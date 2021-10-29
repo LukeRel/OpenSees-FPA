@@ -78,6 +78,7 @@ extern "C" int         OPS_ResetInputNoBuilder(ClientData clientData, Tcl_Interp
 #include <UniaxialFiber3d.h>
 #include <NDFiber2d.h>
 #include <NDFiber3d.h>
+#include <NDFiberIS3d.h>	// Fiber with initial strains (LP)
 
 #include <Bidirectional.h>
 #include <Elliptical2.h>
@@ -964,7 +965,7 @@ static bool currentSectionIsND = false;
 static bool currentSectionIsWarping = false;
 static bool currentSectionComputeCentroid = true;
 
-static bool currentSectionHasIS = false; // (LP)
+static bool currentSectionHasIS = false;				// (LP)
 
 int
 buildSection(Tcl_Interp *interp, TclModelBuilder *theTclModelBuilder,
@@ -1008,7 +1009,6 @@ TclCommand_addFiberSection (ClientData clientData, Tcl_Interp *interp, int argc,
     }
 	// Adding boolean for NDFiberIS (LP)
 	if (strcmp(argv[1], "NDFiberIS") == 0) {
-		currentSectionIsND = true;
 		currentSectionHasIS = true;
 	}
 
@@ -1612,6 +1612,7 @@ TclCommand_addFiber(ClientData clientData, Tcl_Interp *interp, int argc,
     Fiber *theFiber = 0;
     int matTag;
     double yLoc, zLoc, area;
+	double eps0;								// Initial fiber strains (LP)
 	int NDM = theTclModelBuilder->getNDM();
 
     if (Tcl_GetDouble(interp, argv[1], &yLoc) != TCL_OK) {
@@ -1625,11 +1626,18 @@ TclCommand_addFiber(ClientData clientData, Tcl_Interp *interp, int argc,
     if (Tcl_GetDouble(interp, argv[3], &area) != TCL_OK) {
       opserr <<  "WARNING invalid area: fiber yLoc zLoc area matTag\n";
       return TCL_ERROR;
-    }            
+    }
+	// Adding 5th fiber argument for initial fiber strains (LP)
     if (Tcl_GetInt(interp, argv[4], &matTag) != TCL_OK) {
-      opserr <<  "WARNING invalid matTag: fiber yLoc zLoc area matTag\n";
+      opserr <<  "WARNING invalid matTag: fiber yLoc zLoc area matTag <eps0>\n";
       return TCL_ERROR;
-    }                
+    }
+
+	// Adding optional initial fiber deformations (LP)
+	if (Tcl_GetDouble(interp, argv[5], &eps0) != TCL_OK) {
+		opserr << "WARNING invalid area: fiber yLoc zLoc area matTag\n";
+		return TCL_ERROR;
+	}
     
     // creates 2d section      
     if (NDM == 2) {
@@ -1663,23 +1671,32 @@ TclCommand_addFiber(ClientData clientData, Tcl_Interp *interp, int argc,
       fiberPosition(0) = yLoc;
       fiberPosition(1) = zLoc;
       
-      if (currentSectionIsND) {
-	NDMaterial *material = OPS_getNDMaterial(matTag);
-	if (material == 0) {
-	  opserr <<  "WARNING invalid NDMaterial ID for patch\n";
-	  return TCL_ERROR;
-	}
-	theFiber = new NDFiber3d(numFibers, *material, area, yLoc, zLoc);
-      }
-      else {
-	UniaxialMaterial *material = OPS_getUniaxialMaterial(matTag);
-	if (material == 0) {
-	  opserr <<  "WARNING invalid UniaxialMaterial ID for patch\n";
-	  return TCL_ERROR;
-	}   
-	theFiber = new UniaxialFiber3d(numFibers, *material, area,
-				       fiberPosition);
-      }
+	  if (currentSectionIsND) {
+		  NDMaterial* material = OPS_getNDMaterial(matTag);
+		  if (material == 0) {
+			  opserr << "WARNING invalid NDMaterial ID for patch\n";
+			  return TCL_ERROR;
+		  }
+		  theFiber = new NDFiber3d(numFibers, *material, area, yLoc, zLoc);
+	  }
+	  // Fibers with initial strains (LP)
+	  else if (currentSectionHasIS) {
+		  NDMaterial* material = OPS_getNDMaterial(matTag);
+		  if (material == 0) {
+			  opserr << "WARNING invalid NDMaterial ID for patch\n";
+			  return TCL_ERROR;
+		  }
+		  theFiber = new NDFiberIS3d(numFibers, *material, area, yLoc, zLoc, eps0);
+	  }
+	  else {
+		  UniaxialMaterial* material = OPS_getUniaxialMaterial(matTag);
+		  if (material == 0) {
+			  opserr << "WARNING invalid UniaxialMaterial ID for patch\n";
+			  return TCL_ERROR;
+		  }
+		  theFiber = new UniaxialFiber3d(numFibers, *material, area,
+			  fiberPosition);
+	  }
 
       if (theFiber == 0) {
 	opserr <<  "WARNING unable to allocate fiber \n";
@@ -2138,6 +2155,7 @@ buildSection(Tcl_Interp *interp, TclModelBuilder *theTclModelBuilder,
       ID     fibersMaterial(numFibers-numSectionRepresFibers);
       Matrix fibersPosition(2,numFibers-numSectionRepresFibers);
       Vector fibersArea(numFibers-numSectionRepresFibers);
+	  Vector fibersEps0(numFibers - numSectionRepresFibers);
 
       int  numCells;
       Cell **cell;
@@ -3044,6 +3062,10 @@ TclCommand_addFiberSectionAsym(ClientData clientData, Tcl_Interp* interp, int ar
 		currentSectionIsND = true;
 		currentSectionIsWarping = true;
 	}
+	// Adding boolean for NDFiberIS (LP)
+	if (strcmp(argv[1], "NDFiberIS") == 0) {
+		currentSectionHasIS = true;
+	}
 
 	// create the fiber section representation (with the geometric information) 
 
@@ -3268,6 +3290,9 @@ buildSectionAsym(Tcl_Interp* interp, TclModelBuilder* theTclModelBuilder,
 					section = new NDFiberSectionWarping2d(secTag, numFibers, fiber);
 				else
 					section = new NDFiberSection2d(secTag, numFibers, fiber);
+			}
+			else if (currentSectionHasIS) {
+				section = new NDFiberSectionIS3d(secTag, numFibers, fiber);
 			}
 			else
 				section = new FiberSection2d(secTag, numFibers, fiber);

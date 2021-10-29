@@ -111,7 +111,7 @@ NDFiberSectionIS3d::NDFiberSectionIS3d(int tag, int num, Fiber** fibers, double 
             double yLoc, zLoc, Area, eps0;
             theFiber->getFiberLocation(yLoc, zLoc);
             Area = theFiber->getArea();
-            eps0 = theFiber->getd(); // Initial strains
+            eps0 = theFiber->getEps0(); // Initial strains
             Abar += Area;
             QzBar += yLoc * Area;
             QyBar += zLoc * Area;
@@ -345,7 +345,7 @@ NDFiberSectionIS3d::addFiber(Fiber &newFiber)
 
   newFiber.getFiberLocation(yLoc, zLoc);
   Area = newFiber.getArea();
-  eps0 = newFiber.getd();
+  eps0 = newFiber.getEps0();
   matData[numFibers*4] = yLoc;
   matData[numFibers*4+1] = zLoc;
   matData[numFibers*4+2] = Area;
@@ -591,6 +591,7 @@ NDFiberSectionIS3d::getInitialTangent(void)
   static double yLocs[10000];
   static double zLocs[10000];
   static double fiberArea[10000];
+  //static double iStrains[10000];
 
   if (sectionIntegr != 0) {
     sectionIntegr->getFiberLocations(numFibers, yLocs, zLocs);
@@ -598,9 +599,10 @@ NDFiberSectionIS3d::getInitialTangent(void)
   }  
   else {
     for (int i = 0; i < numFibers; i++) {
-      yLocs[i] = matData[3*i];
-      zLocs[i] = matData[3*i+1];
-      fiberArea[i] = matData[3*i+2];
+      yLocs[i] = matData[4*i];
+      zLocs[i] = matData[4*i+1];
+      fiberArea[i] = matData[4*i+2];
+      //iStrains[i] = matData[4*i+3];
     }
   }
 
@@ -736,9 +738,10 @@ NDFiberSectionIS3d::getCopy(void)
     }
 			    
     for (int i = 0; i < numFibers; i++) {
-      theCopy->matData[i*3] = matData[i*3];
-      theCopy->matData[i*3+1] = matData[i*3+1];
-      theCopy->matData[i*3+2] = matData[i*3+2];
+      theCopy->matData[i*4] = matData[i*4];
+      theCopy->matData[i*4+1] = matData[i*4+1];
+      theCopy->matData[i*4+2] = matData[i*4+2];
+      theCopy->matData[i*4+3] = matData[i*4+3];
       theCopy->theMaterials[i] = theMaterials[i]->getCopy("BeamFiber");
 
       if (theCopy->theMaterials[i] == 0) {
@@ -813,9 +816,9 @@ NDFiberSectionIS3d::revertToLastCommit(void)
   }  
   else {
     for (int i = 0; i < numFibers; i++) {
-      yLocs[i] = matData[3*i];
-      zLocs[i] = matData[3*i+1];
-      fiberArea[i] = matData[3*i+2];
+      yLocs[i] = matData[4*i];
+      zLocs[i] = matData[4*i+1];
+      fiberArea[i] = matData[4*i+2];
     }
   }
 
@@ -952,9 +955,9 @@ NDFiberSectionIS3d::revertToStart(void)
   }  
   else {
     for (int i = 0; i < numFibers; i++) {
-      yLocs[i] = matData[3*i];
-      zLocs[i] = matData[3*i+1];
-      fiberArea[i] = matData[3*i+2];
+      yLocs[i] = matData[4*i];
+      zLocs[i] = matData[4*i+1];
+      fiberArea[i] = matData[4*i+2];
     }
   }
 
@@ -1114,7 +1117,7 @@ NDFiberSectionIS3d::sendSelf(int commitTag, Channel &theChannel)
     }    
 
     // send the fiber data, i.e. area and loc
-    Vector fiberData(matData, 3*numFibers);
+    Vector fiberData(matData, 4*numFibers);
     res += theChannel.sendVector(dbTag, commitTag, fiberData);
     if (res < 0) {
       opserr <<  "NDFiberSectionIS3d::sendSelf - failed to send material data\n";
@@ -1190,7 +1193,7 @@ NDFiberSectionIS3d::recvSelf(int commitTag, Channel &theChannel, FEM_ObjectBroke
       }
     }
 
-    Vector fiberData(matData, 3*numFibers);
+    Vector fiberData(matData, 4*numFibers);
     res += theChannel.recvVector(dbTag, commitTag, fiberData);
     if (res < 0) {
       opserr <<  "NDFiberSectionIS3d::recvSelf - failed to recv material data\n";
@@ -1229,9 +1232,9 @@ NDFiberSectionIS3d::recvSelf(int commitTag, Channel &theChannel, FEM_ObjectBroke
     
     // Recompute centroid
     for (i = 0; computeCentroid && i < numFibers; i++) {
-      yLoc = matData[3*i];
-      zLoc = matData[3*i+1];
-      Area = matData[3*i+2];
+      yLoc = matData[4*i];
+      zLoc = matData[4*i+1];
+      Area = matData[4*i+2];
       Abar  += Area;
       QzBar += yLoc*Area;
       QyBar += zLoc*Area;
@@ -1260,8 +1263,8 @@ NDFiberSectionIS3d::Print(OPS_Stream &s, int flag)
 
   if (flag == 1) {
     for (int i = 0; i < numFibers; i++) {
-      s << "\nLocation (y,z) = " << matData[3*i] << ' ' << matData[3*i+1];
-      s << "\nArea = " << matData[3*i+2] << endln;
+      s << "\nLocation (y,z) = " << matData[4*i] << ' ' << matData[4*i+1];
+      s << "\nArea = " << matData[4*i+2] << endln;
       theMaterials[i]->Print(s, flag);
     }
   }
@@ -1282,8 +1285,8 @@ NDFiberSectionIS3d::setResponse(const char **argv, int argc, OPS_Stream &output)
     }  
     else {
       for (int i = 0; i < numFibers; i++) {
-	yLocs[i] = matData[3*i];
-	zLocs[i] = matData[3*i+1];
+	yLocs[i] = matData[4*i];
+	zLocs[i] = matData[4*i+1];
       }
     }
     
@@ -1370,9 +1373,10 @@ NDFiberSectionIS3d::setResponse(const char **argv, int argc, OPS_Stream &output)
     
     if (key < numFibers && key >= 0) {
       output.tag("FiberOutput");
-      output.attr("yLoc",matData[3*key]);
-      output.attr("zLoc",matData[3*key+1]);
-      output.attr("area",matData[3*key+2]);
+      output.attr("yLoc",matData[4*key]);
+      output.attr("zLoc",matData[4*key+1]);
+      output.attr("area",matData[4*key+2]);
+      output.attr("eps0", matData[4*key+3]);
       
       theResponse = theMaterials[key]->setResponse(&argv[passarg], argc-passarg, output);
       
@@ -1487,7 +1491,7 @@ NDFiberSectionIS3d::getStressResultantSensitivity(int gradIndex, bool conditiona
   
   ds.Zero();
   
-  double y, z, A;
+  double y, z, A, eps0;
   static Vector stress(3);
   static Vector dsigdh(3);
   static Vector sig_dAdh(3);
@@ -1496,6 +1500,7 @@ NDFiberSectionIS3d::getStressResultantSensitivity(int gradIndex, bool conditiona
   static double yLocs[10000];
   static double zLocs[10000];
   static double fiberArea[10000];
+  static double iStrains[10000];
 
   if (sectionIntegr != 0) {
     sectionIntegr->getFiberLocations(numFibers, yLocs, zLocs);
@@ -1503,9 +1508,10 @@ NDFiberSectionIS3d::getStressResultantSensitivity(int gradIndex, bool conditiona
   }  
   else {
     for (int i = 0; i < numFibers; i++) {
-      yLocs[i] = matData[3*i];
-      zLocs[i] = matData[3*i+1];
-      fiberArea[i] = matData[3*i+2];
+      yLocs[i] = matData[4*i];
+      zLocs[i] = matData[4*i+1];
+      fiberArea[i] = matData[4*i+2];
+      iStrains[i] = matData[4*i+3];
     }
   }
 
@@ -1537,6 +1543,7 @@ NDFiberSectionIS3d::getStressResultantSensitivity(int gradIndex, bool conditiona
     y = yLocs[i] - yBar;
     z = zLocs[i] - zBar;
     A = fiberArea[i];
+    eps0 = iStrains[i];
     
     dsigdh = theMaterials[i]->getStressSensitivity(gradIndex,true);
 
@@ -1685,8 +1692,8 @@ NDFiberSectionIS3d::commitSensitivity(const Vector& defSens,
     sectionIntegr->getFiberLocations(numFibers, yLocs, zLocs);
   else {
     for (int i = 0; i < numFibers; i++) {
-      yLocs[i] = matData[3*i];
-      zLocs[i] = matData[3*i+1];
+      yLocs[i] = matData[4*i];
+      zLocs[i] = matData[4*i+1];
     }
   }
 
