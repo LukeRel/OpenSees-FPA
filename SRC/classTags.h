@@ -856,7 +856,7 @@
 #define BEAM_INTEGRATION_TAG_HingeRadauTwo3d    33
 #define BEAM_INTEGRATION_TAG_UserHinge3d     	34
 #define BEAM_INTEGRATION_TAG_DistHinge3d     	35
-#define BEAM_INTEGRATION_TAG_DistReg2d			37 // LP
+#define BEAM_INTEGRATION_TAG_DistReg3d			37 // LP
 
 #define CRDTR_TAG_LinearCrdTransf2d 1
 #define CRDTR_TAG_PDeltaCrdTransf2d 2

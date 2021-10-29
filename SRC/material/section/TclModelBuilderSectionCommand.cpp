@@ -355,6 +355,8 @@ TclModelBuilderSectionCommand (ClientData clientData, Tcl_Interp *interp, int ar
 	    theSection = new NDFiberSection3d(tag, numFibers, theMats, tubesect, shape);
 	  if (strcmp(argv[8],"-ndWarping") == 0)
 	    theSection = new NDFiberSectionWarping2d(tag, numFibers, theMats, tubesect, shape);
+	  if (strcmp(argv[8], "-ndIS") == 0)
+		theSection = new NDFiberSectionIS3d(tag, numFibers, theMats, tubesect, shape);
 
 	  delete [] theMats;	  
 	}
@@ -962,7 +964,8 @@ static bool currentSectionIsND = false;
 static bool currentSectionIsWarping = false;
 static bool currentSectionComputeCentroid = true;
 
-static bool currentSectionHasIS = false; // (LP)										
+static bool currentSectionHasIS = false; // (LP)
+
 int
 buildSection(Tcl_Interp *interp, TclModelBuilder *theTclModelBuilder,
 	     int secTag, UniaxialMaterial &theTorsion);
@@ -1007,6 +1010,7 @@ TclCommand_addFiberSection (ClientData clientData, Tcl_Interp *interp, int argc,
 	if (strcmp(argv[1], "NDFiberIS") == 0) {
 		currentSectionIsND = true;
 		currentSectionHasIS = true;
+	}
 
     // create the fiber section representation (with the geometric information) 
       
