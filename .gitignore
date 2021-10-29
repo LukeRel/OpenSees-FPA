@@ -28,7 +28,6 @@
 *.lai
 *.la
 *.a
-*.lib
 
 # Executables
 *.exe
@@ -55,38 +54,9 @@ cmake-build-release
 .vscode
 .clang-format
 
-# OTHER
-Makefile.def
-PlainConcrete.f
-forumat.f
-Damage2p.cpp
-Damage2p.h
-Damage2p3D.cpp
-Damage2p3D.h
-Damage2pThanh.tar
-Damage2ppstress.cpp
-Damage2ppstress.h
-Faria1998.cpp
-Faria1998.h
-Faria1998PlaneStrain.cpp
-Faria1998PlaneStrain.h
-Faria1998PlaneStress.cpp
-Faria1998PlaneStress.h
-Faria1998PlaneStress2d.cpp
-Faria1998PlaneStress2d.h
-Faria1998ThreeDimensional.cpp
-Faria1998ThreeDimensional.h
-SRC/interpreter/pythonInterpreter
-SRC/interpreter/tclInterpreter
-SRC/interpreter/openseespy
-SRC/interpreter/openseestcl
-filip
-PML
-CPlaneStrain.h
-CPlaneStress.h
-CPlaneStress2d.h
-CThreeDimensional.h
-Concrete.h
-forumat.for
-build
-bin
+# Private folders
+Win64/.vs/
+Win64/obj/
+Win64/lib/debug/
+Win64/bin/
+Win64/proj/element/
