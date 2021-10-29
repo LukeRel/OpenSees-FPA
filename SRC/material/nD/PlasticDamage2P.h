@@ -101,6 +101,9 @@ class PlasticDamage2P : public NDMaterial
     // Initialization method
     void initialize(void);
 
+    // Principal values
+    Vector principal_values(Vector e);
+
     // Internal functions
     double Kiso(double alpha1);		// isotropic hardening function
     double Kisoprime(double alpha1);	//

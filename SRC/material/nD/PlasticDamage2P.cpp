@@ -30,8 +30,6 @@ const double PlasticDamage2P::one3 = 1.0 / 3.0;
 const double PlasticDamage2P::two3 = 2.0 / 3.0;
 const double PlasticDamage2P::root23 = sqrt(2.0 / 3.0);
 
-
-
 static Vector Iv6(6); 
 static Matrix Ivp(6,6); 
 static Matrix Idp(6,6); 
@@ -39,7 +37,6 @@ static Matrix I(6,6);
 static Matrix Id(6,6); 
 static Matrix P(6, 6);   //Matrice deviatorica
 static Matrix l(6, 6);   //Matrice volumetrica
-
 
 void *
 OPS_NewPlasticDamage2P(void)
@@ -88,9 +85,7 @@ PlasticDamage2P::PlasticDamage2P(int tag, double E, double nu, //(CALCOLA BULK E
 	double Hk, double Hi, //(CALCOLA H e t)
 	double r_bar, double Kinfinity, double Kinit, double d1, double d2, double mDen, //(PARAMETRI CHE SI POTRANNO IGNORARE)
 	double Yt0, double bt, double at, double Yc0, double bc, double ac, double kappa) //(IN GATTA)
-
 	:NDMaterial(tag, ND_TAG_PlasticDamage2P),
-
 	eps(6), sig(6), sige(6), eps_p(6), sigeP(6),
 	epsCommit(6), sigCommit(6), sigeCommit(6), eps_pCommit(6), sigePCommit(6),
 	Ce(6, 6), C(6, 6), Ccommit(6, 6),
@@ -106,110 +101,106 @@ PlasticDamage2P::PlasticDamage2P(int tag, double E, double nu, //(CALCOLA BULK E
 	mIIvol(6, 6),
 	mIIdev(6, 6),
 	mState(5)
-
 {
-   //Calcola Bulk e Shear
-    mK = E / (3 * (1 - 2 * nu));
-    mG = E / (2 * (1 + nu));
+	//Calcola Bulk e Shear
+	mK = E / (3 * (1 - 2 * nu));
+	mG = E / (2 * (1 + nu));
 
 	//Calcola parametri plasticità
-	msigma_y = 2*fc*ft/(fc+ft);
-	mrho = root23*(fc-ft)/(fc+ft);
+	msigma_y = 2 * fc * ft / (fc + ft);
+	mrho = root23 * (fc - ft) / (fc + ft);
 
 	//Parametri di harding
 	mHard = Hi + Hk;
-	mtheta = Hi/(Hi+Hk);
+	mtheta = Hi / (Hi + Hk);
 
-   //Parametri aggiuntivi plasticità
-    mrho_bar = r_bar;
-    mKinf = Kinfinity;
-    mKo = Kinit;
-    mdelta1 = d1;
-    mdelta2 = d2;
-    massDen = mDen;
+	//Parametri aggiuntivi plasticità
+	mrho_bar = r_bar;
+	mKinf = Kinfinity;
+	mKo = Kinit;
+	mdelta1 = d1;
+	mdelta2 = d2;
+	massDen = mDen;
 
-     //FORSE DA CANCELLARE
-       mKref0 = mK;
-       mGref0 = mG;
-        msigma_y0 = msigma_y;
-
-
-if (mrho == 0.0) {
-	mTo = 1e10;
-}
-else {
-	mTo = root23 * msigma_y / mrho;
-}
-// set the elastic flag
-//  0 = elastic+no param update; 1 = elastic+param update; 2 = elastoplastic+no param update (default)
-mElastFlag = 2;
-
-// Use these values to deactivate yield surface 1 - Create Pure Tension Cutoff
-//msigma_y = 1e10;
-//mTo      = 100;
+	//FORSE DA CANCELLARE
+	mKref0 = mK;
+	mGref0 = mG;
+	msigma_y0 = msigma_y;
 
 
+	if (mrho == 0.0) {
+		mTo = 1e10;
+	}
+	else {
+		mTo = root23 * msigma_y / mrho;
+	}
+	// set the elastic flag
+	// 0 = elastic+no param update; 1 = elastic+param update; 2 = elastoplastic+no param update (default)
+	mElastFlag = 2;
 
+	// Use these values to deactivate yield surface 1 - Create Pure Tension Cutoff
+	// msigma_y = 1e10;
+	// mTo      = 100;
 
+	//Inizializzazione
+	eps.Zero();
+	sig.Zero();
+	sige.Zero();
+	eps_p.Zero();
+	sigeP.Zero();
+	Ce.Zero();
 
-    //Inizializzazione
-  eps.Zero();
-  sig.Zero();
-  sige.Zero();
-  eps_p.Zero();
-  sigeP.Zero();
-  Ce.Zero();
+	Iv6.Zero(); Iv6(0) = 1.;Iv6(1) = 1.;Iv6(2) = 1.;
 
+	// Tensore Volumetrico (1, in Di Re)
+	Ivp.Zero();
+	for (int i = 0; i < 3; i++)
+		for (int j = 0; j < 3; j++)
+			Ivp(i, j) = 1.;
 
-  Iv6.Zero(); Iv6(0)=1.;Iv6(1)=1.;Iv6(2)=1.;
+	// Tensore Deviatorico (P, in Di Re)
+	Idp.Zero();
+	I.Zero();
+	Id.Zero();
+	for (int i = 0; i < 6; i++) {
+		Idp(i, i) = 1.;
+		if (i < 3) {
+			I(i, i) = 1.0;
+			Id(i, i) = 1.0;
+		}
+		else {
+			I(i, i) = 0.5;
+			Id(i, i) = 0.5;
+		}
+	}
+	for (int i = 0; i < 3; i++)
+		for (int j = 0; j < 3; j++) {
+			Id(i, j) = Idp(i, j) - 1 / 3.;
+			Idp(i, j) = Id(i, j);
+		}
 
-  Ivp.Zero();    //Tensore Volumetrico in Di Re 1
-  for (int i=0; i<3; i++) 
-    for (int j=0; j<3; j++)
-      Ivp(i,j)=1.;
+	Ce.addMatrix(0.0, Ivp, mK);
+	Ce.addMatrix(1.0, Id, 2. * mG);
 
-  Idp.Zero();  
-  I.Zero(); 
-  Id.Zero();   //Tensore Deviatorico  in Di Re P
-  for (int i = 0; i < 6; i++) {
-	  Idp(i, i) = 1.;
-	  if (i < 3) {
-		  I(i, i) = 1.0;
-		  Id(i, i) = 1.0;
-	  }
-	  else {
-		  I(i, i) = 0.5;
-		  Id(i, i) = 0.5;
-	  }
-  }
-  for (int i=0; i<3; i++) 
-	  for (int j = 0; j < 3; j++) {
-		  Id(i, j) = Idp(i, j) - 1 / 3.;
-		  Idp(i, j) = Id(i, j);
-	  }
-
-  Ce.addMatrix(0.0, Ivp, mK);
-  Ce.addMatrix(1.0,  Id, 2.*mG);
-  
-  C = Ce;
-  P = Id;              // Matrice deviatorica
-  l = Ivp;             // Matrice volumetrica
+	C = Ce;
+	P = Id;              // Matrice deviatorica
+	l = Ivp;             // Matrice volumetrica
 
 
 
-  //      % initial damage threshold
-  // double rp0 = ft/sqrt(E);
-  // double rn0 = sqrt((-k+sqrt(2.0))*fc/sqrt(3.0));
-      
-  // rp = rp0;
- //  rn = rn0;
-  // dp = 0.;
-  // dn = 0.;
+	//      % initial damage threshold
+	// double rp0 = ft/sqrt(E);
+	// double rn0 = sqrt((-k+sqrt(2.0))*fc/sqrt(3.0));
 
- ///ARRIVATI QUIIIIIIIIIIIIIIIIIIIII
-  
+	// rp = rp0;
+	// rn = rn0;
+	// dp = 0.;
+	// dn = 0.;
 
-  this->initialize();
+	// ARRIVATI QUIIIIIIIIIIIIIIIIIIIII
+
+
+	this->initialize();
 }
 
 
@@ -314,74 +305,73 @@ void PlasticDamage2P::initialize()
 }
 
 int
-PlasticDamage2P::setTrialStrain (const Vector &strain)
+PlasticDamage2P::setTrialStrain(const Vector& strain)
 {
+	// Vector and matrices to be used within the method
+	static Vector epsilon_e(6);			// Elastic strains vector - eps^e
+	/*
+	static Vector Depse_tr(6);
+	static Vector Deps(6);
+	static Vector sige_tr(6);
+	static Vector sigpos(6);
+	static Vector signeg(6);
+	static Matrix Qpos(6, 6);
+	static Matrix Qneg(6, 6);
+	static Vector L_tr(6);
+	static Vector L_tr_temp(6);
+	static Vector Dnrm_Dsig(6);
+	static Vector Dlam_Dsig(6);
+	static Vector Dnrm_Deps(6);
+	static Matrix Dsigpos_Deps(6, 6);
+	static Matrix Dsigneg_Deps(6, 6);
+	static Vector Ddp_Deps(6);
+	static Vector Ddn_Deps(6);
+	static Matrix Cbar(6, 6);
+	*/
 
-  // bunch of Vectors and Matrices used in the method
-  static Vector Depse_tr(6);
-  static Vector Deps(6);  
-  static Vector sige_tr(6);
-  static Vector sigpos(6);
-  static Vector signeg(6);
-  static Matrix Qpos(6,6);
-  static Matrix Qneg(6,6);
-  static Vector L_tr(6);
-  static Vector L_tr_temp(6);  
-  static Vector Dnrm_Dsig(6);
-  static Vector Dlam_Dsig(6);
-  static Vector Dnrm_Deps(6);
-  static Matrix Dsigpos_Deps(6,6);
-  static Matrix Dsigneg_Deps(6,6);
-  static Vector Ddp_Deps(6);
-  static Vector Ddn_Deps(6);
-  static Matrix Cbar(6,6);
+	double tol = 1.0e-5;
 
-  /*
+	// Strains vector from global analysis
+	eps = strain;
 
-  double Invariant_1;
-  static Vector s;
-  double f1;
-  double f2;
+	// Variable renaming
+	mEpsilon_n_p = eps_p;
+	mEpsilon = eps;
 
-  double alpha1;			// hardening parameter for DP surface
-  double alpha2;			// hardening parameter for tension cut-off
+	// [VEDI COME GESTIRE VARIABILI DI STATO]
 
-  */
+	/* PLASTICITY ---------------------- */
+	this->plastic_integrator();
 
-  double tol = 1.0e-5;
-  
+	/* DAMAGE -------------------------- */
+	
+	// Elastic strain
+	epsilon_e = eps - mEpsilon_n1_p;
 
+	// Principal strains from total strains
+	Vector em = principal_values(mEpsilon);
 
-  
+	/* Damage parameters
+	double Yt0;
+	double bt;
+	double at;
+	double Yc0;
+	double bc;
+	double ac;
+	double kappa;
+	*/
 
-  // Deformazione da analisi globale
-  eps = strain;
- 
+	// Damage history variables
+	
+
+	// Limit damage functions
 
 
-  //VEDI COME GESTIRE VARIABILI DI STato
-
-  //Modello di plasticità 
-  this->plastic_integrator();
-
-
-
-  //DANNO
-
-  //Deformazione elastica
-  epse = eps - mEpsilon_n1_p;
-
-
-
-
-
-
-  return 0;
+	return 0;
 }
 
 
-// --------------------Plasticity------------------------------------ -
-//plasticity integration routine
+// Plasticity integration routine
 void PlasticDamage2P::plastic_integrator()
 {
 	bool okay;		// boolean variable to ensure satisfaction of multisurface kuhn tucker conditions
@@ -414,33 +404,16 @@ void PlasticDamage2P::plastic_integrator()
 	Matrix g(2, 2);			// jacobian of the corner region (return map)
 	Matrix g_contra(2, 2);	// inverse of jacobian of the corner region
 
-<<<<<<< Updated upstream
-	//Variabili rinominate
-	mEpsilon_n_p = eps_p;
-	mEpsilon = eps;
+	// Calcolo variabili di storia
+	mEpsilon_n1_p = mEpsilon_n_p;	// eps^p_n+1_trial
+	mAlpha1_n1 = mAlpha1_n;			// alpha1_n+1_trial
+	mAlpha2_n1 = mAlpha2_n;			// alpha2_n+1_trial
+	mBeta_n1 = mBeta_n;				// beta_n+1_trial
 
-=======
-							
-
-
-// set trial state:
-
-// epsilon_n1_p_trial = ..._n1_p  = ..._n_p
->>>>>>> Stashed changes
-	mEpsilon_n1_p = mEpsilon_n_p;
-
-	// alpha1_n+1_trial
-	mAlpha1_n1 = mAlpha1_n;
-	// alpha2_n+1_trial
-	mAlpha2_n1 = mAlpha2_n;
-
-	// beta_n+1_trial
-	mBeta_n1 = mBeta_n;
-
-	// epsilon_elastic = epsilon_n+1 - epsilon_n_p
+	// Deformazioni elastiche
 	epsilon_e = mEpsilon - mEpsilon_n1_p;
 
-	// trial stress
+	// Tensioni elastiche trial
 	mSigma = mCe * epsilon_e;
 
 	// deviator stress tensor: s = 2G * IIdev * epsilon_e
@@ -463,7 +436,6 @@ void PlasticDamage2P::plastic_integrator()
 	f2 = Invariant_1 - T(mAlpha2_n1);
 
 	
-
 	// check trial state
 	int count = 1;
 	if ((f1 <= fTOL) && (f2 <= fTOL) || mElastFlag < 2) {
@@ -656,7 +628,7 @@ void PlasticDamage2P::plastic_integrator()
 	} // end of while(!okay) loop
 
 
-	  //update everything and exit!
+	//update everything and exit!
 
 	Vector b1(6);
 	Vector b2(6);
@@ -747,13 +719,10 @@ void PlasticDamage2P::plastic_integrator()
 	return;
 }
 
-
-
 double PlasticDamage2P::Kiso(double alpha1)
 {
 	return msigma_y + mtheta * mHard * alpha1 + (mKinf - mKo) * (1 - exp(-mdelta1 * alpha1));
 }
-
 
 double PlasticDamage2P::Kisoprime(double alpha1)
 {
@@ -765,10 +734,33 @@ double PlasticDamage2P::T(double alpha2)
 	return mTo * exp(-mdelta2 * alpha2);
 }
 
-
 double PlasticDamage2P::deltaH(double dGamma)
 {
 	return mHprime * root23 * dGamma;
+}
+
+Vector PlasticDamage2P::principal_values(Vector e)
+{
+	// Invariants
+	double I1 = e[0]+e[1]+e[2];
+	double I2 = 0.5*(e[0]*e[1]+e[1]*e[2]+e[2]*e[0]-(e[3]*e[3]+e[4]*e[4]+e[5]*e[5]));
+	double I3 = e[0]*e[1]*e[2]+2.0*e[3]*e[4]*e[5] -(e[3]*e[3]*e[2]+e[4]*e[4]*e[0]+e[5]*e[5]*e[1]);
+
+	// Check if 1-2-3-4-5-6 position correspond to 11-22-33-12-23-31.
+	// Evaluate if 12-23-31 correspond to eps=gamma/2 or gamma.
+
+	// Intermediate quantities
+	double Q = (3*I2-I1*I1)/9;
+	double R = (2*pow(I1,3)-9*I1*I2+27*I3)/54;
+	double arg = R/sqrt(pow(-Q,3));
+	double theta = acos(arg);
+
+	// Principal values
+	Vector em(6);
+	em[0] = 2.0*sqrt(-Q)*cos(theta/3) + I1/3;
+	em[1] = 2.0*sqrt(-Q)*cos((theta+2*3.14157)/3) + I1/3;
+	em[2] = 2.0*sqrt(-Q)*cos((theta+4*3.14157)/3) + I1/3;
+	return em;
 }
 
 Vector PlasticDamage2P::getState()
@@ -776,8 +768,13 @@ Vector PlasticDamage2P::getState()
 	return mState;
 }
 
-<<<<<<< Updated upstream
-//ALTRE COSE NOSTRE NON IN DRUCKER
+// Other methods:
+//	  - setTrialStrainIncr: used for cases where stress depends by
+//		the rate of change of the strains.
+//	  - getTangent: returns constitutive C matrix.
+//	  - getInitialTangent: returns initial constitutive C matrix.
+//	  - getStress: returns the stress vector (sigma)
+//	  - getStrain: returns the strain vector (epsilon)
 
 int
 PlasticDamage2P::setTrialStrainIncr (const Vector &strain)
@@ -818,17 +815,15 @@ PlasticDamage2P::getStrain (void)
 {
   return eps;
 }
-=======
 
-
-
-
-
-
-
-
-
->>>>>>> Stashed changes
+// History methods:
+//	  - commitState: invoked at the end of every n-th cycle.
+//		Resets n+1 values to n vaues.
+//	  - revertToLastCommit: reverts n+1 values to n values.
+//	  - revertToStart: reverts histry variables at n-th cycle to
+//		initial value at n=1.
+//	  - getCopy: creates a copy for every instance of the material.
+//
 
 int
 PlasticDamage2P::commitState(void)
@@ -949,50 +944,4 @@ PlasticDamage2P::Print(OPS_Stream &s, int flag) {
   opserr << "strain: " << eps;
   opserr << "strain: " << sig;
   opserr << "tangent: " << C;
-}       
-
-
-
-//ALTRE COSE NOSTRE NON IN DRUCKER
-
-
-
-int
-PlasticDamage2P::setTrialStrainIncr(const Vector& strain)
-{
-	eps += strain;
-	this->setTrialStrain(eps);
-	return 0;
-}
-
-int
-PlasticDamage2P::setTrialStrainIncr(const Vector& strain, const Vector& rate)
-{
-	eps += strain;
-	this->setTrialStrain(eps);
-	return 0;
-}
-
-const Matrix&
-PlasticDamage2P::getTangent(void)
-{
-	return C;
-}
-
-const Matrix&
-PlasticDamage2P::getInitialTangent(void)
-{
-	return Ce;
-}
-
-const Vector&
-PlasticDamage2P::getStress(void)
-{
-	return sig;
-}
-
-const Vector&
-PlasticDamage2P::getStrain(void)
-{
-	return eps;
 }
