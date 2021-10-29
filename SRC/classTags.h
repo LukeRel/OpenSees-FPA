@@ -331,6 +331,9 @@
 #define SEC_TAG_LayeredShellFiberSectionThermal 35     //L.Jiang[SIF]
 #define SEC_TAG_BiaxialHysteretic 36
 
+// Fiber section with initial strains (LP)
+#define SEC_TAG_NDFiberSectionIS3d		        1001
+
 #define SEC_TAG_MCFTFiberSection2d 7601
 
 #define SECTION_INTEGRATION_TAG_WideFlange 1
@@ -392,6 +395,9 @@
 #define ND_TAG_StressDensityModel3D 57
 #define ND_TAG_UVCmultiaxial  58
 #define ND_TAG_UVCplanestress 59
+
+// New ND Material Tag - Plasticity and damage with 2 parameters based on Gatta et al [2018]
+#define ND_TAG_PlasticDamage2P            60
 
 #define ND_TAG_LowTension 65
 #define ND_TAG_LowTensionPlaneStress 66
@@ -505,8 +511,10 @@
 
 #define FIBER_TAG_Uniaxial2d	1
 #define FIBER_TAG_Uniaxial3d	2
-#define FIBER_TAG_ND2d	3
-#define FIBER_TAG_ND3d	4
+#define FIBER_TAG_ND2d			3
+#define FIBER_TAG_ND3d			4
+#define FIBER_TAG_NDIS2d		5  //LP
+#define FIBER_TAG_NDIS3d		6  //LP
 
 #define BACKBONE_TAG_Capped		1
 #define BACKBONE_TAG_LinearCapped	2
@@ -825,28 +833,30 @@
 #define BEAM_INTEGRATION_TAG_LowOrder     9
 #define BEAM_INTEGRATION_TAG_MidDistance     40
 
-#define BEAM_INTEGRATION_TAG_HingeMidpoint 10
-#define BEAM_INTEGRATION_TAG_HingeEndpoint 11
-#define BEAM_INTEGRATION_TAG_HingeRadau    12
-#define BEAM_INTEGRATION_TAG_HingeRadauTwo    13
-#define BEAM_INTEGRATION_TAG_UserHinge     14
-#define BEAM_INTEGRATION_TAG_DistHinge     15
-#define BEAM_INTEGRATION_TAG_RegularizedHinge     16
+#define BEAM_INTEGRATION_TAG_HingeMidpoint 		10
+#define BEAM_INTEGRATION_TAG_HingeEndpoint 		11
+#define BEAM_INTEGRATION_TAG_HingeRadau    		12
+#define BEAM_INTEGRATION_TAG_HingeRadauTwo    	13
+#define BEAM_INTEGRATION_TAG_UserHinge     		14
+#define BEAM_INTEGRATION_TAG_DistHinge     		15
+#define BEAM_INTEGRATION_TAG_RegularizedHinge   16
+#define BEAM_INTEGRATION_TAG_DistReg	   		17 // LP
 
-#define BEAM_INTEGRATION_TAG_HingeMidpoint2d 20
-#define BEAM_INTEGRATION_TAG_HingeEndpoint2d 21
-#define BEAM_INTEGRATION_TAG_HingeRadau2d    22
+#define BEAM_INTEGRATION_TAG_HingeMidpoint2d 	20
+#define BEAM_INTEGRATION_TAG_HingeEndpoint2d 	21
+#define BEAM_INTEGRATION_TAG_HingeRadau2d    	22
 #define BEAM_INTEGRATION_TAG_HingeRadauTwo2d    23
-#define BEAM_INTEGRATION_TAG_UserHinge2d     24
-#define BEAM_INTEGRATION_TAG_DistHinge2d     25
+#define BEAM_INTEGRATION_TAG_UserHinge2d     	24
+#define BEAM_INTEGRATION_TAG_DistHinge2d    	25
+#define BEAM_INTEGRATION_TAG_DistReg2d	   		27 // LP
 
-#define BEAM_INTEGRATION_TAG_HingeMidpoint3d 30
-#define BEAM_INTEGRATION_TAG_HingeEndpoint3d 31
-#define BEAM_INTEGRATION_TAG_HingeRadau3d    32
+#define BEAM_INTEGRATION_TAG_HingeMidpoint3d 	30
+#define BEAM_INTEGRATION_TAG_HingeEndpoint3d 	31
+#define BEAM_INTEGRATION_TAG_HingeRadau3d    	32
 #define BEAM_INTEGRATION_TAG_HingeRadauTwo3d    33
-#define BEAM_INTEGRATION_TAG_UserHinge3d     34
-#define BEAM_INTEGRATION_TAG_DistHinge3d     35
-
+#define BEAM_INTEGRATION_TAG_UserHinge3d     	34
+#define BEAM_INTEGRATION_TAG_DistHinge3d     	35
+#define BEAM_INTEGRATION_TAG_DistReg2d			37 // LP
 
 #define CRDTR_TAG_LinearCrdTransf2d 1
 #define CRDTR_TAG_PDeltaCrdTransf2d 2

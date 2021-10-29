@@ -54,6 +54,7 @@ extern "C" int         OPS_ResetInputNoBuilder(ClientData clientData, Tcl_Interp
 #include <NDFiberSection2d.h>
 #include <NDFiberSection3d.h>
 #include <NDFiberSectionWarping2d.h>
+#include <NDFiberSectionIS3d.h> // Fiber section with initial strains (LP)
 #include <FiberSection2dInt.h>
 #include <FiberSection3d.h>
 #include <FiberSectionAsym3d.h>
@@ -528,6 +529,11 @@ TclModelBuilderSectionCommand (ClientData clientData, Tcl_Interp *interp, int ar
 	return TclCommand_addFiberSection (clientData, interp, argc, argv,
 					   theTclBuilder);
 
+	// nD fiber command with initial strains (LP) ///////////////////////////////////////////////////////////
+	else if (strcmp(argv[1], "NDFiberIS") == 0)
+		return TclCommand_addFiberSection(clientData, interp, argc, argv, theTclBuilder);
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
 	else if (strcmp(argv[1], "FiberAsym") == 0 || strcmp(argv[1], "fiberSecAsym") == 0)
 		return TclCommand_addFiberSectionAsym (clientData, interp, argc, argv, theTclBuilder); //Xinlong
 
@@ -956,6 +962,7 @@ static bool currentSectionIsND = false;
 static bool currentSectionIsWarping = false;
 static bool currentSectionComputeCentroid = true;
 
+static bool currentSectionHasIS = false; // (LP)										
 int
 buildSection(Tcl_Interp *interp, TclModelBuilder *theTclModelBuilder,
 	     int secTag, UniaxialMaterial &theTorsion);
@@ -996,6 +1003,10 @@ TclCommand_addFiberSection (ClientData clientData, Tcl_Interp *interp, int argc,
       currentSectionIsND = true;
       currentSectionIsWarping = true;
     }
+	// Adding boolean for NDFiberIS (LP)
+	if (strcmp(argv[1], "NDFiberIS") == 0) {
+		currentSectionIsND = true;
+		currentSectionHasIS = true;
 
     // create the fiber section representation (with the geometric information) 
       

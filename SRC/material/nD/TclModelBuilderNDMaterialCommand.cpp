@@ -125,7 +125,11 @@ extern void *OPS_LinearCap(void);
 extern void *OPS_AcousticMedium(void);
 extern void* OPS_UVCmultiaxial(void);
 extern void* OPS_UVCplanestress(void);
+
 extern  void *OPS_SAniSandMSMaterial(void);
+
+// Plasticity and damage with 2 parameters based on Gatta et al [2018]
+extern  void *OPS_NewPlasticDamage2P(void);
 
 extern  void *OPS_ElasticIsotropicMaterialThermal(void);  //L.Jiang [SIF]
 extern  void *OPS_DruckerPragerMaterialThermal(void);//L.Jiang [SIF]
@@ -209,6 +213,16 @@ TclModelBuilderNDMaterialCommand (ClientData clientData, Tcl_Interp *interp, int
       else 
 	return TCL_ERROR;
     }
+	
+	// Plasticity and damage with 2 parameters based on Gatta et al [2018]
+	else if (strcmp(argv[1], "PlasticDamage2P") == 0) {
+		void* theMat = OPS_NewPlasticDamage2P();
+		if (theMat != 0) {
+			theMaterial = (NDMaterial*)theMat;
+		}
+		else
+			return TCL_ERROR;
+	}
 
     else if ((strcmp(argv[1],"PlasticDamageConcretePlaneStress") == 0)) {
       void *theMat = OPS_NewPlasticDamageConcretePlaneStress();

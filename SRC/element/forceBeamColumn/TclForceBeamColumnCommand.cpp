@@ -69,6 +69,7 @@
 #include <HingeRadauTwoBeamIntegration.h>
 #include <UserDefinedHingeIntegration.h>
 #include <DistHingeIntegration.h>
+#include <DistRegIntegration.h>					// LP
 #include <RegularizedHingeIntegration.h>
 
 #include <TrapezoidalBeamIntegration.h>
@@ -182,6 +183,7 @@ TclModelBuilder_addForceBeamColumn(ClientData clientData, Tcl_Interp *interp,
       (strcmp(argv[6],"HingeRadauTwo") != 0) &&
       (strcmp(argv[6],"UserHinge") != 0) &&
       (strcmp(argv[6],"DistHinge") != 0) &&
+      (strcmp(argv[6],"DistReg") != 0) &&				// LP
       (strcmp(argv[6],"RegularizedHinge") != 0) &&
       (strcmp(argv[6],"Trapezoidal") != 0) &&
       (strcmp(argv[6],"CompositeSimpson") != 0) &&
@@ -233,7 +235,12 @@ TclModelBuilder_addForceBeamColumn(ClientData clientData, Tcl_Interp *interp,
 
       for (int i = 0; i < nIP; i++)
 	sections[i] = theSection;
+				 
 
+							 
+										 
+																	  
+													   
 
     } else {
       
@@ -322,6 +329,7 @@ TclModelBuilder_addForceBeamColumn(ClientData clientData, Tcl_Interp *interp,
 	  beamIntegr = new TrapezoidalBeamIntegration();
 	else if (strcmp(argv[argi],"CompositeSimpson") == 0)
 	  beamIntegr = new CompositeSimpsonBeamIntegration();
+								   
 	argi++;
 
 	if (beamIntegr == 0) {
@@ -425,11 +433,17 @@ TclModelBuilder_addForceBeamColumn(ClientData clientData, Tcl_Interp *interp,
     return TCL_OK;
   } 
 
+
+							
+
+					
+   
   
   //
   // otherwise use correct format of command as found in current documentation
   //
 
+							 
   if (Tcl_GetInt(interp, argv[5], &transfTag) != TCL_OK) {
     opserr << "WARNING invalid transfTag\n";
     opserr << argv[1] << " element: " << eleTag << endln;
@@ -612,6 +626,10 @@ TclModelBuilder_addForceBeamColumn(ClientData clientData, Tcl_Interp *interp,
 	opserr << "Section: " << secs(i);
 	opserr << "\n" << argv[1] << " element: " << eleTag << endln;
 	return TCL_ERROR;
+		   
+
+															   
+								   
       }
       sections[i] = theSection;
     }
@@ -941,6 +959,280 @@ TclModelBuilder_addForceBeamColumn(ClientData clientData, Tcl_Interp *interp,
     if (otherBeamInt != 0)
       delete otherBeamInt;
   }
+    
+  // DistReg begin /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // L. Parente (based on Addessi, Ciampi 2007)
+  else if (strcmp(argv[6], "DistReg") == 0) {
+	  
+  // Sono necessari 11 argomenti nel file Tcl per far si che funzioni (altrimenti errore)
+  if (argc < 11) {
+      opserr << "WARNING insufficient arguments\n";
+      printCommand(argc, argv);
+      opserr << "Want: element " << argv[1] << " eleTag? iNode? jNode? transfTag? DistReg distType nIP? nc? Lc? sections?\n";
+      opserr << "The integration type is DistReg:\n";
+      opserr << "distType - must be either Lobatto, Legendre, Radau, NewtonCotes, Trapezoidal, CompositeSimpson.\n";                // 7
+      opserr << "nIP      - must be an integer indicating the number of the desired integration points along the beam [1-10].\n";   // 8
+      opserr << "nc       - must be an integer indicating the number of the points in the localization region [2-3]\n";                   // 9
+      opserr << "Lc       - must be the length of the characteristic region [Lc < L - 2*w1]\n";                                     // 10
+      opserr << "sections - must be a vector containing all the section tags. The size is equal to nIP.\n";                         // 11+
+      return TCL_ERROR;
+  }
+  
+  // Dichiarazione grandezze
+  int nIP;   // 8
+  int nc;    // 9
+  double Lc; // 10
+  
+  // Creazione dell'oggetto "otherBeamInt" a seconda del tipo di integrazione scelta [7]
+  BeamIntegration* otherBeamInt = 0;
+  if (strcmp(argv[7], "Lobatto") == 0)
+      otherBeamInt = new LobattoBeamIntegration();
+  else if (strcmp(argv[7], "Legendre") == 0)
+      otherBeamInt = new LegendreBeamIntegration();
+  else if (strcmp(argv[7], "Radau") == 0)
+      otherBeamInt = new RadauBeamIntegration();
+  else if (strcmp(argv[7], "NewtonCotes") == 0)
+      otherBeamInt = new NewtonCotesBeamIntegration();
+  else if (strcmp(argv[7], "Trapezoidal") == 0)
+      otherBeamInt = new TrapezoidalBeamIntegration();
+  else if (strcmp(argv[7], "CompositeSimpson") == 0)
+      otherBeamInt = new CompositeSimpsonBeamIntegration();
+  else {
+      opserr << "ERROR: invalid integration type: " << argv[7] << endln;
+      return TCL_ERROR;
+  }
+  
+  // Controllo numero punti di integrazione [8]
+  if (Tcl_GetInt(interp, argv[8], &nIP) != TCL_OK) {
+      opserr << "WARNING invalid number of integration points nIP\n";
+      opserr << "" << argv[1] << " element: " << eleTag << endln;
+      return TCL_ERROR;
+  }
+  
+  // Test
+  opserr << "Using Distributed Non Linearities Regularization for tests.\n";
+  opserr << "Inputs: ";
+  opserr << argv[7] << " ";
+  opserr << argv[8] << " ";
+  opserr << argv[9] << " ";
+  opserr << argv[10] << "\nSection tags: ";
+  int i;
+  for (i = 0; i < nIP; i++) {
+      opserr << argv[11 + i] << " ";
+  }
+  opserr << "\n"<< endln;
+  
+  // Controllo numero sezioni
+  if (argc < 10 + nIP) {
+      opserr << "WARNING insufficient section tags\n";
+      printCommand(argc, argv);
+      opserr << "Sections must be as much as the integration points:" << nIP;
+      return TCL_ERROR;
+  }
+  // Controllo numero punti nella regione caratteristica [9]
+  if (Tcl_GetInt(interp, argv[9], &nc) != TCL_OK) {
+      opserr << "WARNING invalid number of integration points in the localization region\n";
+      opserr << "" << argv[1] << " element: " << eleTag << endln;
+      return TCL_ERROR;
+  }
+  if ((nc < 2) || (nc > 3)) {
+      opserr << "WARNING nc must be 2 or 3, input number is " << argv[9] << "\n";
+      opserr << "" << argv[1] << " element: " << eleTag << endln;
+      return TCL_ERROR;
+  }
+  // Controllo lunghezza regione caratteristica [10]
+  if (Tcl_GetDouble(interp, argv[10], &Lc) != TCL_OK) {
+      opserr << "WARNING invalid Lc\n";
+      opserr << "" << argv[1] << " element: " << eleTag << endln;
+      return TCL_ERROR;
+  }
+  // Formazione vettore con i tag di sezione [11]
+  numSections = nIP;
+  ID secs(numSections);
+  
+  // Per ogni sezione:
+  int j;
+  for (i = 0, j = 11; i < numSections; i++, j++) {
+      int sec;
+	  
+      // Controllo esistenza sezione
+      if (Tcl_GetInt(interp, argv[j], &sec) != TCL_OK) {
+          opserr << "WARNING invalid sec\n";
+          opserr << "" << argv[1] << " element: " << eleTag << endln;
+          return TCL_ERROR;
+      }
+
+      // Assegnazione in un array
+      secs(i) = sec;
+  }
+  
+  // Creazione struttura "sections"
+  sections = new SectionForceDeformation * [numSections];
+  
+  // Per ogni sezione:
+  for (i = 0; i < numSections; i++) {
+      // Creazione oggetto theSection a partire dal tag indicato
+      SectionForceDeformation* theSection = theTclBuilder->getSection(secs(i));
+	  
+      // Messaggio di errore se la sezione non è trovata
+      if (theSection == 0) {
+          opserr << "WARNING section not found\n";
+          opserr << "Section: " << secs(i);
+          opserr << "\n" << argv[1] << " element: " << eleTag << endln;
+          return TCL_ERROR;
+      }
+	  
+      // Collocamento theSection nella structure "sections"
+      sections[i] = theSection;
+  }
+  // Creazione dell'oggetto beamIntegr da DistRegIntegration
+  beamIntegr = new DistRegIntegration(nIP, nc, Lc, *otherBeamInt);
+  
+  if (otherBeamInt != 0)
+      delete otherBeamInt;
+  }
+  // DistReg finish ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+  // Inizio DistReg /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // L. Parente (based on Addessi, Ciampi 2007)
+
+  else if (strcmp(argv[6], "DistReg") == 0) {
+
+  // Sono necessari 11 argomenti nel file Tcl per far sì che funzioni (altrimenti errore)
+  if (argc < 11) {
+      opserr << "WARNING insufficient arguments\n";
+      printCommand(argc, argv);
+      opserr << "Want: element " << argv[1] << " eleTag? iNode? jNode? transfTag? DistReg distType nIP? nc? Lc? sections?\n";
+      opserr << "The integration type is DistReg:\n";
+      opserr << "distType - must be either Lobatto, Legendre, Radau, NewtonCotes, Trapezoidal, CompositeSimpson.\n";                // 7
+      opserr << "nIP      - must be an integer indicating the number of the desired integration points along the beam [1-10].\n";   // 8
+      opserr << "nc       - must be an integer indicating the number of the points in the localization region [2-3]\n";                   // 9
+      opserr << "Lc       - must be the length of the characteristic region [Lc < L - 2*w1]\n";                                     // 10
+      opserr << "sections - must be a vector containing all the section tags. The size is equal to nIP.\n";                         // 11+
+      return TCL_ERROR;
+  }
+
+  // Dichiarazione grandezze
+  int nIP;   // 8
+  int nc;    // 9
+  double Lc; // 10
+
+  // Creazione dell'oggetto "otherBeamInt" a seconda del tipo di integrazione scelta [7]
+  BeamIntegration* otherBeamInt = 0;
+  if (strcmp(argv[7], "Lobatto") == 0)
+      otherBeamInt = new LobattoBeamIntegration();
+  else if (strcmp(argv[7], "Legendre") == 0)
+      otherBeamInt = new LegendreBeamIntegration();
+  else if (strcmp(argv[7], "Radau") == 0)
+      otherBeamInt = new RadauBeamIntegration();
+  else if (strcmp(argv[7], "NewtonCotes") == 0)
+      otherBeamInt = new NewtonCotesBeamIntegration();
+  else if (strcmp(argv[7], "Trapezoidal") == 0)
+      otherBeamInt = new TrapezoidalBeamIntegration();
+  else if (strcmp(argv[7], "CompositeSimpson") == 0)
+      otherBeamInt = new CompositeSimpsonBeamIntegration();
+  else {
+      opserr << "ERROR: invalid integration type: " << argv[7] << endln;
+      return TCL_ERROR;
+  }
+
+  // Controllo numero punti di integrazione [8]
+  if (Tcl_GetInt(interp, argv[8], &nIP) != TCL_OK) {
+      opserr << "WARNING invalid number of integration points nIP\n";
+      opserr << "" << argv[1] << " element: " << eleTag << endln;
+      return TCL_ERROR;
+  }
+
+  // Test
+  opserr << "Using Distributed Non Linearities Regularization for tests.\n";
+  opserr << "Inputs: ";
+  opserr << argv[7] << " ";
+  opserr << argv[8] << " ";
+  opserr << argv[9] << " ";
+  opserr << argv[10] << "\nSection tags: ";
+  int i;
+  for (i = 0; i < nIP; i++) {
+      opserr << argv[11 + i] << " ";
+  }
+  opserr << "\n"<< endln;
+
+  // Controllo numero sezioni
+  if (argc < 10 + nIP) {
+      opserr << "WARNING insufficient section tags\n";
+      printCommand(argc, argv);
+      opserr << "Sections must be as much as the integration points:" << nIP;
+      return TCL_ERROR;
+  }
+
+  // Controllo numero punti nella regione caratteristica [9]
+  if (Tcl_GetInt(interp, argv[9], &nc) != TCL_OK) {
+      opserr << "WARNING invalid number of integration points in the localization region\n";
+      opserr << "" << argv[1] << " element: " << eleTag << endln;
+      return TCL_ERROR;
+  }
+  if ((nc < 2) || (nc > 3)) {
+      opserr << "WARNING nc must be 2 or 3, input number is " << argv[9] << "\n";
+      opserr << "" << argv[1] << " element: " << eleTag << endln;
+      return TCL_ERROR;
+  }
+  // Controllo lunghezza regione caratteristica [10]
+  if (Tcl_GetDouble(interp, argv[10], &Lc) != TCL_OK) {
+      opserr << "WARNING invalid Lc\n";
+      opserr << "" << argv[1] << " element: " << eleTag << endln;
+      return TCL_ERROR;
+  }
+
+  // Formazione vettore con i tag di sezione [11]
+  numSections = nIP;
+  ID secs(numSections);
+
+  // Per ogni sezione:
+  int j;
+  for (i = 0, j = 11; i < numSections; i++, j++) {
+      int sec;
+
+      // Controllo esistenza sezione
+      if (Tcl_GetInt(interp, argv[j], &sec) != TCL_OK) {
+          opserr << "WARNING invalid sec\n";
+          opserr << "" << argv[1] << " element: " << eleTag << endln;
+          return TCL_ERROR;
+      }
+
+      // Assegnazione in un array
+      secs(i) = sec;
+  }
+
+  // Creazione struttura "sections"
+  sections = new SectionForceDeformation * [numSections];
+
+  // Per ogni sezione:
+  for (i = 0; i < numSections; i++) {
+
+      // Creazione oggetto theSection a partire dal tag indicato
+      SectionForceDeformation* theSection = theTclBuilder->getSection(secs(i));
+
+      // Messaggio di errore se la sezione non è trovata
+      if (theSection == 0) {
+          opserr << "WARNING section not found\n";
+          opserr << "Section: " << secs(i);
+          opserr << "\n" << argv[1] << " element: " << eleTag << endln;
+          return TCL_ERROR;
+      }
+
+      // Collocamento theSection nella structure "sections"
+      sections[i] = theSection;
+  }
+
+  // Creazione dell'oggetto beamIntegr da DistRegIntegration
+  beamIntegr = new DistRegIntegration(nIP, nc, Lc, *otherBeamInt);
+
+  if (otherBeamInt != 0)
+      delete otherBeamInt;
+  }
+
+  // Fine DistReg ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
   else if (strcmp(argv[6],"RegularizedHinge") == 0) {
     

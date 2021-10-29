@@ -324,6 +324,7 @@
 #include "HingeRadauTwoBeamIntegration.h"
 #include "UserDefinedHingeIntegration.h"
 #include "DistHingeIntegration.h"
+#include "DistRegIntegration.h"				// LP
 #include "RegularizedHingeIntegration.h"
 
 #include "LobattoBeamIntegration.h"
@@ -1132,6 +1133,9 @@ FEM_ObjectBrokerAllClasses::getNewBeamIntegration(int classTag)
 
   case BEAM_INTEGRATION_TAG_DistHinge:
     return new DistHingeIntegration();
+	
+  case BEAM_INTEGRATION_TAG_DistReg:			// LP
+	return new DistRegIntegration();
 
   case BEAM_INTEGRATION_TAG_RegularizedHinge:
     return new RegularizedHingeIntegration();

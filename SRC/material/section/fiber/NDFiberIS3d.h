@@ -18,41 +18,41 @@
 **                                                                    **
 ** ****************************************************************** */
                                                                         
-// $Revision: 1.9 $
-// $Date: 2007-02-02 01:18:42 $
-// $Source: /usr/local/cvs/OpenSees/SRC/material/section/fiber/UniaxialFiber2d.h,v $
-                                                                        
-                                                                        
-// File: ~/fiber/UniaxialFiber2d.h
+// $Revision$
+// $Date$
+// $Source$
+
+
+// File: ~/fiber/NDFiberIS3d.h
 //
-// Written: Remo Magalhaes de Souza
-// Created: 10/98
+// Written: MHS
+// Created: 2012
 // Revision: 
 //
 // Description: This file contains the class definition for 
-// UniaxialFiber2d.h. UniaxialFiber2d provides the abstraction of a
+// NDFiberIS3d.h. NDFiberIS3d provides the abstraction of a
 // uniaxial fiber whose position  is defined with only one coordinate.
-// The UniaxialFiber2d is subjected to a stress state with 
+// The NDFiberIS3d is subjected to a stress state with 
 // only one nonzero axial stress and corresponding axial strain.
 //
-// What: "@(#) UniaxialFiber2d.h, revA"
+// What: "@(#) NDFiberIS3d.h, revA"
 
-#ifndef UniaxialFiber2d_h
-#define UniaxialFiber2d_h
+#ifndef NDFiberIS3d_h
+#define NDFiberIS3d_h
 
-#include "Fiber.h"
+#include <Fiber.h>
 #include <Vector.h>
 #include <Matrix.h>
 
-class UniaxialMaterial;
+class NDMaterial;
 class Parameter;
 
-class UniaxialFiber2d : public Fiber
+class NDFiberIS3d : public Fiber
 {
   public:
-    UniaxialFiber2d ();   
-    UniaxialFiber2d (int tag, UniaxialMaterial &theMat, double Area, double position);
-    ~UniaxialFiber2d();
+    NDFiberIS3d ();   
+    NDFiberIS3d (int tag, NDMaterial &theMat, double Area, double y, double z, double strain=0.0);
+    ~NDFiberIS3d();
 
     
     int   setTrialFiberStrain(const Vector &vs);
@@ -75,12 +75,12 @@ class UniaxialFiber2d : public Fiber
     int getResponse(int responseID, Information &info);
 	
     void getFiberLocation(double &y, double &z);
-    UniaxialMaterial *getMaterial(void) {return theMaterial;};
+    NDMaterial *getNDMaterial(void) {return theMaterial;}
     double getArea(void) {return area;};
-    double getd(void) {return 1.0;};
-	
-	// Initial strains (LP)
-    virtual double getEps0(void) {return 0;};
+    double getd(void) {return dValue;};
+
+    // Initial strains (LP)
+    virtual double getEps0(void) { return eps0; };
     
     int setParameter(const char **argv, int argc, Parameter &param);
     int updateParameter(int parameterID, Information &info);
@@ -93,12 +93,15 @@ class UniaxialFiber2d : public Fiber
   protected:
     
   private:
-    UniaxialMaterial *theMaterial;   // pointer to a material
-    double area;                          // area of the fiber 
-    double y;		// fiber location
+    NDMaterial *theMaterial;    // pointer to a material
+    double area;                // area of the fiber
+    double y;                   // fiber location y
+    double z;                   // fiber location z
+    double eps0;                // additional strain
+    double dValue;
 
-    static Matrix ks;       // static class wide matrix object for returns
-    static Vector fs;	    // static class wide vector object for returns
+    static Matrix ks;           // static class wide matrix object for returns
+    static Vector fs;           // static class wide vector object for returns
 
     static ID code;
 };
