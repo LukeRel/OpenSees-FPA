@@ -45,7 +45,6 @@ obj
 *.filters
 
 # CLion
-.gitignore
 .idea
 cmake-build-debug
 cmake-build-release
@@ -59,6 +58,5 @@ cmake-build-release
 # Private folders
 Win64/.vs/
 Win64/obj/
-# Win64/lib/debug/
 Win64/bin/
 Win64/proj/
