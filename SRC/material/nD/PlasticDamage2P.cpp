@@ -357,9 +357,9 @@ PlasticDamage2P::setTrialStrain(const Vector& strain)
 	double Yt = sqrt((e_tot_pos[0]) * (e_tot_pos[0]) + (e_tot_pos[1]) * (e_tot_pos[1]) + (e_tot_pos[2]) * (e_tot_pos[2]));
 	//Equivalent Deformation Total Compression
 	double Yc = sqrt((e_tot_neg[0]) * (e_tot_neg[0]) + (e_tot_neg[1]) * (e_tot_neg[1]) + (e_tot_neg[2]) * (e_tot_neg[2])) +
-		        (kappa/2)*((e_tot_neg[0]) * (e_tot_neg[0]) + (e_tot_neg[0]) * (e_tot_neg[1]) + (e_tot_neg[0]) * (e_tot_neg[2])+
-					       (e_tot_neg[1]) * (e_tot_neg[0]) + (e_tot_neg[1]) * (e_tot_neg[1]) + (e_tot_neg[1]) * (e_tot_neg[2])+
-				           (e_tot_neg[2]) * (e_tot_neg[0]) + (e_tot_neg[2]) * (e_tot_neg[1]) + (e_tot_neg[2]) * (e_tot_neg[2]));
+		        (kappa/2)*( (e_tot_neg[0]) * (e_tot_neg[1]) + (e_tot_neg[0]) * (e_tot_neg[2])+
+					        (e_tot_neg[1]) * (e_tot_neg[0])  + (e_tot_neg[1]) * (e_tot_neg[2])+
+				            (e_tot_neg[2]) * (e_tot_neg[0]) + (e_tot_neg[2]) * (e_tot_neg[1]) );
 
 
 
@@ -381,9 +381,9 @@ PlasticDamage2P::setTrialStrain(const Vector& strain)
 	double Yt_el = sqrt((e_el_pos[0]) * (e_el_pos[0]) + (e_el_pos[1]) * (e_el_pos[1]) + (e_el_pos[2]) * (e_el_pos[2]));
 	//Equivalent Deformation Elastic Compression
 	double Yc_el = sqrt((e_el_neg[0]) * (e_el_neg[0]) + (e_el_neg[1]) * (e_el_neg[1]) + (e_el_neg[2]) * (e_el_neg[2])) +
-		          (kappa / 2) * ((e_el_neg[0]) * (e_el_neg[0]) + (e_el_neg[0]) * (e_el_neg[1]) + (e_el_neg[0]) * (e_el_neg[2]) +
-			                     (e_el_neg[1]) * (e_el_neg[0]) + (e_el_neg[1]) * (e_el_neg[1]) + (e_el_neg[1]) * (e_el_neg[2]) +
-			                     (e_el_neg[2]) * (e_el_neg[0]) + (e_el_neg[2]) * (e_el_neg[1]) + (e_el_neg[2]) * (e_el_neg[2]));
+		          (kappa / 2) * ( (e_el_neg[0]) * (e_el_neg[1]) + (e_el_neg[0]) * (e_el_neg[2]) +
+			                      (e_el_neg[1]) * (e_el_neg[0]) + (e_el_neg[1]) * (e_el_neg[2]) +
+			                      (e_el_neg[2]) * (e_el_neg[0]) + (e_el_neg[2]) * (e_el_neg[1]) );
 
 
 
@@ -394,7 +394,7 @@ PlasticDamage2P::setTrialStrain(const Vector& strain)
 	// Dc_n1 Variabile a compressione di danno allo step corrente
 
 
-	// Yield Functions at step n
+	// Damage Functions at step n
 	double Ft = (Yt - Yt0) - Dt_n * (at * Yt + bt);
 	double Fc = (Yc - Yc0) - Dc_n * (ac * Yc + bc);
 
@@ -433,11 +433,11 @@ PlasticDamage2P::setTrialStrain(const Vector& strain)
 
 	//Stress at n+1 !!!Attenzione lui in plastic integrator non lo calcola come cep(eps-epsp) quindi vedi se posso scrivere cosi' oppure lui ha solo complicato le cose
 	mSigma = pow(((1 - Dt_n1) * alpt + (1 - Dc_n1) * alpc), 2) * mCep * (eps - mEpsilon_n1_p);
-	//devi inserire nel codice un get stress e un get tangent!!
+	
 
 	// Matrice secante di danno e tangente in plasticità
 	C = pow(((1 - Dt_n1) * alpt + (1 - Dc_n1) * alpc), 2) * mCep;
-	//devi inserire nel codice un get stress e un get tangent!!
+	
 
 
 	return 0;
@@ -858,21 +858,7 @@ Vector PlasticDamage2P::getState()
 //	  - getStress: returns the stress vector (sigma)
 //	  - getStrain: returns the strain vector (epsilon)
 
-int
-PlasticDamage2P::setTrialStrainIncr (const Vector &strain)
-{
-  eps += strain;
-  this->setTrialStrain(eps);
-  return 0;
-}
 
-int
-PlasticDamage2P::setTrialStrainIncr (const Vector &strain, const Vector &rate)
-{
-  eps += strain;
-  this->setTrialStrain(eps);
-  return 0;
-}
 
 const Matrix&
 PlasticDamage2P::getTangent (void)
@@ -889,7 +875,7 @@ PlasticDamage2P::getInitialTangent (void)
 const Vector&
 PlasticDamage2P::getStress (void)
 {
-  return sig;
+  return mSigma;
 }
 
 const Vector&

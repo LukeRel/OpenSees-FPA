@@ -60,8 +60,7 @@ class PlasticDamage2P : public NDMaterial
 
     // Main methods
     int setTrialStrain (const Vector &v);
-    int setTrialStrainIncr (const Vector &v);
-    int setTrialStrainIncr (const Vector &v, const Vector &r);
+    
 
     // Constitutive matrix, stress and strain determination
     const Matrix &getTangent (void);
