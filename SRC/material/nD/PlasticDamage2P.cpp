@@ -18,8 +18,8 @@
 **                                                                    **
 ** ****************************************************************** */
 
-// Written in Matlab: Thanh Do
-// Created: 07/16
+// Written in C++: Daniela Fusco and Luca Parente
+// Created: 11/21
                                                                         
 #include <PlasticDamage2P.h>           
 #include <Channel.h>
@@ -101,6 +101,8 @@ PlasticDamage2P::PlasticDamage2P(int tag, double E, double nu, //(CALCOLA BULK E
 	mIIvol(6, 6),
 	mIIdev(6, 6),
 	mState(5)
+
+	
 {
 	//Calcola Bulk e Shear
 	mK = E / (3 * (1 - 2 * nu));
@@ -188,17 +190,11 @@ PlasticDamage2P::PlasticDamage2P(int tag, double E, double nu, //(CALCOLA BULK E
 
 
 
-	//      % initial damage threshold
-	// double rp0 = ft/sqrt(E);
-	// double rn0 = sqrt((-k+sqrt(2.0))*fc/sqrt(3.0));
-
-	// rp = rp0;
-	// rn = rn0;
-	// dp = 0.;
-	// dn = 0.;
-
-	// ARRIVATI QUIIIIIIIIIIIIIIIIIIIII
-
+	
+	// Inizializza variabili di danno
+	Dt_n = 0;
+	Dc_n = 0;
+	
 
 	this->initialize();
 }
@@ -232,15 +228,6 @@ PlasticDamage2P::~PlasticDamage2P ()
 }
 
 
-
-//Funzione che calcola le invarianti
-void
-StrsInvar(const Vector &sig, double &sigoct, double &tauoct) {
-  sigoct = (sig(0) + sig(1) + sig(2))/3.;
-  double J2 = (pow((sig(0) - sig(1)),2) + pow((sig(0) - sig(2)),2) + pow((sig(1) - sig(2)),2))/6. + 
-    pow(sig(3),2) + pow(sig(4),2) + pow(sig(5),2);
-  tauoct = sqrt(2./3.*J2);  
-}
 
 
 //zero internal variables
@@ -304,32 +291,17 @@ void PlasticDamage2P::initialize()
 	mState.Zero();
 }
 
+
+
+
+
+// Plastic - Damage routine_________________________________
 int
 PlasticDamage2P::setTrialStrain(const Vector& strain)
 {
 	// Vector and matrices to be used within the method
 	static Vector epsilon_e(6);			// Elastic strains vector - eps^e
-	/*
-	static Vector Depse_tr(6);
-	static Vector Deps(6);
-	static Vector sige_tr(6);
-	static Vector sigpos(6);
-	static Vector signeg(6);
-	static Matrix Qpos(6, 6);
-	static Matrix Qneg(6, 6);
-	static Vector L_tr(6);
-	static Vector L_tr_temp(6);
-	static Vector Dnrm_Dsig(6);
-	static Vector Dlam_Dsig(6);
-	static Vector Dnrm_Deps(6);
-	static Matrix Dsigpos_Deps(6, 6);
-	static Matrix Dsigneg_Deps(6, 6);
-	static Vector Ddp_Deps(6);
-	static Vector Ddn_Deps(6);
-	static Matrix Cbar(6, 6);
-	*/
-
-	double tol = 1.0e-5;
+	
 
 	// Strains vector from global analysis
 	eps = strain;
@@ -338,40 +310,141 @@ PlasticDamage2P::setTrialStrain(const Vector& strain)
 	mEpsilon_n_p = eps_p;
 	mEpsilon = eps;
 
-	// [VEDI COME GESTIRE VARIABILI DI STATO]
 
-	/* PLASTICITY ---------------------- */
+
+	/* PLASTICITY -------------------------------------- */
 	this->plastic_integrator();
 
-	/* DAMAGE -------------------------- */
+
+
+	/* DAMAGE -------------------------------------------*/
 	
 	// Elastic strain
 	epsilon_e = eps - mEpsilon_n1_p;
 
 	// Principal strains from total strains
-	Vector em = principal_values(mEpsilon);
+	Vector eps_princ = principal_values(eps);
 
-	/* Damage parameters
-	double Yt0;
-	double bt;
-	double at;
-	double Yc0;
-	double bc;
-	double ac;
-	double kappa;
-	*/
+	// Principal strains from elastic strains
+	Vector epse_princ = principal_values(epsilon_e);
 
-	// Damage history variables
-	
+	// Equivalent total strains 
+	Vector e_tot(3);
+	e_tot[0] = (1 - 2 * nu) * eps_princ[0] + nu * (eps_princ[0] + eps_princ[1] + eps_princ[2]);
+	e_tot[1] = (1 - 2 * nu) * eps_princ[1] + nu * (eps_princ[0] + eps_princ[1] + eps_princ[2]);
+	e_tot[2] = (1 - 2 * nu) * eps_princ[2] + nu * (eps_princ[0] + eps_princ[1] + eps_princ[2]);
 
-	// Limit damage functions
+	// Equivalent elastic strains
+	Vector e_el(3);
+	e_el[0] = (1 - 2 * nu) * epse_princ[0] + nu * (epse_princ[0] + epse_princ[1] + epse_princ[2]);
+	e_el[1] = (1 - 2 * nu) * epse_princ[1] + nu * (epse_princ[0] + epse_princ[1] + epse_princ[2]);
+	e_el[2] = (1 - 2 * nu) * epse_princ[2] + nu * (epse_princ[0] + epse_princ[1] + epse_princ[2]);
+
+	// Equivalent total strains positive and negative
+	Vector e_tot_pos(3);
+	Vector e_tot_neg(3);
+	for(int i = 0; i < 2; i++) {
+		if (e_tot[i] > 0) {
+			e_tot_pos[i]= e_tot[i];
+			e_tot_neg[i] = 0;
+		}
+		else {
+			e_tot_pos[i] = 0;
+			e_tot_neg[i] = e_tot[i];
+		}
+	}
+	//Equivalent Deformation Total Traction
+	double Yt = sqrt((e_tot_pos[0]) * (e_tot_pos[0]) + (e_tot_pos[1]) * (e_tot_pos[1]) + (e_tot_pos[2]) * (e_tot_pos[2]));
+	//Equivalent Deformation Total Compression
+	double Yc = sqrt((e_tot_neg[0]) * (e_tot_neg[0]) + (e_tot_neg[1]) * (e_tot_neg[1]) + (e_tot_neg[2]) * (e_tot_neg[2])) +
+		        (kappa/2)*((e_tot_neg[0]) * (e_tot_neg[0]) + (e_tot_neg[0]) * (e_tot_neg[1]) + (e_tot_neg[0]) * (e_tot_neg[2])+
+					       (e_tot_neg[1]) * (e_tot_neg[0]) + (e_tot_neg[1]) * (e_tot_neg[1]) + (e_tot_neg[1]) * (e_tot_neg[2])+
+				           (e_tot_neg[2]) * (e_tot_neg[0]) + (e_tot_neg[2]) * (e_tot_neg[1]) + (e_tot_neg[2]) * (e_tot_neg[2]));
+
+
+
+
+	// Equivalent elastic strains positive and negative
+	Vector e_el_pos(3);
+	Vector e_el_neg(3);
+	for (int i = 0; i < 2; i++) {
+		if (e_el[i] > 0) {
+			e_el_pos[i] = e_el[i];
+			e_el_neg[i] = 0;
+		}
+		else {
+			e_el_pos[i] = 0;
+			e_el_neg[i] = e_el[i];
+		}
+	}
+	//Equivalent Deformation Elastic Traction
+	double Yt_el = sqrt((e_el_pos[0]) * (e_el_pos[0]) + (e_el_pos[1]) * (e_el_pos[1]) + (e_el_pos[2]) * (e_el_pos[2]));
+	//Equivalent Deformation Elastic Compression
+	double Yc_el = sqrt((e_el_neg[0]) * (e_el_neg[0]) + (e_el_neg[1]) * (e_el_neg[1]) + (e_el_neg[2]) * (e_el_neg[2])) +
+		          (kappa / 2) * ((e_el_neg[0]) * (e_el_neg[0]) + (e_el_neg[0]) * (e_el_neg[1]) + (e_el_neg[0]) * (e_el_neg[2]) +
+			                     (e_el_neg[1]) * (e_el_neg[0]) + (e_el_neg[1]) * (e_el_neg[1]) + (e_el_neg[1]) * (e_el_neg[2]) +
+			                     (e_el_neg[2]) * (e_el_neg[0]) + (e_el_neg[2]) * (e_el_neg[1]) + (e_el_neg[2]) * (e_el_neg[2]));
+
+
+
+	// Historical damage parameters
+	// Dt_n Variabile a trazione di danno allo step precedente 
+	// Dc_n Variabile a compressione di danno allo step precedente
+	// Dt_n1 Variabile a trazione di danno allo step corrente
+	// Dc_n1 Variabile a compressione di danno allo step corrente
+
+
+	// Yield Functions at step n
+	double Ft = (Yt - Yt0) - Dt_n * (at * Yt + bt);
+	double Fc = (Yc - Yc0) - Dc_n * (ac * Yc + bc);
+
+
+
+	// Traction Damage parameter at step n+1
+	if (Ft < 0) {                // No damage
+		Dt_n1= Dt_n;
+	}
+	else {                       // Damage Traction
+		Dt_n1 = (Yt - Yt0) / (at * Yt + bt);
+	}
+
+
+	// Compression Damage parameter at step n+1
+	if (Fc < 0) {                // No damage
+		Dc_n1 = Dc_n;
+	}
+	else {                       // Damage Compression
+		Dc_n1 = (Yc - Yc0) / (ac * Yc + bc);
+	}
+
+
+	// Condition for traction damage Dt>Dc ---> Dt=max(Dc,Dt)
+	if (Dt_n1 < Dc_n1) {                
+		Dt_n1 = Dc_n1;
+	}
+	else {                      
+		Dt_n1 = Dt_n1;
+	}
+
+	// Weighting coefficients
+	double alpt = (Yt_el / Yt0) / ((Yt_el / Yt0) + (Yc_el / Yc0));
+	double alpc = 1 - alpt;
+
+
+	//Stress at n+1 !!!Attenzione lui in plastic integrator non lo calcola come cep(eps-epsp) quindi vedi se posso scrivere cosi' oppure lui ha solo complicato le cose
+	mSigma = pow(((1 - Dt_n1) * alpt + (1 - Dc_n1) * alpc), 2) * mCep * (eps - mEpsilon_n1_p);
+	//devi inserire nel codice un get stress e un get tangent!!
+
+	// Matrice secante di danno e tangente in plasticità
+	C = pow(((1 - Dt_n1) * alpt + (1 - Dc_n1) * alpc), 2) * mCep;
+	//devi inserire nel codice un get stress e un get tangent!!
 
 
 	return 0;
 }
 
 
-// Plasticity integration routine
+// Plasticity integration routine___________________________
 void PlasticDamage2P::plastic_integrator()
 {
 	bool okay;		// boolean variable to ensure satisfaction of multisurface kuhn tucker conditions
@@ -719,6 +792,11 @@ void PlasticDamage2P::plastic_integrator()
 	return;
 }
 
+
+
+
+
+// Functions for plasticity___________________________________
 double PlasticDamage2P::Kiso(double alpha1)
 {
 	return msigma_y + mtheta * mHard * alpha1 + (mKinf - mKo) * (1 - exp(-mdelta1 * alpha1));
@@ -739,6 +817,10 @@ double PlasticDamage2P::deltaH(double dGamma)
 	return mHprime * root23 * dGamma;
 }
 
+
+
+
+// Functions for damage________________________________________
 Vector PlasticDamage2P::principal_values(Vector e)
 {
 	// Invariants
@@ -833,11 +915,16 @@ PlasticDamage2P::commitState(void)
 	mAlpha2_n = mAlpha2_n1;
 	mBeta_n = mBeta_n1;
 
+
+	Dt_n = Dt_n1;
+	Dc_n = Dc_n1;
+
+
 	sigCommit = sig;
 	sigeCommit = sige;
 	sigePCommit = sige;
 
-	C = Ccommit;
+	C = Ccommit;// cancella
 
 
 	return 0;

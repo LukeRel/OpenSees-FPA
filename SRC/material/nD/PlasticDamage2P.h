@@ -159,6 +159,14 @@ class PlasticDamage2P : public NDMaterial
     double ac;
     double kappa;
 
+
+    //Variabili di danno
+    double Dt_n;            // Variabile a trazione di danno allo step precedente 
+    double Dc_n;            // Variabile a compressione di danno allo step precedente
+    double Dt_n1;           // Variabile a trazione di danno allo step corrente
+    double Dc_n1;           // Variabile a compressione di danno allo step corrente
+
+
     //internal variables
     Vector mEpsilon;
     Vector mEpsilon_n_p;	// plastic strain vector at step n, trail e_p
