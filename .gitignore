@@ -62,3 +62,4 @@ Win64/bin/
 Win64/proj/
 Win64/lib/debug/
 Win64/lib/release/
+*.lib
