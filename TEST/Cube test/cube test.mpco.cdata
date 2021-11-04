@@ -1,0 +1,73 @@
+#Begin LOCAL AXES definitions.
+#elem_id q.w q.x q.y q.z (quaternion components)
+*LOCAL_AXES
+1 0.707107 0 0 0.707107
+2 0 0.707107 0 0.707107
+3 -0.707107 0 0 0.707107
+4 0 -0.707107 0 0.707107
+5 -0.707107 0 0 0.707107
+6 0 -0.707107 0 0.707107
+7 0.707107 0 0 0.707107
+8 0 0.707107 0 0.707107
+9 0 0 0 1
+10 1 0 0 0
+11 1 0 0 0
+12 0 0 0 1
+13 0.5 0.5 0.5 0.5
+14 -0.5 -0.5 0.5 0.5
+15 0 1 0 0
+16 1 0 0 0
+17 0.707107 0.707107 0 0
+18 0 0 0.707107 0.707107
+19 1 0 0 0
+
+#Begin SECTION OFFSET definitions.
+#elem_id yOffset zOffset (2D, in element local coordinate system)
+*SECTION_OFFSET
+
+#Begin BEAM PROFILE definitions.
+#For each profile the following data is provided:
+#PROFILE_ID
+#NPOINTS NTRIANGLES NEDGES NSWEEPS
+#points: DATASET(NPOINTS X [x y]), 1 point per line
+#triangles: DATASET(NTRIANGLES X [p1 p2 p3]) 1 triangle per line
+#edges: DATASET(NEDGES X [N  p1 p2 p3 ... pN]) 1 edge per line, with N=number of points in edge, P1,...,PN n points
+#sweeps: DATASET(NSWEEPS X [p1]) 1 id per line
+#Begin BEAM PROFILE assignments.
+#For each element (only those with a profile assigned) the following data is provided:
+#ELEM_ID N_PROFILES PROF_ID_1 PROF_WEIGHT_1 ... PROF_ID_N PROF_WEIGHT_N
+#Where: #ELEM_ID = the id of the element
+#N_PROFILES = the number of profiles assigned to this element
+#PROF_ID_i = the i-th profile
+#PROF_WEIGHT_i = the i-th profile weight, normalized [0-1] to the element length
+*BEAM_PROFILE_ASSIGNMENT
+
+#Begin ELEMENT INFO data.
+#For each element in the mesh (or a subset of them) the following data is provided:
+#ELEM_ID GEOM (LENGTH+)GEOMNAME SUBGEOM TYPE PPID (LENGTH+)PPNAME EPID (LENGTH+)EPNAME
+#Where: #ELEM_ID = the id of the element
+#GEOM = the parent geometry id (0 if none)
+#GEOMNAME = the parent geometry name
+#SUBGEOM = the 0-based index of the sub-geometry
+#TYPE = the type of the subgeometry
+*ELEMENT_INFO
+1 1 14 Parallelepiped 0 Edge 0 4 None 0 4 None
+2 1 14 Parallelepiped 1 Edge 0 4 None 0 4 None
+3 1 14 Parallelepiped 2 Edge 0 4 None 0 4 None
+4 1 14 Parallelepiped 3 Edge 0 4 None 0 4 None
+5 1 14 Parallelepiped 4 Edge 0 4 None 0 4 None
+6 1 14 Parallelepiped 5 Edge 0 4 None 0 4 None
+7 1 14 Parallelepiped 6 Edge 0 4 None 0 4 None
+8 1 14 Parallelepiped 7 Edge 0 4 None 0 4 None
+9 1 14 Parallelepiped 8 Edge 0 4 None 0 4 None
+10 1 14 Parallelepiped 9 Edge 0 4 None 0 4 None
+11 1 14 Parallelepiped 10 Edge 0 4 None 0 4 None
+12 1 14 Parallelepiped 11 Edge 0 4 None 0 4 None
+13 1 14 Parallelepiped 0 Face 0 4 None 0 4 None
+14 1 14 Parallelepiped 1 Face 0 4 None 0 4 None
+15 1 14 Parallelepiped 2 Face 0 4 None 0 4 None
+16 1 14 Parallelepiped 3 Face 0 4 None 0 4 None
+17 1 14 Parallelepiped 4 Face 0 4 None 0 4 None
+18 1 14 Parallelepiped 5 Face 0 4 None 0 4 None
+19 1 14 Parallelepiped 0 Solid 1 3 mat 1 5 brick
+
