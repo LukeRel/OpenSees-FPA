@@ -79,9 +79,6 @@ class UniaxialFiber3d: public Fiber
     UniaxialMaterial *getMaterial(void) {return theMaterial;};
     double getArea(void) {return area;};
     double getd(void) {return dValue;};
-	
-	// Initial strains (LP)
-    virtual double getEps0(void) {return 0;};
 
   protected:
     
