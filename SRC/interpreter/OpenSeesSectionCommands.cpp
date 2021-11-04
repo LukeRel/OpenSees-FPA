@@ -35,12 +35,10 @@
 #include <FiberSectionAsym3d.h>
 #include <NDFiberSection2d.h>
 #include <NDFiberSection3d.h>
-#include <NDFiberSectionIS3d.h>		// Section with initial fiber strains (LP)
 #include <UniaxialFiber2d.h>
 #include <UniaxialFiber3d.h>
 #include <NDFiber2d.h>
 #include <NDFiber3d.h>
-#include <NDFiberIS3d.h>			// Fibers with initial strains (LP)
 #include <Patch.h>
 #include <QuadPatch.h>
 #include <CircPatch.h>
@@ -62,6 +60,10 @@
 #include <MembranePlateFiberSectionThermal.h>
 #include <LayeredShellFiberSectionThermal.h>
 
+// Fiber and section for additional fiber strains (LP)
+//#include <NDFiberIS3d.h>			// Fibers with initial strains (LP)
+//#include <NDFiberSectionIS3d.h>		// Section with initial fiber strains (LP)
+
 void* OPS_ElasticSection2d();
 void* OPS_ElasticSection3d();
 void* OPS_ElasticShearSection2d();
@@ -72,12 +74,10 @@ void* OPS_FiberSectionWarping3d();
 void* OPS_FiberSectionAsym3d();
 void* OPS_NDFiberSection2d();
 void* OPS_NDFiberSection3d();
-void* OPS_NDFiberSectionIS3d();			// Section with initial fiber strains (LP)
 void* OPS_UniaxialFiber2d();
 void* OPS_UniaxialFiber3d();
 void* OPS_NDFiber2d();
 void* OPS_NDFiber3d();
-void* OPS_NDFiberIS3d();					// Fibers with initial strains (LP)
 void* OPS_CircPatch();
 void* OPS_QuadPatch();
 void* OPS_StraightReinfLayer();
@@ -98,6 +98,10 @@ void* OPS_Isolator2spring();
 void* OPS_FiberSection2dThermal();
 void* OPS_HSSSection();
 
+// Fiber and section for additional fiber strains (LP)
+//void* OPS_NDFiberSectionIS3d();			// Section with initial fiber strains (LP)
+//void* OPS_NDFiberIS3d();					// Fibers with initial strains (LP)
+
 namespace {
     static FiberSection2d* theActiveFiberSection2d = 0;
     static FiberSection3d* theActiveFiberSection3d = 0;
@@ -105,7 +109,7 @@ namespace {
 	static FiberSectionAsym3d* theActiveFiberSectionAsym3d = 0;
     static NDFiberSection2d* theActiveNDFiberSection2d = 0;
     static NDFiberSection3d* theActiveNDFiberSection3d = 0;
-	static NDFiberSectionIS3d* theActiveNDFiberSectionIS3d = 0;		// (LP)
+	//static NDFiberSectionIS3d* theActiveNDFiberSectionIS3d = 0;		// (LP)
 
     static FiberSection2dThermal* theActiveFiberSection2dThermal = 0;
     static FiberSection3dThermal* theActiveFiberSection3dThermal = 0;
@@ -277,7 +281,7 @@ namespace {
 
 	return theSec;
     }
-
+	/*
 	static void* OPS_NDFiberSectionIS()
 	{
 		void* theSec = 0;
@@ -291,7 +295,7 @@ namespace {
 		}
 
 		return theSec;
-	}
+	}*/
 
     static void* OPS_UniaxialSection()
     {
@@ -434,9 +438,9 @@ namespace {
 		    theSection = new NDFiberSection3d(tag, numFibers, theMats, tubesect, shape);
 		} else if (strcmp(flag,"-ndWarping") == 0) {
 		    theSection = new NDFiberSectionWarping2d(tag, numFibers, theMats, tubesect, shape);
-		} else if (strcmp(flag, "-ndIS") == 0) {
+		} /*else if (strcmp(flag, "-ndIS") == 0) {
 			theSection = new NDFiberSectionIS3d(tag, numFibers, theMats, tubesect, shape);
-		}
+		}*/
 	    }
 	    delete [] theMats;
 	}
@@ -1102,7 +1106,6 @@ namespace {
 	functionMap.insert(std::make_pair("FiberAsym", &OPS_FiberSectionAsym));
 	functionMap.insert(std::make_pair("FiberThermal", &OPS_FiberSectionThermal));	
 	functionMap.insert(std::make_pair("NDFiber", &OPS_NDFiberSection));
-	functionMap.insert(std::make_pair("NDFiberIS", &OPS_NDFiberSectionIS));			// (LP)
 	functionMap.insert(std::make_pair("Uniaxial", &OPS_UniaxialSection));
 	functionMap.insert(std::make_pair("Generic1D", &OPS_UniaxialSection));
 	functionMap.insert(std::make_pair("Generic1d", &OPS_UniaxialSection));
@@ -1129,6 +1132,8 @@ namespace {
 	functionMap.insert(std::make_pair("RCCircularSection", &OPS_RCCircularSection));
 	functionMap.insert(std::make_pair("RCTunnelSection", &OPS_RCTunnelSection));
 
+	//functionMap.insert(std::make_pair("NDFiberIS", &OPS_NDFiberSectionIS));			// (LP)
+
 	return 0;
     }
 }
@@ -1142,7 +1147,7 @@ int OPS_Section()
 	theActiveFiberSectionAsym3d = 0;
     theActiveNDFiberSection2d = 0;
     theActiveNDFiberSection3d = 0;
-	theActiveNDFiberSectionIS3d = 0;			// (LP)
+	//theActiveNDFiberSectionIS3d = 0;			// (LP)
 
     theActiveFiberSection2dThermal = 0;
     theActiveFiberSection3dThermal = 0;
@@ -1181,7 +1186,7 @@ int OPS_Section()
 	theActiveFiberSectionAsym3d = 0;
 	theActiveNDFiberSection2d = 0;
 	theActiveNDFiberSection3d = 0;
-	theActiveNDFiberSectionIS3d = 0;				// (LP)
+	//theActiveNDFiberSectionIS3d = 0;				// (LP)
 
 	theActiveFiberSection2dThermal = 0;
 	theActiveFiberSection3dThermal = 0;
@@ -1215,11 +1220,11 @@ int OPS_Fiber()
 
 	theFiber = (NDFiber3d*) OPS_NDFiber3d();
 
-    } else if (theActiveNDFiberSectionIS3d != 0) {			// (LP)
+    }/* else if (theActiveNDFiberSectionIS3d != 0) {			// (LP)
 
 		theFiber = (NDFiberIS3d*)OPS_NDFiberIS3d();
 
-	}
+	}*/
 
     if (theFiber == 0) {
 
@@ -1254,11 +1259,11 @@ int OPS_Fiber()
 
 	res = theActiveNDFiberSection3d->addFiber(*theFiber);
 
-    } else if (theActiveNDFiberSectionIS3d != 0) {				// (LP)
+    }/* else if (theActiveNDFiberSectionIS3d != 0) {				// (LP)
 
 	res = theActiveNDFiberSectionIS3d->addFiber(*theFiber);
 
-	}
+	}*/
 	else if (theActiveFiberSection2dThermal != 0) {
 
 	res = theActiveFiberSection2dThermal->addFiber(*theFiber);
@@ -1412,7 +1417,7 @@ int OPS_Patch()
 	    theFiber = new NDFiber3d(j,*ndmaterial,area,cPos(0),cPos(1));
 	    theActiveNDFiberSection3d->addFiber(*theFiber);
 
-	} else if (theActiveNDFiberSectionIS3d != 0) {				// (LP)
+	}/* else if (theActiveNDFiberSectionIS3d != 0) {				// (LP)
 
 		ndmaterial = OPS_getNDMaterial(matTag);
 		if (ndmaterial == 0) {
@@ -1422,7 +1427,7 @@ int OPS_Patch()
 		}
 		theFiber = new NDFiberIS3d(j, *ndmaterial, area, cPos(0), cPos(1));
 		theActiveNDFiberSectionIS3d->addFiber(*theFiber);
-	}
+	}*/
 
 	delete cells[j];
     }
@@ -1568,7 +1573,7 @@ int OPS_Layer()
 	    theFiber = new NDFiber3d(j,*ndmaterial,area,cPos(0),cPos(1));
 	    theActiveNDFiberSection3d->addFiber(*theFiber);
 
-	} else if (theActiveNDFiberSectionIS3d != 0) {							// (LP)
+	}/* else if (theActiveNDFiberSectionIS3d != 0) {							// (LP)
 
 		ndmaterial = OPS_getNDMaterial(matTag);
 		if (ndmaterial == 0) {
@@ -1578,7 +1583,7 @@ int OPS_Layer()
 		}
 		theFiber = new NDFiberIS3d(j, *ndmaterial, area, cPos(0), cPos(1));
 		theActiveNDFiberSection3d->addFiber(*theFiber);
-	}
+	}*/
 
     }
 

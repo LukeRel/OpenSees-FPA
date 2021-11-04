@@ -80,7 +80,7 @@ class NDFiber2d : public Fiber
     double getd(void) {return 1.0;};
 	
 	// Initial strains (LP)
-    virtual double getEps0(void) {return 0;};
+    //double getEps0(void) {return 0.0;};
  
     int setParameter(const char **argv, int argc, Parameter &param);
     int updateParameter(int parameterID, Information &info);

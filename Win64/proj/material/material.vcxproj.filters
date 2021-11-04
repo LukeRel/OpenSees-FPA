@@ -1397,12 +1397,6 @@
     <ClCompile Include="..\..\..\SRC\material\nD\PlasticDamage2P.cpp">
       <Filter>nD</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\SRC\material\section\NDFiberSectionIS3d.cpp">
-      <Filter>section</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\SRC\material\section\fiber\NDFiberIS3d.cpp">
-      <Filter>section\fiber</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\SRC\material\uniaxial\SteelDRC.cpp">
       <Filter>uniaxial</Filter>
     </ClCompile>
@@ -2602,12 +2596,6 @@
     </ClInclude>
     <ClInclude Include="..\..\..\SRC\material\nD\UANDESmaterials\SAniSandMSPlaneStrain.h">
       <Filter>nD</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\SRC\material\section\NDFiberSectionIS3d.h">
-      <Filter>section</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\SRC\material\section\fiber\NDFiberIS3d.h">
-      <Filter>section\fiber</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

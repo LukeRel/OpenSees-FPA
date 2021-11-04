@@ -34,9 +34,7 @@ static Vector Iv6(6);
 static Matrix Ivp(6,6); 
 static Matrix Idp(6,6); 
 static Matrix I(6,6);
-static Matrix Id(6,6); 
-static Matrix P(6, 6);   //Matrice deviatorica
-static Matrix l(6, 6);   //Matrice volumetrica
+static Matrix Id(6,6);
 
 void *
 OPS_NewPlasticDamage2P(void)
@@ -44,12 +42,17 @@ OPS_NewPlasticDamage2P(void)
   NDMaterial *theMaterial = 0;
   
   int numArgs = OPS_GetNumRemainingInputArgs();
+
+  // Material creation kudos
+  opserr << "Using PlasticDamage2P material for tests.\n";
+  opserr << "Based on Drucker - Prager plasticity model and Gatta - Di Re - Addessi damage model.\n";
   
   if (numArgs < 20 || numArgs > 30) {
-    opserr << "Want: nDMaterial PlasticDamage2P $tag $E $nu $ft $fc $Hk $Hi\n";
-	opserr << "$r_bar $Kinfinity $Kinit, $d1, $d2, $mDen\n";
-	opserr << "$Yt0, $bt, $at, $Yc0, $bc, $ac, $kappa)\n";
-    return 0;	
+	  opserr << "Required: nDMaterial PlasticDamage2P tag E nu\n";
+	  opserr << "Plasticity arguments:                ft fc Hk Hi\n";
+	  opserr << "Other arguments, to be removed:      r_bar Kinfinity Kinit d1 d2 $mDen\n";
+	  opserr << "Damage arguments:                    Yt0 bt at Yc0 bc ac kappa\n";
+	  return 0;
   }
   
   int tag;
@@ -69,12 +72,26 @@ OPS_NewPlasticDamage2P(void)
     return 0;
   }  
   
-  theMaterial = new PlasticDamage2P(tag, 
-					    dData[0], dData[1], dData[2],dData[3], 
-					    dData[4], dData[5], dData[6],dData[7],
-	                    dData[8], dData[9], dData[10], dData[11],
-	                    dData[12], dData[13], dData[14], dData[15],
-	                    dData[16], dData[17], dData[18]);
+  theMaterial = new PlasticDamage2P(tag,
+	  dData[0],		// E
+	  dData[1],		// nu
+	  dData[2],		// ft
+	  dData[3],		// fc
+	  dData[4],		// Hk
+	  dData[5],		// Hi
+	  dData[6],		// r_bar
+	  dData[7],		// Kinfty
+	  dData[8],		// Kinit
+	  dData[9],		// d1
+	  dData[10],	// d2
+	  dData[11],	// mass density
+	  dData[12],	// Yt0
+	  dData[13],	// bt
+	  dData[14],	// at
+	  dData[15],	// Yc0
+	  dData[16],	// bc
+	  dData[17],	// ac
+	  dData[18]);	// kappa
 
   return theMaterial;
 }
@@ -101,8 +118,6 @@ PlasticDamage2P::PlasticDamage2P(int tag, double E, double nu, //(CALCOLA BULK E
 	mIIvol(6, 6),
 	mIIdev(6, 6),
 	mState(5)
-
-	
 {
 	//Calcola Bulk e Shear
 	mK = E / (3 * (1 - 2 * nu));
@@ -112,7 +127,7 @@ PlasticDamage2P::PlasticDamage2P(int tag, double E, double nu, //(CALCOLA BULK E
 	msigma_y = 2 * fc * ft / (fc + ft);
 	mrho = root23 * (fc - ft) / (fc + ft);
 
-	//Parametri di harding
+	//Parametri di hardening
 	mHard = Hi + Hk;
 	mtheta = Hi / (Hi + Hk);
 
@@ -136,7 +151,7 @@ PlasticDamage2P::PlasticDamage2P(int tag, double E, double nu, //(CALCOLA BULK E
 	else {
 		mTo = root23 * msigma_y / mrho;
 	}
-	// set the elastic flag
+	// Set the elastic flag
 	// 0 = elastic+no param update; 1 = elastic+param update; 2 = elastoplastic+no param update (default)
 	mElastFlag = 2;
 
@@ -152,15 +167,16 @@ PlasticDamage2P::PlasticDamage2P(int tag, double E, double nu, //(CALCOLA BULK E
 	sigeP.Zero();
 	Ce.Zero();
 
+	// Identity vector Iv6 = [1 1 1 0 0 0]'
 	Iv6.Zero(); Iv6(0) = 1.;Iv6(1) = 1.;Iv6(2) = 1.;
 
-	// Tensore Volumetrico (1, in Di Re)
+	// Volumetric tensor (1, in Di Re)
 	Ivp.Zero();
 	for (int i = 0; i < 3; i++)
 		for (int j = 0; j < 3; j++)
 			Ivp(i, j) = 1.;
 
-	// Tensore Deviatorico (P, in Di Re)
+	// Deviatoric tensor (P, in Di Re)
 	Idp.Zero();
 	I.Zero();
 	Id.Zero();
@@ -184,18 +200,13 @@ PlasticDamage2P::PlasticDamage2P(int tag, double E, double nu, //(CALCOLA BULK E
 	Ce.addMatrix(0.0, Ivp, mK);
 	Ce.addMatrix(1.0, Id, 2. * mG);
 
-	C = Ce;
-	P = Id;              // Matrice deviatorica
-	l = Ivp;             // Matrice volumetrica
+	C = Ce;				 // Elastic tangent constitutive matrix
 
-
-
-	
-	// Inizializza variabili di danno
+	// Damage variable initialization
 	Dt_n = 0;
 	Dc_n = 0;
 	
-
+	// All parameters initialization
 	this->initialize();
 }
 

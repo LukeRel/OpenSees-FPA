@@ -1,5 +1,3 @@
-set Ap 3.14*pow(20.0,2.0);
-
 section NDFiber 5 -GJ 10000 {
 # Prestressed tendon
 fiber 0.0 -30.0 1256.0 2 -0.005
