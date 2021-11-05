@@ -67,8 +67,8 @@ void* OPS_UniaxialFiber3d()
     }
 
     // get data
-    int numData = 3;
-    double data[3];
+    int numData = 4;
+    double data[4];
     if(OPS_GetDoubleInput(&numData,&data[0]) < 0) return 0;
 
     // get mat tag
@@ -86,14 +86,14 @@ void* OPS_UniaxialFiber3d()
     static Vector fiberPos(2);
     fiberPos(0) = data[0];
     fiberPos(1) = data[1];
-    return new UniaxialFiber3d(numUniaxialFiber3d++,*theMat,data[2],fiberPos);
+    return new UniaxialFiber3d(numUniaxialFiber3d++,*theMat,data[2],fiberPos,data[3]);
 }
 
 
 // constructor:
 UniaxialFiber3d::UniaxialFiber3d()
 :Fiber(0, FIBER_TAG_Uniaxial3d),
- theMaterial(0), area(0.0), dValue(0.0)
+ theMaterial(0), area(0.0), dValue(1.0), eps0(0.0)
 {
 	if (code(0) != SECTION_RESPONSE_P) {
 		code(0) = SECTION_RESPONSE_P;
@@ -107,9 +107,9 @@ UniaxialFiber3d::UniaxialFiber3d()
 
 UniaxialFiber3d::UniaxialFiber3d(int tag, 
                                  UniaxialMaterial &theMat,
-                                 double Area, const Vector &position, double d)
+                                 double Area, const Vector &position, double Eps0)
 :Fiber(tag, FIBER_TAG_Uniaxial3d),
- theMaterial(0), area(Area), dValue(d)
+ theMaterial(0), area(Area), dValue(1.0), eps0(Eps0)
 {
 	theMaterial = theMat.getCopy();  // get a copy of the MaterialModel
 

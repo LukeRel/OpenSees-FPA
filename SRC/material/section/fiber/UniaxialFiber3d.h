@@ -81,7 +81,7 @@ class UniaxialFiber3d: public Fiber
     double getd(void) {return dValue;};
 	
 	// Initial strains (LP)
-    virtual double getEps0(void) {return 0;};
+    double getEps0(void) {return eps0;};
 
   protected:
     
@@ -89,6 +89,7 @@ class UniaxialFiber3d: public Fiber
     UniaxialMaterial *theMaterial;   // pointer to a material
     double area;                          // area of the fiber
     double dValue;
+    double eps0;            // initial fiber strains (LP)
     double as[2];                            // matrix that transforms
 	                            // section deformations into fiber strain	
     static Matrix ks;       // static class wide matrix object for returns

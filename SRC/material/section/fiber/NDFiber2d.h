@@ -51,7 +51,7 @@ class NDFiber2d : public Fiber
 {
   public:
     NDFiber2d ();   
-    NDFiber2d (int tag, NDMaterial &theMat, double Area, double position);
+    NDFiber2d (int tag, NDMaterial &theMat, double Area, double position, double Eps0);
     ~NDFiber2d();
 
     
@@ -80,7 +80,7 @@ class NDFiber2d : public Fiber
     double getd(void) {return 1.0;};
 	
 	// Initial strains (LP)
-    //double getEps0(void) {return 0.0;};
+    double getEps0(void) {return eps0;};
  
     int setParameter(const char **argv, int argc, Parameter &param);
     int updateParameter(int parameterID, Information &info);
@@ -96,6 +96,7 @@ class NDFiber2d : public Fiber
     NDMaterial *theMaterial;   // pointer to a material
     double area;                          // area of the fiber 
     double y;		// fiber location
+    double eps0;    // initial fiber strain
 
     static Matrix ks;       // static class wide matrix object for returns
     static Vector fs;	    // static class wide vector object for returns

@@ -50,7 +50,7 @@ OPS_NewPlasticDamage2P(void)
   if (numArgs < 20 || numArgs > 30) {
 	  opserr << "Required: nDMaterial PlasticDamage2P tag E nu\n";
 	  opserr << "Plasticity arguments:                ft fc Hk Hi\n";
-	  opserr << "Other arguments, to be removed:      r_bar Kinfinity Kinit d1 d2 $mDen\n";
+	  opserr << "Other arguments, to be removed:      r_bar Kinfinity Kinit d1 d2 mDen\n";
 	  opserr << "Damage arguments:                    Yt0 bt at Yc0 bc ac kappa\n";
 	  return 0;
   }
