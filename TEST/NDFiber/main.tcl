@@ -23,11 +23,11 @@ puts ""
 timeSeries Linear 1
 
 # Materials:
-# uniaxialMaterial Concrete02 1 -40.0 -0.002 -5.0 -0.01 0.05 3.2 35000.0
-# uniaxialMaterial Steel02 2 450.0 210000.0 0.0 15.0 0.925 0.15
-nDMaterial ElasticIsotropic 1 30000.0 0.2
-nDMaterial ElasticIsotropic 2 210000.0 0.3
-# nDMaterial PlasticDamageConcrete3d 5 35000.0 0.2 -40.0 3.0
+#nDMaterial ElasticIsotropic 1 30000.0 0.2
+#nDMaterial ElasticIsotropic 2 210000.0 0.3
+uniaxialMaterial Concrete02 1 -40.0 -0.002 -5.0 -0.05 0.05 3.2 35000.0
+uniaxialMaterial Steel02 2 450.0 210000.0 0.0 15.0 0.925 0.15
+uniaxialMaterial Steel02 3 1760.0 210000.0 0.0 15.0 0.925 0.15
 
 puts "- Materials added"
 puts ""

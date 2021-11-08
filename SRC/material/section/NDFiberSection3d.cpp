@@ -105,10 +105,9 @@ NDFiberSection3d::NDFiberSection3d(int tag, int num, Fiber **fibers, double a, b
       exit(-1);
     }
 
-
+    double yLoc, zLoc, Area, eps0;
     for (int i = 0; i < numFibers; i++) {
       Fiber *theFiber = fibers[i];
-      double yLoc, zLoc, Area, eps0;
       theFiber->getFiberLocation(yLoc, zLoc);
       Area = theFiber->getArea();
       eps0 = theFiber->getEps0();

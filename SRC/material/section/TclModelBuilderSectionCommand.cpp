@@ -1612,8 +1612,7 @@ TclCommand_addFiber(ClientData clientData, Tcl_Interp *interp, int argc,
     
     Fiber *theFiber = 0;
     int matTag;
-    double yLoc, zLoc, area;
-	double eps0 = 0.0;								// Initial fiber strains (LP)
+    double yLoc, zLoc, area, eps0 = 0.0;	// Initial fiber strains (LP)
 	int NDM = theTclModelBuilder->getNDM();
 
     if (Tcl_GetDouble(interp, argv[1], &yLoc) != TCL_OK) {
@@ -1633,12 +1632,6 @@ TclCommand_addFiber(ClientData clientData, Tcl_Interp *interp, int argc,
       return TCL_ERROR;
     }
 
-	/* Printing arguments
-	opserr << "Number of inputs: " << argc << "\nArguments: ";
-	for (int i = 0; i < argc; i++)
-		opserr << argv[i] << " ";
-	opserr << "\n"; */
-
 	// Additional fiber strains (LP)
 	if (argc > 5) {
 		if (Tcl_GetDouble(interp, argv[5], &eps0) != TCL_OK) {
@@ -1647,72 +1640,72 @@ TclCommand_addFiber(ClientData clientData, Tcl_Interp *interp, int argc,
 		}
 		opserr << "Specified additional fiber strain: eps0 = " << eps0 << "\n";
 	}
-    
-    // creates 2d section      
-    if (NDM == 2) {
 
-      if (currentSectionIsND) {
-	NDMaterial *material = OPS_getNDMaterial(matTag);
-	if (material == 0) {
-	  opserr <<  "WARNING invalid NDMaterial ID for patch\n";
-	  return TCL_ERROR;
-	}  
-	theFiber = new NDFiber2d(numFibers, *material, area, yLoc, eps0);
-      }
-      else {
-	UniaxialMaterial *material = OPS_getUniaxialMaterial(matTag);
-	if (material == 0) {
-	  opserr <<  "WARNING invalid UniaxialMaterial ID for patch\n";
-	  return TCL_ERROR;
-	}   
-	theFiber = new UniaxialFiber2d(numFibers, *material, area, yLoc, eps0);
-      }
-      
-      if (theFiber == 0) {
-	opserr <<  "WARNING unable to allocate fiber \n";
-	return TCL_ERROR;
-      }    
-    }
+    // creates 2d section      
+	if (NDM == 2) {
+
+		if (currentSectionIsND) {
+			NDMaterial* material = OPS_getNDMaterial(matTag);
+			if (material == 0) {
+				opserr << "WARNING invalid NDMaterial ID for patch\n";
+				return TCL_ERROR;
+			}
+			theFiber = new NDFiber2d(numFibers, *material, area, yLoc, eps0);
+		}
+		else {
+			UniaxialMaterial* material = OPS_getUniaxialMaterial(matTag);
+			if (material == 0) {
+				opserr << "WARNING invalid UniaxialMaterial ID for patch\n";
+				return TCL_ERROR;
+			}
+			theFiber = new UniaxialFiber2d(numFibers, *material, area, yLoc, eps0);
+		}
+
+		if (theFiber == 0) {
+			opserr << "WARNING unable to allocate fiber \n";
+			return TCL_ERROR;
+		}
+	}
 
 	// creates 3d section
-    else if (NDM == 3) {
-      
-      static Vector fiberPosition(2);
-      fiberPosition(0) = yLoc;
-      fiberPosition(1) = zLoc;
-      
-	  if (currentSectionIsND) {
-		  NDMaterial* material = OPS_getNDMaterial(matTag);
-		  if (material == 0) {
-			  opserr << "WARNING invalid NDMaterial ID for patch\n";
-			  return TCL_ERROR;
-		  }
-		  theFiber = new NDFiber3d(numFibers, *material, area, yLoc, zLoc, eps0);
-	  }
-	  // Fibers with initial strains (LP)
-	  /*else if (currentSectionHasIS) {
-		  NDMaterial* material = OPS_getNDMaterial(matTag);
-		  if (material == 0) {
-			  opserr << "WARNING invalid NDMaterial ID for patch\n";
-			  return TCL_ERROR;
-		  }
-		  theFiber = new NDFiberIS3d(numFibers, *material, area, yLoc, zLoc, eps0);
-	  }*/
-	  else {
-		  UniaxialMaterial* material = OPS_getUniaxialMaterial(matTag);
-		  if (material == 0) {
-			  opserr << "WARNING invalid UniaxialMaterial ID for patch\n";
-			  return TCL_ERROR;
-		  }
-		  theFiber = new UniaxialFiber3d(numFibers, *material, area,
-			  fiberPosition, eps0);
-	  }
+	else if (NDM == 3) {
 
-      if (theFiber == 0) {
-	opserr <<  "WARNING unable to allocate fiber \n";
-	return TCL_ERROR;
-      }    
-    }
+		static Vector fiberPosition(2);
+		fiberPosition(0) = yLoc;
+		fiberPosition(1) = zLoc;
+
+		if (currentSectionIsND) {
+			NDMaterial* material = OPS_getNDMaterial(matTag);
+			if (material == 0) {
+				opserr << "WARNING invalid NDMaterial ID for patch\n";
+				return TCL_ERROR;
+			}
+			theFiber = new NDFiber3d(numFibers, *material, area, yLoc, zLoc, eps0);
+		}
+		// Fibers with initial strains (LP)
+		/*else if (currentSectionHasIS) {
+			NDMaterial* material = OPS_getNDMaterial(matTag);
+			if (material == 0) {
+				opserr << "WARNING invalid NDMaterial ID for patch\n";
+				return TCL_ERROR;
+			}
+			theFiber = new NDFiberIS3d(numFibers, *material, area, yLoc, zLoc, eps0);
+		}*/
+		else {
+			UniaxialMaterial* material = OPS_getUniaxialMaterial(matTag);
+			if (material == 0) {
+				opserr << "WARNING invalid UniaxialMaterial ID for patch\n";
+				return TCL_ERROR;
+			}
+			theFiber = new UniaxialFiber3d(numFibers, *material, area,
+				fiberPosition, eps0);
+		}
+
+		if (theFiber == 0) {
+			opserr << "WARNING unable to allocate fiber \n";
+			return TCL_ERROR;
+		}
+	}
 
     else {
 	opserr <<  "WARNING fiber command for FiberSection only for 2 or 3d \n";

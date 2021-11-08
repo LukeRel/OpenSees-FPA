@@ -29,6 +29,7 @@
 // FiberSection3d.h. FiberSection3d provides the abstraction of a 
 // 3d beam section discretized by fibers. The section stiffness and
 // stress resultants are obtained by summing fiber contributions.
+// Modified to include additional consistent fiber strains. (LP)
 
 #ifndef FiberSection3d_h
 #define FiberSection3d_h
@@ -100,7 +101,7 @@ class FiberSection3d : public SectionForceDeformation
   private:
     int numFibers, sizeFibers;       // number of fibers in the section
     UniaxialMaterial **theMaterials; // array of pointers to materials
-    double   *matData;               // data for the materials [yloc, zloc, area]
+    double   *matData;               // data for the materials [yloc, zloc, area, eps0]
     double   kData[16];              // data for ks matrix 
     double   sData[4];               // data for s vector 
 
