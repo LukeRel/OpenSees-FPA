@@ -25,7 +25,7 @@ timeSeries Linear 1
 # Materials:
 #nDMaterial ElasticIsotropic 1 30000.0 0.2
 #nDMaterial ElasticIsotropic 2 210000.0 0.3
-uniaxialMaterial Concrete02 1 -40.0 -0.002 -5.0 -0.05 0.05 3.2 35000.0
+uniaxialMaterial Concrete02 1 -30.0 -0.002 -5.0 -0.05 0.05 3.0 35000.0
 uniaxialMaterial Steel02 2 450.0 210000.0 0.0 15.0 0.925 0.15
 uniaxialMaterial Steel02 3 1760.0 210000.0 0.0 15.0 0.925 0.15
 
@@ -53,7 +53,7 @@ set secTags "5 5 5 5 5 5 5"
 
 # Elemento trave:
 #element forceBeamColumn 1 1 2 1 DistReg Lobatto 7 2 50.0 $secTags
-element forceBeamColumn 1 1 2 1 Lobatto 5 9
+element forceBeamColumn 1 1 2 1 Lobatto 5 5
 
 puts "- Elements created"
 puts ""

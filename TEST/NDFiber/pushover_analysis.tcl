@@ -17,7 +17,7 @@ proc CustomFunctionCaller {step_id dt T n_iter norm perc process_id is_parallel}
 	}
 }
 
-recorder mpco "shelf.mpco" \
+recorder mpco "shelf_noprestress.mpco" \
 -N "displacement" "rotation" "reactionForce" "reactionMoment" \
 -E "force" "deformation" "section.force" "section.deformation" "section.fiber.stress" "section.fiber.strain"
 
