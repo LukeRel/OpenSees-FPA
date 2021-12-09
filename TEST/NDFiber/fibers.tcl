@@ -1,12 +1,12 @@
 section Fiber 5 -GJ 10000 {
 # Prestressed tendon
-#fiber 0.0 -40.0 314.0 3 0.001                      78.54
+fiber 0.0 -40.0 314.0 3 0.001
 
 # Steel fibers
-fiber 40.0 40.0 10.0 2
-fiber -40.0 40.0 10.0 2
-fiber -40.0 -40.0 10.0 2
-fiber 40.0 -40.0 10.0 2
+fiber 40.0 40.0 78.54 2
+fiber -40.0 40.0 78.54 2
+fiber -40.0 -40.0 78.54 2
+fiber 40.0 -40.0 78.54 2
 
 # Concrete fibers
 fiber 0.0 -43.81765205116502 1000.0 1
