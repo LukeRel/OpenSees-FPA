@@ -11,7 +11,7 @@ model basic -ndm 3 -ndf 3
 timeSeries Linear 1
 
 # materials
-nDMaterial ElasticIsotropic 1 30000.0 0.2
+nDMaterial PlasticDamage2P 1 37000 0.2 6.6 60.0 25900.0 37.0 9.72e-5 3.0e-4 0.8 5.84e-5 5.0e-4 0.1 1.0
 
 # nodes tag x y z
 node 1 1 1 0

@@ -203,11 +203,11 @@ BeamFiberMaterial::setTrialStrain(const Vector &strainFromElement)
   static Matrix dd22(3,3);
 
   int count = 0;
-  const int maxCount = 20;
+  const int maxCount = 10;
   double norm0;
 
   do {
-
+      //opserr << "Sub iteration n. " << count << endln;
     //set three dimensional strain
     threeDstrain(0) = this->strain(0);
     threeDstrain(1) = this->Tstrain22;
@@ -259,7 +259,13 @@ BeamFiberMaterial::setTrialStrain(const Vector &strainFromElement)
     this->Tstrain33 -= strainIncrement(1);
     this->Tgamma23  -= strainIncrement(2);
 
+    //commit state
+    //theMaterial->commitState();
+    //if (count == maxCount) opserr << "Warning: " << maxCount << " iterations reached in the beam fiber condensation wrapper." << endln;
+
   } while (count++ < maxCount && norm > tolerance);
+
+  theMaterial->commitState();
 
   return 0;
 }
