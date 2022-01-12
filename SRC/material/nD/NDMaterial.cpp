@@ -231,6 +231,13 @@ NDMaterial::getTempAndElong()
 }
 //end of adding thermo-mechanical functions, L.Jiang [SIF]
 
+double
+NDMaterial::getDamage(void)
+{
+    opserr << "NDMaterial::getDamage -- subclass responsibility\n";
+    return -1;
+}
+
 Response*
 NDMaterial::setResponse (const char **argv, int argc, OPS_Stream &output)
 {
@@ -257,6 +264,11 @@ NDMaterial::setResponse (const char **argv, int argc, OPS_Stream &output)
 	output.tag("ResponseType","sigma12");
 	output.tag("ResponseType","sigma23");
 	output.tag("ResponseType","sigma13");
+    }
+    else if (strcmp(matType, "BeamFiber") == 0 && size == 3) {
+        output.tag("ResponseType", "sigma11");
+        output.tag("ResponseType", "sigma12");
+        output.tag("ResponseType", "sigma13");
     } else {
       for (int i=0; i<size; i++) 
 	output.tag("ResponseType","UnknownStress");
@@ -278,7 +290,13 @@ NDMaterial::setResponse (const char **argv, int argc, OPS_Stream &output)
 	output.tag("ResponseType","eps12");
 	output.tag("ResponseType","eps23");
 	output.tag("ResponseType","eps13");
-    } else {
+    }
+    else if (strcmp(matType, "BeamFiber") == 0 && size == 3) {
+        output.tag("ResponseType", "eps11");
+        output.tag("ResponseType", "eps12");
+        output.tag("ResponseType", "eps13");
+    }
+    else {
       for (int i=0; i<size; i++) 
 	output.tag("ResponseType","UnknownStrain");
     }      
@@ -302,9 +320,10 @@ NDMaterial::setResponse (const char **argv, int argc, OPS_Stream &output)
   }
   //default damage output - added by V.K. Papanikolaou [AUTh] - start
   else if (strcmp(argv[0], "Damage") == 0 || strcmp(argv[0], "damage") == 0) {
-      static Vector vec = Vector(3);
-      for (int i = 0; i < 3; i++) vec[i] = 0;
-      theResponse = new MaterialResponse(this, 5, vec);  // zero vector
+      //static Vector vec = Vector(3);
+      //for (int i = 0; i < 3; i++) vec[i] = 0;
+      output.tag("ResponseType", "Damage");
+      theResponse = new MaterialResponse(this, 5, this->getDamage());
   }
   //default damage output - added by V.K. Papanikolaou [AUTh] - end 
 
@@ -322,6 +341,9 @@ NDMaterial::getResponse (int responseID, Information &matInfo)
     
   case 2:
     return matInfo.setVector(this->getStrain());
+
+  //case 5:
+    //return matInfo.setVector(this->getDamage());
     
   default:
     return -1;

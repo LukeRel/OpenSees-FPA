@@ -97,7 +97,7 @@ J2BeamFiber3d::J2BeamFiber3d
 
 J2BeamFiber3d::J2BeamFiber3d():
   NDMaterial(0, ND_TAG_J2BeamFiber3d),
-  E(0.0), nu(0.0), sigmaY(0.0), Hkin(0.0), 
+  E(0.0), nu(0.0), sigmaY(0.0), Hkin(0.0), Hiso(0.0),
   parameterID(0), SHVs(0), Tepsilon(3), 
   alphan(0.0), alphan1(0.0), dg_n1(0.0)
 {

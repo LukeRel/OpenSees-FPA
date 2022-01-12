@@ -397,8 +397,10 @@
 #define ND_TAG_UVCmultiaxial  58
 #define ND_TAG_UVCplanestress 59
 
-// New ND Material Tag - Plasticity and damage with 2 parameters based on Gatta et al [2018]
-#define ND_TAG_PlasticDamage2P            60
+// Plasticity and damage based on Di Re et al [2018] and Gatta et al [2018]
+#define ND_TAG_DPDamage            60		// Drucker Prager + Addessi
+#define ND_TAG_J2Damage            61		// Von Mises J2 + Addessi
+#define ND_TAG_GDamage            62		// Gatta [2018] damage only
 
 #define ND_TAG_LowTension 65
 #define ND_TAG_LowTensionPlaneStress 66
@@ -429,6 +431,8 @@
 #define ND_TAG_J2ThreeDimensional             3009
 #define ND_TAG_J2PlateFiber		      3010
 #define ND_TAG_J2BeamFiber		      3011
+
+#define ND_TAG_J2FiberDegrading		  3012 // L. Parente
 
 
 #define ND_TAG_FeapMaterial                 1000

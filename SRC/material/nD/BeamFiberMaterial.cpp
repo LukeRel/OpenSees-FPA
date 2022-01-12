@@ -37,6 +37,7 @@
 #include <FEM_ObjectBroker.h>
 #include <string.h>
 #include <elementAPI.h>
+#include <MaterialResponse.h>
 
 Vector BeamFiberMaterial::stress(3);
 Matrix BeamFiberMaterial::tangent(3,3);
@@ -80,7 +81,8 @@ BeamFiberMaterial::BeamFiberMaterial(void)
 : NDMaterial(0, ND_TAG_BeamFiberMaterial),
 Tstrain22(0.0), Tstrain33(0.0), Tgamma23(0.0),
 Cstrain22(0.0), Cstrain33(0.0), Cgamma23(0.0),
-theMaterial(0), strain(3)
+theMaterial(0), strain(3),
+damage(0.0)
 {
 	// Nothing to do
 }
@@ -89,8 +91,8 @@ BeamFiberMaterial::BeamFiberMaterial(int tag, NDMaterial &theMat)
 : NDMaterial(tag, ND_TAG_BeamFiberMaterial),
 Tstrain22(0.0), Tstrain33(0.0), Tgamma23(0.0),
 Cstrain22(0.0), Cstrain33(0.0), Cgamma23(0.0),
-theMaterial(0), strain(3)
-
+theMaterial(0), strain(3),
+damage(0.0)
 {
   // Get a copy of the material
   theMaterial = theMat.getCopy("ThreeDimensional");
@@ -207,7 +209,7 @@ BeamFiberMaterial::setTrialStrain(const Vector &strainFromElement)
   double norm0;
 
   do {
-
+      //opserr << "Sub iteration n. " << count << endln;
     //set three dimensional strain
     threeDstrain(0) = this->strain(0);
     threeDstrain(1) = this->Tstrain22;
@@ -260,6 +262,8 @@ BeamFiberMaterial::setTrialStrain(const Vector &strainFromElement)
     this->Tgamma23  -= strainIncrement(2);
 
   } while (count++ < maxCount && norm > tolerance);
+
+  theMaterial->commitState();
 
   return 0;
 }
@@ -476,10 +480,65 @@ BeamFiberMaterial::getInitialTangent()
   //this->tangent   = dd11; 
   //this->tangent  -= (dd12*dd22invdd21);
   dd11.addMatrixProduct(1.0, dd12, dd22invdd21, -1.0);
-  tangent = dd11; 
+  tangent = dd11;
 
   return tangent;
 }
+
+double BeamFiberMaterial::getDamage(void) {
+
+    return theMaterial->getDamage();
+}
+
+/*
+Response* BeamFiberMaterial::setResponse(const char** argv, int argc, OPS_Stream& s) {
+    
+    if (strcmp(argv[0], "stress") == 0 || strcmp(argv[0], "stresses") == 0)
+        return new MaterialResponse(this, 1, this->getStress());
+
+    else if (strcmp(argv[0], "strain") == 0 || strcmp(argv[0], "strains") == 0)
+        return new MaterialResponse(this, 2, this->getStrain());
+
+    else if (strcmp(argv[0], "tangent") == 0 || strcmp(argv[0], "Tangent") == 0)
+        return new MaterialResponse(this, 3, this->getTangent());
+
+	else if (strcmp(argv[0], "damage") == 0 || strcmp(argv[0], "Damage") == 0)
+		return new MaterialResponse(this, 5, this->getDamage());
+
+	else
+		return 0;
+}
+
+int BeamFiberMaterial::getResponse(int responseID, Information& matInfo) {
+    
+    switch (responseID) {
+    
+    case -1:
+        return -1;
+    case 1:
+        if (matInfo.theVector != 0)
+            *(matInfo.theVector) = this->getStress();
+        return 0;
+
+    case 2:
+        if (matInfo.theVector != 0)
+            *(matInfo.theVector) = this->getStrain();
+        return 0;
+
+    case 3:
+        if (matInfo.theMatrix != 0)
+            *(matInfo.theMatrix) = this->getTangent();
+        return 0;
+    
+    case 5:
+        matInfo.setDouble(this->getDamage());
+        return 0;
+
+    }
+
+    return 0;
+}
+*/
 
 void  
 BeamFiberMaterial::Print(OPS_Stream &s, int flag)

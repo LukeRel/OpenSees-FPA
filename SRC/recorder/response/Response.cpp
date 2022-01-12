@@ -44,7 +44,7 @@ Response::Response(int val)
 Response::Response(double val)
 :myInfo(val)
 {
-
+    
 }
 
 Response::Response(const ID &val)

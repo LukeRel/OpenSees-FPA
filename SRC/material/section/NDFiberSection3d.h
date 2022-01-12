@@ -36,6 +36,7 @@
 #include <SectionForceDeformation.h>
 #include <Vector.h>
 #include <Matrix.h>
+#include <Domain.h>
 
 class NDMaterial;
 class Fiber;
@@ -119,6 +120,10 @@ class NDFiberSection3d : public SectionForceDeformation
     int parameterID;
     Vector dedh; // MHS hack
 // AddingSensitivity:END ///////////////////////////////////////////
+
+    // For damage output
+    Domain* theDomain;
+    double step;
 };
 
 #endif
