@@ -55,8 +55,9 @@ class DPDamage : public NDMaterial
 public:
 	// Full Constructor
 	DPDamage(int tag, double _E, double _nu, // Parameters
-			 double _sig_c, double _sig_t, double _Hk, double _Hi, // Plasticity
-			 double _Yt0, double _bt, double _at, double _Yc0, double _bc, double _ac, double _beta); // Damage
+		double _sig_c, double _sig_t, double _Hk, double _Hi, // Plasticity
+		double _Yt0, double _bt, double _at, double _Yc0, double _bc, double _ac, double _beta, // Damage
+		double _De); // Degradation
 
 	//Null Constructor
 	DPDamage();
@@ -85,6 +86,8 @@ public:
 	int updateParameter(int responseID, Information& eleInformation);
 
 	double getRho(void) { return massDen; };
+
+	double getDamage(void);
 
 	int setTrialStrain(const Vector& strain_from_element);
 
@@ -143,15 +146,13 @@ protected:
 	Vector mSigma_n;		// stress at step n
 	Vector mSigma;			// stress at step n+1
 
-	Vector mBeta_n;		// backstress at step n, beta_np1_trial = beta_n
-	Vector mBeta_n1;		// backstress at step n+1
+	Vector mZeta_n;		// backstress at step n, beta_np1_trial = beta_n
+	Vector mZeta_n1;		// backstress at step n+1
 
 	double mHprime;		// derivative of linear kinematic hardening term 
 
-	double mAlpha1_n;		// alpha1_n
-	double mAlpha1_n1;	// alpha1_n+1
-	double mAlpha2_n;		// alpha2_n
-	double mAlpha2_n1;	// alpha2_n+1
+	double mAlpha_n;		// alpha1_n
+	double mAlpha_n1;	// alpha1_n+1
 
 	int mElastFlag;    // Flag to determine elastic behavior
 	int mFlag;
@@ -160,6 +161,7 @@ protected:
 	Matrix mCep;		// elastoplastic tangent stiffness matrix
 	Matrix mCt;			// damage tangent stiffness matrix
 	Vector mI1;			// 2nd Order Identity Tensor	
+	Matrix mII1;		// 4th Order Identity Tensor
 	Matrix mIIvol;		// IIvol = I1 tensor I1  
 	Matrix mIIdev;		// 4th Order Deviatoric Tensor
 
@@ -167,15 +169,9 @@ protected:
 
 	//functions
 	void initialize();	// initializes variables
-	int  updateElasticParam(void); //updated Elastic Parameters based on mean stress 
 
 	//plasticity integration routine
 	void plastic_integrator(void);
-
-	double Kiso(double alpha1);		// isotropic hardening function
-	double Kisoprime(double alpha1);	//
-	double T(double alpha2);
-	double deltaH(double dGamma);
 
 	Vector getState();		// fills vector of state variables for output
 
@@ -207,10 +203,13 @@ private:
 	double Dc;					// Compressive damage at step (k+1)
 	double D;					// Total damage (k+1)
 	double Dm1sq;				// [1-D]^2 
-	double Dt_n;				// Tensile damage at step (k)
-	double Dc_n;				// Compressive damage at step (k)
-	double D_n;					// Total damage at previous step (k)
+	double Dt_k;				// Tensile damage at step (k)
+	double Dc_k;				// Compressive damage at step (k)
+	double D_k;					// Total damage at previous step (k)
 
-}; //end of DPDamage declarations
+	// Degradation stuff ------------------------------------------------------------------------------
+	double De;
+
+};
 
 #endif

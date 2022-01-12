@@ -54,12 +54,13 @@ void* OPS_J2Damage(void) {
 	int numArgs = OPS_GetNumRemainingInputArgs();
 	if (numArgs < 13) {
 		opserr << "Want: nDMaterial J2Damage $tag $E $nu $sig_y $Hk $Hi\n";
-		opserr << "$Yt0, $bt, $at, $Yc0, $bc, $ac, $beta)\n";
+		opserr << "$Yt0, $bt, $at, $Yc0, $bc, $ac, $beta, <$De>)\n";
 		return 0;
 	}
 
 	int tag;
-	double dData[12];
+	double dData[13];
+	dData[12] = 0;
 
 	int numData = 1;
 	if (OPS_GetInt(&numData, &tag) != 0) {
@@ -76,19 +77,21 @@ void* OPS_J2Damage(void) {
 	NDMaterial* theMaterial = new J2Damage(tag,
 		dData[0], dData[1], // E and nu
 		dData[2], dData[3], dData[4], // Druker Prager plasticity
-		dData[5], dData[6], dData[7], dData[8], dData[9], dData[10], dData[11]); // Addessi damage
+		dData[5], dData[6], dData[7], dData[8], dData[9], dData[10], dData[11], // Addessi damage
+		dData[12]); // Parente degradation
 
-	opserr<<"J2Damage memory is allocated!"<<endln;
+	//opserr<<"J2Damage memory is allocated!"<<endln;
 	return theMaterial;
 }
 
 // Full constructor
 J2Damage::J2Damage(int tag, double _E, double _nu, // Parameters
 	double _sig_y, double _Hk, double _Hi, // Plasticity
-	double _Yt0, double _bt, double _at, double _Yc0, double _bc, double _ac, double _beta) // Damage
+	double _Yt0, double _bt, double _at, double _Yc0, double _bc, double _ac, double _beta, // Damage
+	double _De) // Degradation
 	: NDMaterial(tag, ND_TAG_J2Damage),
 	E(_E), nu(_nu), sig_y(_sig_y), Hk(_Hk), Hi(_Hi),
-	Yt0(_Yt0), bt(_bt), at(_at), Yc0(_Yc0), bc(_bc), ac(_ac), beta(_beta),
+	Yt0(_Yt0), bt(_bt), at(_at), Yc0(_Yc0), bc(_bc), ac(_ac), beta(_beta), De(_De),
 	tangent(6, 6), tangent_e(6, 6), stress(6), strain(6),
 	strain_e(6), strain_p(6), strain_p_dev(6), strain_m(6), strain_e_m(6), backStress(6),
 	stress_k(6), strain_k(6), strain_p_k(6), strain_p_dev_k(6), backstress_k(6)
@@ -131,7 +134,7 @@ J2Damage::J2Damage(int tag, double _E, double _nu, // Parameters
 // Null constructor
 J2Damage::J2Damage(const J2Damage& a) : NDMaterial(a.getTag(), ND_TAG_J2Damage),
 E(0.0), nu(0.0), sig_y(1e10), Hk(0.0), Hi(0.0),
-Yt0(0.0), bt(0.0), at(0.0), Yc0(0.0), bc(0.0), ac(0.0), beta(0.0),
+Yt0(0.0), bt(0.0), at(0.0), Yc0(0.0), bc(0.0), ac(0.0), beta(0.0), De(0.0),
 tangent(6, 6), tangent_e(6, 6), stress(6), strain(6),
 strain_e(6), strain_p(6), strain_p_dev(6), strain_m(6), strain_e_m(6), backStress(6),
 stress_k(6), strain_k(6), strain_p_k(6), strain_p_dev_k(6), backstress_k(6)
@@ -185,7 +188,7 @@ J2Damage::getCopy(void)
 {
 	J2Damage* theCopy =
 		new J2Damage(this->getTag(), E, nu, sig_y, Hk, Hi,
-			Yt0, bt, at, Yc0, bc, ac, beta);
+			Yt0, bt, at, Yc0, bc, ac, beta, De);
 
 	return theCopy;
 }
@@ -409,34 +412,52 @@ void J2Damage::damage()
 	double Fc = (Yc - Yc0) - Dc_k * (ac * Yc + bc);
 
 	// Tensile damage parameter at step n+1
-	Dt = (Yt - Yt0) / (at * Yt + bt);
-	if (Ft > 0.0)	Dt = fmax(Dt, Dt_k);
-	else			Dt = Dt_k;
+	if (Ft < 1e-8) Dt = Dt_k;
+	else Dt = (Yt - Yt0) / (at * Yt + bt);
+	//Dt = fmax(Dt, Dt_k);
 	if (Dt < 0.0)	Dt = 0.0;
 	if (Dt > 1.0)	Dt = 1.0;
 
 	// Compressive damage parameter at step n+1
-	Dc = (Yc - Yc0) / (ac * Yc + bc);
-	if (Fc > 0.0)	Dc = fmax(Dc,Dc_k);
-	else			Dc = Dc_k;
+	if (Fc < 1e-8) Dc = Dc_k;
+	else Dc = (Yc - Yc0) / (ac * Yc + bc);
+	//Dc = fmax(Dc, Dc_k);
 	if (Dc < 0.0)	Dc = 0.0;
 	if (Dc > 1.0)	Dc = 1.0;
 
 	// Condition for tensile damage Dt > Dc ---> Dt = max(Dc,Dt)
 	Dt = fmax(Dc, Dt);
 
-	// Weighting coefficients
-	double alpha;
-	if (Yt_e == 0.0 && Yc_e == 0.0) alpha = 0.0;
-	else alpha = (fabs(Yt_e)/Yt0) / (fabs(Yt_e)/Yt0 + fabs(Yc_e)/Yc0);
-	if (alpha < 0.0) alpha = 0.0;
-	if (alpha > 1.0) alpha = 1.0;
+	// Damage 2 parameters coefficients
+	int algorithm = 1; // 0 = GATTA, 1 = DI RE
+	double alpha = 0.0;
 
-	if (fabs(Yt_e) / Yt0 + fabs(Yc_e) / Yc0 < 1.0e-10) D = D_k;
+	// Weighting coefficients GATTA
+	if (algorithm == 0) {
+		if (fabs(Yt_e) / Yt0 + fabs(Yc_e) / Yc0 < 1.0e-10) { alpha = 0.0; D = D_k; }
+		else {
+			alpha = pow(Yt_e / Yt0, 1) / (pow(Yt_e / Yt0, 1) + pow(Yc_e / Yc0, 1));
+			if (alpha < 0.0) alpha = 0.0;
+			if (alpha > 1.0) alpha = 1.0;
+		}
+	}
+	// Weighting coefficients DI RE
+	else {
+		double eta_t = Yt_e / (Yt0 + D_k * (at * Yt_e + bt));
+		double eta_c = Yc_e / (Yc0 + D_k * (ac * Yc_e + bc));
+		if (eta_t == 0) { alpha = 0.0; D = D_k; }
+		else {
+			alpha = pow(eta_t, 2) / (pow(eta_t, 2) + pow(eta_c, 2));
+			if (alpha < 0.0) alpha = 0.0;
+			if (alpha > 1.0) alpha = 1.0;
+		}
+	}
 
-	// Cumulative damage variable Dm1sq = [1-D]^2
-	D = alpha * Dt + (1.0-alpha) * Dc;
-	Dm1sq = pow(1.0-D, 2.0);
+	// Cumulative damage variable
+	D = alpha * Dt + (1.0 - alpha) * Dc;
+
+	// Final check
+	//D = fmax(D_k, D);
 
 	if (dFlag2 == 1) {
 		opserr << "\n--- Damage routine internal debug ----------\n";
@@ -473,18 +494,9 @@ int J2Damage::setTrialStrain(const Vector& pStrain)
 	// Strains from the analysis
 	strain = pStrain;
 
-	// Change to real strain instead of eng. strain
-	for (int i = 3; i < 6; i++) {
-		strain[i] /= 2.0;
-	}
-
-	// Volumetric part of strains
-	double trace = strain(0) + strain(1) + strain(2);
-	Vector I2(6);                // unit vector order 2
-	I2.Zero();
-	for (int i = 0; i < 3; i++)
-		I2(i) = 1.0;
-	Vector strain_vol = 1.0 / 3.0 * trace * I2;
+	// ----- Plasticity and damage part ---------------------------------------------------------------- //
+	// ENG -> SCI strains (x0.5)         gamma_ij --> eps_ij
+	for (int i = 3; i < 6; i++) {strain[i] /= 2.0;}
 
 	// Debug 1
 	if (dFlag1 == 1) {
@@ -497,7 +509,9 @@ int J2Damage::setTrialStrain(const Vector& pStrain)
 
 	// Plasticity routine
 	this->plasticity();
-	// ------------------------------------------------------------------------------------------------- //
+
+	// Tangent
+	tangent_ep = tangent;
 	
 	// Total plastic strains
 	strain_p = strain_p_dev; // + strain_vol; no volumetric plastic strains exist in J2.
@@ -520,14 +534,10 @@ int J2Damage::setTrialStrain(const Vector& pStrain)
 
 	// Damage routine
 	this->damage();
-	// ------------------------------------------------------------------------------------------------- //
 
-	// Change back to eng. strains
-	for (int i = 3; i < 6; i++) {
-		strain[i] *= 2.0;
-		strain_p[i] *= 2.0;
-		strain_e[i] *= 2.0;
-	}
+	// SCI -> ENG strains (x2.0)         eps_ij --> gamma_ij
+	for (int i = 3; i < 6; i++) {strain[i] *= 2.0;strain_p[i] *= 2.0;strain_e[i] *= 2.0;}
+	// ------------------------------------------------------------------------------------------------- //
 
 	// Incremental quantities
 	//D = 0;	// Damage trigger
@@ -536,8 +546,10 @@ int J2Damage::setTrialStrain(const Vector& pStrain)
 	Vector dstrain_p = strain_p - strain_p_k;
 	Vector dstrain_e = dstrain - dstrain_p;
 	double dD = D - D_k;
+	//Matrix d_dstrain_e(6,6);
+	//for (int i = 0;i < 6;i++) d_dstrain_e(i,i) = dstrain_e(i) / strain_e(i);
 
-	// Constitutive matrix and stress ---------------------------------------------------------------- //
+	// Constitutive matrix and stress
 
 	// Procedura Gatta
 	//Nota: stress = tangent_e * strain_e restituisce le tensioni giuste post plasticità
@@ -550,27 +562,20 @@ int J2Damage::setTrialStrain(const Vector& pStrain)
 	//stress = stress_k + (Dm1sq - 2.0 * (1.0 - dD)) * tangent_e * (dstrain_e - dstrain);		// Exact stress (45)
 	*/
 
-	// Procedura Di Re
-	/*
-	Matrix Ct(6, 6);
-	Vector dD_dstrain(6);
-	double dD_e = 0.0;
-	for (int i = 0;i < 6;i++) {
-		if (dstrain(i) == 0) dD_dstrain(i) = 0.0;
-		else dD_dstrain(i) = dD/dstrain(i);
-		dD_e += dD_dstrain(i) * strain_e(i);
-	}
-	tangent = pow(1 - D, 2.0) * tangent -2 * (1 - D) * tangent_e * dD_e;
-	stress = stress_k + tangent * dstrain;
-	*/
+	// Optional degradation correction
+	D = fmax(D, De);
+
+	// Damage correction in order to avoid singularity
+	if (D > 0.99) D = 0.99;
+	Dm1sq = pow(1.0 - D, 2.0);	// [1-D]^2
 
 	// Nota: convergono ->    tangent = [1-D]^2*Cep,   stress = stress_k + Ce*dstrain
-	tangent_ep = tangent;
-	stress = stress_k + Dm1sq * tangent_e * dstrain_e - 2*(1-D)*dD*tangent_e*strain_e;
-	tangent = Dm1sq * tangent_ep;
+	tangent = Dm1sq * tangent_e;
+	//stress = stress_k + Dm1sq * tangent_e * dstrain_e - 2.0 * (1.0 - D) * dD * tangent_e * strain_e;
+	stress = Dm1sq * tangent_e * strain_e;
 
 	// Debug 3
-	if (D > 1) {
+	if (dFlag1 == 1) {
 		opserr << "\nD = " << D << "\n\n";
 		opserr << "Outputs after both plasticity and damage:\n";
 		opserr << "strain     = [ "; for (int i = 0;i < 6;i++) opserr << strain(i) << " "; opserr << "]\n";
@@ -589,32 +594,19 @@ int J2Damage::setTrialStrain(const Vector& pStrain)
 	stress = stress_k + tangent * dstrain_e - 2 * (1 - D) * dD * tangent * strain_e;
 	*/
 	
-	// Commits
-	this->commitState();
-
-	// Debug 3
-	if (dFlag1 == 1) {
-		opserr << "\nDamage executed!\n\n";
-		opserr << "Outputs after both plasticity and damage:\n";
-		opserr << "strain     = [ "; for (int i = 0;i < 6;i++) opserr << strain(i) << " "; opserr << "]\n";
-		opserr << "strain_k   = [ "; for (int i = 0;i < 6;i++) opserr << strain_k(i) << " "; opserr << "]\n";
-		opserr << "strain_e   = [ "; for (int i = 0;i < 6;i++) opserr << strain_e(i) << " "; opserr << "]\n";
-		opserr << "strain_p   = [ "; for (int i = 0;i < 6;i++) opserr << strain_p(i) << " "; opserr << "]\n";
-		opserr << "strain_p_k = [ "; for (int i = 0;i < 6;i++) opserr << strain_p_k(i) << " "; opserr << "]\n";
-		opserr << "stress     = [ "; for (int i = 0;i < 6;i++) opserr << stress(i) << " "; opserr << "]\n";
-		opserr << "stress_k   = [ "; for (int i = 0;i < 6;i++) opserr << stress_k(i) << " "; opserr << "]\n";
-		opserr << "tangent_ep:\n[ "; for (int i = 0;i < 6;i++) { for (int j = 0;j < 6;j++) opserr << tangent_ep(j, i) << " "; opserr << "]\n"; }
-		opserr << "tangent:\n[ "; for (int i = 0;i < 6;i++) { for (int j = 0;j < 6;j++) opserr << tangent(j, i) << " "; opserr << "]\n"; }
-	}
+	// Internal commits
+	//this->commitState();
 
 	return 0;
 };
 
+//unused
 int J2Damage::setTrialStrain(const Vector& v, const Vector& r) {
 
 	return this->setTrialStrain(v);
 };
 
+//unused
 int J2Damage::setTrialStrainIncr(const Vector& v) {
 
 	// ----- change to real strain instead of eng. strain
@@ -648,6 +640,7 @@ int J2Damage::setTrialStrainIncr(const Vector& v) {
 	return 0;
 };
 
+//unused
 int J2Damage::setTrialStrainIncr(const Vector& v, const Vector& r) {
 
 	return this->setTrialStrainIncr(v);
@@ -700,6 +693,11 @@ const Vector& J2Damage::getCommittedStrain(void) {
 	return strain_k;
 };
 
+double J2Damage::getDamage(void) {
+	
+	return D;
+}
+
 int J2Damage::commitState(void) {
 
 	stress_k = stress;
@@ -711,14 +709,21 @@ int J2Damage::commitState(void) {
 	Dc_k = Dc;
 	Dt_k = Dt;
 	D_k = D;
-	//CcumPlastStrainDev = cumPlastStrainDev;
 
 	return 0;
 };
 
 int J2Damage::revertToLastCommit(void) {
 
-	// -- to be implemented.
+	stress = stress_k;
+	strain = strain_k;
+	strain_p = strain_p_k;
+	strain_p_dev = strain_p_dev_k;
+	backStress = backstress_k;
+	sig_y = sig_y_k;
+	Dc = Dc_k;
+	Dt = Dt_k;
+	D = D_k;
 	return 0;
 };
 
@@ -761,16 +766,11 @@ Response* J2Damage::setResponse(const char** argv, int argc, OPS_Stream& s) {
 	else if (strcmp(argv[0], "tangent") == 0 || strcmp(argv[0], "Tangent") == 0)
 		return new MaterialResponse(this, 3, tangent);
 
-
-	else if (strcmp(argv[0], "plasticStrainDev") == 0 || strcmp(argv[0], "plasticStrainDevs") == 0)
-		return new MaterialResponse(this, 4, strain_p_dev);
-
-	else if (strcmp(argv[0], "damage") == 0 || strcmp(argv[0], "Damage") == 0)
+	else if (strcmp(argv[0], "damage") == 0 || strcmp(argv[0], "Damage") == 0) {
 		return new MaterialResponse(this, 5, D);
-
+	}
 	else
 		return 0;
-
 }
 
 
@@ -797,14 +797,8 @@ int J2Damage::getResponse(int responseID, Information& matInfo) {
 			*(matInfo.theMatrix) = tangent;
 		return 0;
 
-	case 4:
-		if (matInfo.theVector != 0)
-			*(matInfo.theVector) = strain_p_dev;
-		return 0;
-
 	case 5:
-		if (matInfo.theVector != 0)
-			*(matInfo.theVector) = D;
+		matInfo.setDouble(this->getDamage());
 		return 0;
 
 	}
@@ -812,7 +806,7 @@ int J2Damage::getResponse(int responseID, Information& matInfo) {
 
 
 	return 0;
-};
+}
 
 void J2Damage::Print(OPS_Stream& s, int flag) {
 	// -- to be implemented.

@@ -47,7 +47,8 @@ public:
 
 	J2Damage(int tag, double _E, double _nu, // Parameters
 		double sig_y, double _Hk, double _Hi, // Plasticity
-		double _Yt0, double _bt, double _at, double _Yc0, double _bc, double _ac, double _beta); // Damage
+		double _Yt0, double _bt, double _at, double _Yc0, double _bc, double _ac, double _beta, // Damage
+		double _De); // Degradation
 
 	J2Damage(const J2Damage&);
 	virtual ~J2Damage();
@@ -68,6 +69,8 @@ public:
 	const Vector& getStrain(void);
 	const Vector& getCommittedStress(void);
 	const Vector& getCommittedStrain(void);
+
+	double getDamage(void);
 
 	int commitState(void);
 	int revertToLastCommit(void);
@@ -90,13 +93,14 @@ public:
 protected:
 
 private:
+
 	// Custom plasticity routine
 	int plasticity();
 
 	// Internal parameters
 	int ndm;
 	double E;       // Elastic modulus
-	double nu;      // Poisson ratio 
+	double nu;      // Poisson ratio
 	double K;		// Bulk modulus
 	double G;		// Shear modulus
 	double sig_y;   // Yield strength
@@ -153,6 +157,9 @@ private:
 	double Dt_k;				// Tensile damage at step (k)
 	double Dc_k;				// Compressive damage at step (k)
 	double D_k;					// Total damage at previous step (k)
+
+	// Degradation stuff ------------------------------------------------------------------------------
+	double De;
 };
 
 #endif

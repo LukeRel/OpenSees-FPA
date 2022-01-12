@@ -54,6 +54,7 @@ class BeamFiberMaterial: public NDMaterial {
     const Matrix& getInitialTangent(void);
 
     double getRho(void);
+    double getDamage(void);
 
     int commitState(void);
     int revertToLastCommit(void);
@@ -63,7 +64,10 @@ class BeamFiberMaterial: public NDMaterial {
     NDMaterial *getCopy(const char *type);
     const char *getType(void) const;
     int getOrder(void) const; 
-
+    /*
+    Response* setResponse(const char** argv, int argc, OPS_Stream& s);
+    int getResponse(int responseID, Information& matInformation);
+    */
     void Print(OPS_Stream &s, int flag);
 
     int sendSelf(int commitTag, Channel &theChannel);
@@ -82,12 +86,15 @@ class BeamFiberMaterial: public NDMaterial {
     double Cstrain33;
     double Cgamma23;
 
+    double damage; // Damage
+
     NDMaterial *theMaterial;
 
     Vector strain;
 
     static Vector stress;
     static Matrix tangent;
+
 };
 
 

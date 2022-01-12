@@ -131,6 +131,8 @@ extern  void *OPS_SAniSandMSMaterial(void);
 // Plasticity and damage based on Di Re et al [2018] and Gatta et al [2018]
 extern  void *OPS_DPDamage(void);		// Drucker Prager + Addessi
 extern  void* OPS_J2Damage(void);		// Von Mises (J2) + Addessi
+extern  void* OPS_J2FiberDegrading(void); // Parente steel degradation
+extern  void* OPS_GDamage(void);		// Gatta [2018] damage only
 
 extern  void *OPS_ElasticIsotropicMaterialThermal(void);  //L.Jiang [SIF]
 extern  void *OPS_DruckerPragerMaterialThermal(void);//L.Jiang [SIF]
@@ -230,6 +232,13 @@ TclModelBuilderNDMaterialCommand (ClientData clientData, Tcl_Interp *interp, int
 		else
 			return TCL_ERROR;
 	}
+	else if (strcmp(argv[1], "GDamage") == 0) {	// Gatta et al [2018] - damage only
+		void* theMat = OPS_GDamage();
+		if (theMat != 0)
+			theMaterial = (NDMaterial*)theMat;
+		else
+			return TCL_ERROR;
+	}
 
     else if ((strcmp(argv[1],"PlasticDamageConcretePlaneStress") == 0)) {
       void *theMat = OPS_NewPlasticDamageConcretePlaneStress();
@@ -276,6 +285,16 @@ TclModelBuilderNDMaterialCommand (ClientData clientData, Tcl_Interp *interp, int
       else 
         return TCL_ERROR;
     }
+
+	else if (strcmp(argv[1], "J2FiberDegrading") == 0) {
+		void* theMat = 0;
+		theMat = OPS_J2FiberDegrading();
+
+		if (theMat != 0)
+			theMaterial = (NDMaterial*)theMat;
+		else
+			return TCL_ERROR;
+	}
 
     else if (strcmp(argv[1],"J2PlateFibre") == 0) {
       void *theMat = OPS_J2PlateFibreMaterial();

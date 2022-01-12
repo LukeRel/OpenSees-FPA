@@ -47,6 +47,11 @@
 #include <Parameter.h>
 #include <elementAPI.h>
 
+// For damage output
+#include <iostream>
+#include <fstream>
+#include <Domain.h>
+
 ID NDFiberSection3d::code(6);
 
 void* OPS_NDFiberSection3d()
@@ -67,7 +72,7 @@ void* OPS_NDFiberSection3d()
       if (strcmp(opt, "-noCentroid") == 0)
 	computeCentroid = false;
     }
-    
+
     int num = 30;
     return new NDFiberSection3d(tag, num, computeCentroid);
 }
@@ -78,7 +83,7 @@ NDFiberSection3d::NDFiberSection3d(int tag, int num, Fiber **fibers, double a, b
   numFibers(num), sizeFibers(num), theMaterials(0), matData(0),
   Abar(0.0), QyBar(0.0), QzBar(0.0), yBar(0.0), zBar(0.0), computeCentroid(compCentroid),
   alpha(a), sectionIntegr(0), e(6), s(0), ks(0), 
-  parameterID(0), dedh(6)
+  parameterID(0), dedh(6), theDomain(0), step(0.0)
 {
   if (numFibers != 0) {
     theMaterials = new NDMaterial *[numFibers];
@@ -137,6 +142,8 @@ NDFiberSection3d::NDFiberSection3d(int tag, int num, Fiber **fibers, double a, b
   code(3) = SECTION_RESPONSE_VY;
   code(4) = SECTION_RESPONSE_VZ;
   code(5) = SECTION_RESPONSE_T;
+
+  theDomain = new Domain;
 }
 
 NDFiberSection3d::NDFiberSection3d(int tag, int num, double a, bool compCentroid): 
@@ -144,7 +151,7 @@ NDFiberSection3d::NDFiberSection3d(int tag, int num, double a, bool compCentroid
     numFibers(0), sizeFibers(num), theMaterials(0), matData(0),
     Abar(0.0), QyBar(0.0), QzBar(0.0), yBar(0.0), zBar(0.0), computeCentroid(compCentroid),
     alpha(a), sectionIntegr(0), e(6), s(0), ks(0), 
-    parameterID(0), dedh(6)
+    parameterID(0), dedh(6), theDomain(0), step(0.0)
 {
     if (sizeFibers != 0) {
 	theMaterials = new NDMaterial *[sizeFibers];
@@ -192,8 +199,8 @@ NDFiberSection3d::NDFiberSection3d(int tag, int num, NDMaterial **mats,
   SectionForceDeformation(tag, SEC_TAG_NDFiberSection3d),
   numFibers(num), sizeFibers(num), theMaterials(0), matData(0),
   Abar(0.0), QyBar(0.0), QzBar(0.0), yBar(0.0), zBar(0.0), computeCentroid(compCentroid),
-  alpha(a), sectionIntegr(0), e(6), s(0), ks(0), 
-  parameterID(0), dedh(6)
+  alpha(a), sectionIntegr(0), e(6), s(0), ks(0),
+  parameterID(0), dedh(6), theDomain(0), step(0.0)
 {
   if (numFibers != 0) {
     theMaterials = new NDMaterial *[numFibers];
@@ -257,6 +264,8 @@ NDFiberSection3d::NDFiberSection3d(int tag, int num, NDMaterial **mats,
   code(3) = SECTION_RESPONSE_VY;
   code(4) = SECTION_RESPONSE_VZ;
   code(5) = SECTION_RESPONSE_T;
+
+  theDomain = new Domain;
 }
 
 // constructor for blank object that recvSelf needs to be invoked upon
@@ -265,7 +274,7 @@ NDFiberSection3d::NDFiberSection3d():
   numFibers(0), sizeFibers(0), theMaterials(0), matData(0),
   Abar(0.0), QyBar(0.0), QzBar(0.0), yBar(0.0), zBar(0.0), computeCentroid(true),
   alpha(1.0), sectionIntegr(0), e(6), s(0), ks(0),
-  parameterID(0), dedh(6)
+  parameterID(0), dedh(6), theDomain(0), step(0.0)
 {
   s = new Vector(sData, 6);
   ks = new Matrix(kData, 6, 6);
@@ -282,6 +291,8 @@ NDFiberSection3d::NDFiberSection3d():
   code(3) = SECTION_RESPONSE_VY;
   code(4) = SECTION_RESPONSE_VZ;
   code(5) = SECTION_RESPONSE_T;
+
+  theDomain = new Domain;
 }
 
 int
@@ -378,6 +389,9 @@ NDFiberSection3d::~NDFiberSection3d()
 
   if (sectionIntegr != 0)
     delete sectionIntegr;
+
+  if (theDomain != 0)
+      delete theDomain;
 }
 
 // a = [1 -y z       0       0  0
@@ -747,9 +761,29 @@ int
 NDFiberSection3d::commitState(void)
 {
   int err = 0;
-
   for (int i = 0; i < numFibers; i++)
-    err += theMaterials[i]->commitState();
+      err += theMaterials[i]->commitState();
+
+  // Damage output
+  int d_out = 1;
+  if (d_out == 1) {
+      step += ops_Dt;
+      
+      if (((step >= 0.000) && (step <= 0.01)) || ((step >= 0.399) && (step <= 0.405)) || ((step >= 0.799) && (step <= 0.805))) {
+          opserr << "Export damage at step " << step*100 << "%" << endln;
+          for (int i = 0; i < numFibers; i++) {
+              double y = matData[3 * i];
+              double z = matData[3 * i + 1];
+              double D = theMaterials[i]->getDamage();
+
+              using namespace std;
+              ofstream outdata;
+              outdata.open("damage.txt", ios::app);
+              outdata << step << " " << y << " " << z << " " << D << endln;
+              outdata.close();
+          }
+      }
+  }
 
   return err;
 }

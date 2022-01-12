@@ -214,8 +214,10 @@
     <ClCompile Include="..\..\..\SRC\material\nD\PlaneStressUserMaterial.cpp" />
     <ClCompile Include="..\..\..\SRC\material\nD\PlasticDamageConcrete3d.cpp" />
     <ClCompile Include="..\..\..\SRC\material\nD\PlasticDamageConcretePlaneStress.cpp" />
+    <ClCompile Include="..\..\..\SRC\material\nD\PlasticityDamage\GDamage.cpp" />
     <ClCompile Include="..\..\..\SRC\material\nD\PlasticityDamage\J2Damage.cpp" />
     <ClCompile Include="..\..\..\SRC\material\nD\PlasticityDamage\DPDamage.cpp" />
+    <ClCompile Include="..\..\..\SRC\material\nD\PlasticityDamage\J2FiberDegrading.cpp" />
     <ClCompile Include="..\..\..\SRC\material\nD\PlateFiberMaterialThermal.cpp" />
     <ClCompile Include="..\..\..\SRC\material\nD\PlateFromPlaneStressMaterial.cpp" />
     <ClCompile Include="..\..\..\SRC\material\nD\PlateFromPlaneStressMaterialThermal.cpp" />
@@ -646,8 +648,10 @@
     <ClInclude Include="..\..\..\SRC\material\nD\PlaneStressUserMaterial.h" />
     <ClInclude Include="..\..\..\SRC\material\nD\PlasticDamageConcrete3d.h" />
     <ClInclude Include="..\..\..\SRC\material\nD\PlasticDamageConcretePlaneStress.h" />
+    <ClInclude Include="..\..\..\SRC\material\nD\PlasticityDamage\GDamage.h" />
     <ClInclude Include="..\..\..\SRC\material\nD\PlasticityDamage\J2Damage.h" />
     <ClInclude Include="..\..\..\SRC\material\nD\PlasticityDamage\DPDamage.h" />
+    <ClInclude Include="..\..\..\SRC\material\nD\PlasticityDamage\J2FiberDegrading.h" />
     <ClInclude Include="..\..\..\SRC\material\nD\PlateFiberMaterialThermal.h" />
     <ClInclude Include="..\..\..\SRC\material\nD\PlateFromPlaneStressMaterial.h" />
     <ClInclude Include="..\..\..\SRC\material\nD\PlateFromPlaneStressMaterialThermal.h" />
