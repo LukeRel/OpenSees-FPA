@@ -67,9 +67,10 @@ void* OPS_UniaxialFiber3d()
     }
 
     // get data
-    int numData = 3;
-    double data[3];
+    int numData = 4;
+    double data[4];
     if(OPS_GetDoubleInput(&numData,&data[0]) < 0) return 0;
+    opserr <<"Uniaxial Fiber: " << data[0] << " " << data[1] << " " << data[2] << " " << data[3] << "\n";
 
     // get mat tag
     int tag;
@@ -86,14 +87,14 @@ void* OPS_UniaxialFiber3d()
     static Vector fiberPos(2);
     fiberPos(0) = data[0];
     fiberPos(1) = data[1];
-    return new UniaxialFiber3d(numUniaxialFiber3d++,*theMat,data[2],fiberPos);
+    return new UniaxialFiber3d(numUniaxialFiber3d++,*theMat,data[2],fiberPos,data[3]);
 }
 
 
 // constructor:
 UniaxialFiber3d::UniaxialFiber3d()
 :Fiber(0, FIBER_TAG_Uniaxial3d),
- theMaterial(0), area(0.0), dValue(0.0)
+ theMaterial(0), area(0.0), eps0(0.0)
 {
 	if (code(0) != SECTION_RESPONSE_P) {
 		code(0) = SECTION_RESPONSE_P;
@@ -107,11 +108,11 @@ UniaxialFiber3d::UniaxialFiber3d()
 
 UniaxialFiber3d::UniaxialFiber3d(int tag, 
                                  UniaxialMaterial &theMat,
-                                 double Area, const Vector &position, double d)
+                                 double Area, const Vector &position, double Eps0)
 :Fiber(tag, FIBER_TAG_Uniaxial3d),
- theMaterial(0), area(Area), dValue(d)
+ theMaterial(0), area(Area), eps0(Eps0)
 {
-	theMaterial = theMat.getCopy();  // get a copy of the MaterialModel
+    theMaterial = theMat.getCopy();  // get a copy of the MaterialModel
 
 	if (theMaterial == 0) {
 	  opserr << "UniaxialFiber3d::UniaxialFiber2d -- failed to get copy of UniaxialMaterial\n";
@@ -270,10 +271,11 @@ UniaxialFiber3d::sendSelf(int commitTag, Channel &theChannel)
     // store area and position data in a vector and send it
     //
     
-    static Vector dData(3);
+    static Vector dData(4);
     dData(0) = area;
     dData(1) = as[0];
     dData(2) = as[1];
+    dData(3) = eps0;
     if (theChannel.sendVector(dbTag, commitTag, dData) < 0)  {
       opserr << "UniaxialFiber3d::sendSelf() -  failed to send Vector data\n";
       return -2;
@@ -311,7 +313,7 @@ UniaxialFiber3d::recvSelf(int commitTag, Channel &theChannel,
     // get area and position datafrom a vector
     //
     
-    static Vector dData(3);
+    static Vector dData(4);
     if (theChannel.recvVector(dbTag, commitTag, dData) < 0)  {
       opserr << "UniaxialFiber3d::recvSelf() -  failed to recv Vector data\n";
 	return -2;
@@ -319,6 +321,7 @@ UniaxialFiber3d::recvSelf(int commitTag, Channel &theChannel,
     area = dData(0);
     as[0] = dData(1);
     as[1] = dData(2);
+    eps0 = dData(3);
 
     //
     // now we do the material stuff

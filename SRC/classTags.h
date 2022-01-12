@@ -518,6 +518,8 @@
 #define FIBER_TAG_Uniaxial3d	2
 #define FIBER_TAG_ND2d			3
 #define FIBER_TAG_ND3d			4
+
+// Fiber with additional strains (LP)
 #define FIBER_TAG_NDIS2d		5  //LP
 #define FIBER_TAG_NDIS3d		6  //LP
 
