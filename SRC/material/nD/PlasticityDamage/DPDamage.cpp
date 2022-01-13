@@ -83,7 +83,7 @@ void* OPS_DPDamage(void)
 		dData[13]); // Parente degradation
 
 	opserr << "DPDamage memory is allocated!" << endln;
-	/*for (int i = 0;i < 14;i++) opserr << "dData[" << i << "] = " << dData[i] << endln;*/
+	//for (int i = 0;i < 14;i++) opserr << "dData[" << i << "] = " << dData[i] << endln;
 	return theMaterial;
 }
 
@@ -414,13 +414,8 @@ void DPDamage::plastic_integrator()
 	// Accuracy control
 	double tol = 1.0e-6;
 
-	// set trial state:
-	mEpsilon_n1_p = mEpsilon_n_p;
-	mAlpha_n1 = mAlpha_n;
-	mZeta_n1 = mZeta_n;
-
 	// Elastic strains
-	mEpsilon_e = mEpsilon - mEpsilon_n1_p;
+	mEpsilon_e = mEpsilon - mEpsilon_n_p;
 
 	// Trial stress
 	mSigma = mCe * mEpsilon_e;
@@ -429,17 +424,23 @@ void DPDamage::plastic_integrator()
 	Invariant_1 = (mSigma(0) + mSigma(1) + mSigma(2));
 	s = mSigma - (Invariant_1 / 3.0) * mI1;
 
-	// Norm of eta -> |eta| = |s - zeta|
+	// Vector eta = s-zeta
 	eta = s - mZeta_n;
 
-	// Yield function value (contravariant form)
-	norm_eta = sqrt(eta(0) * eta(0) + eta(1) * eta(1) + eta(2) * eta(2) + 2 * (eta(3) * eta(3) + eta(4) * eta(4) + eta(5) * eta(5)));
+	// Norm of eta -> |eta| = |s - zeta|
+	norm_eta = sqrt(eta(0) * eta(0) + eta(1) * eta(1) + eta(2) * eta(2)
+	+ 2 * (eta(3) * eta(3) + eta(4) * eta(4) + eta(5) * eta(5)));
 
 	// Plastic function
-	f1 = norm_eta - root23 * (sig_y * Hi * mAlpha_n1) + mu * Invariant_1;
+	f1 = norm_eta - root23 * (sig_y + Hi * mAlpha_n1) + mu * Invariant_1;
 
 	// Check trial state
 	if (f1 <= tol) { // Trial state = elastic state - don't need to do any updates.
+
+		// set trial state:
+		mEpsilon_n1_p = mEpsilon_n_p;
+		mAlpha_n1 = mAlpha_n;
+		mZeta_n1 = mZeta_n;
 
 		// Elastoplastic matrix
 		mCep = mCe;

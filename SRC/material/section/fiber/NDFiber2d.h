@@ -78,9 +78,8 @@ class NDFiber2d : public Fiber
     NDMaterial *getNDMaterial(void) {return theMaterial;}
     double getArea(void) {return area;};
     double getd(void) {return 1.0;};
-	
-	// Initial strains (LP)
-    double getEps0(void) {return eps0;};
+
+    double getEps0(void) { return eps0; };
  
     int setParameter(const char **argv, int argc, Parameter &param);
     int updateParameter(int parameterID, Information &info);
