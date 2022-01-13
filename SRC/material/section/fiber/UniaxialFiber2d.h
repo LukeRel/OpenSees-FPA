@@ -78,10 +78,9 @@ class UniaxialFiber2d : public Fiber
     UniaxialMaterial *getMaterial(void) {return theMaterial;};
     double getArea(void) {return area;};
     double getd(void) {return 1.0;};
-	
-	// Initial strains (LP)
-    double getEps0(void) {return eps0;};
-    
+
+    double getEps0(void) { return eps0; };
+
     int setParameter(const char **argv, int argc, Parameter &param);
     int updateParameter(int parameterID, Information &info);
     int activateParameter(int parameterID);
@@ -96,7 +95,7 @@ class UniaxialFiber2d : public Fiber
     UniaxialMaterial *theMaterial;   // pointer to a material
     double area;                          // area of the fiber 
     double y;		// fiber location
-    double eps0;    // initial fiber strain (LP)
+    double eps0;    // initial fiber strains
 
     static Matrix ks;       // static class wide matrix object for returns
     static Vector fs;	    // static class wide vector object for returns

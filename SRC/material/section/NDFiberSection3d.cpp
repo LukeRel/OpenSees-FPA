@@ -117,6 +117,8 @@ NDFiberSection3d::NDFiberSection3d(int tag, int num, Fiber **fibers, double a, b
       Area = theFiber->getArea();
       eps0 = theFiber->getEps0();
 
+      if (eps0 > 0) opserr << "Received eps0 = " << eps0 << " on fiber " << i+1;
+
       Abar  += Area;
       QzBar += yLoc*Area;
       QyBar += zLoc*Area;

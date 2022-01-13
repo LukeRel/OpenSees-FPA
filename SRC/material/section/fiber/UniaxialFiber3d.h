@@ -52,7 +52,7 @@ class UniaxialFiber3d: public Fiber
   public:
     UniaxialFiber3d ();    
     UniaxialFiber3d (int tag, UniaxialMaterial &theMat, double Area, 
-                     const Vector &position, double dvalue=1.0);
+                     const Vector &position, double Eps0);
  
     ~UniaxialFiber3d();
 

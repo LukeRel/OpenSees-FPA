@@ -93,7 +93,7 @@ UniaxialFiber2d::UniaxialFiber2d(int tag,
                                  UniaxialMaterial &theMat,
                                  double Area, double position, double Eps0):
                                  Fiber(tag, FIBER_TAG_Uniaxial2d),
-                                 theMaterial(0), area(Area), y(-position)
+                                 theMaterial(0), area(Area), y(-position), eps0(Eps0)
 {
   theMaterial = theMat.getCopy();  // get a copy of the MaterialModel
   
