@@ -753,7 +753,6 @@ int J2Damage::recvSelf(int commitTag, Channel& theChannel, FEM_ObjectBroker& the
 	return 0;
 };
 
-
 Response* J2Damage::setResponse(const char** argv, int argc, OPS_Stream& s) {
 
 
@@ -772,8 +771,6 @@ Response* J2Damage::setResponse(const char** argv, int argc, OPS_Stream& s) {
 	else
 		return 0;
 }
-
-
 
 int J2Damage::getResponse(int responseID, Information& matInfo) {
 
@@ -812,7 +809,6 @@ void J2Damage::Print(OPS_Stream& s, int flag) {
 	// -- to be implemented.
 	return;
 };
-
 
 int J2Damage::setParameter(const char** argv, int argc, Parameter& param) {
 	// -- to be implemented.

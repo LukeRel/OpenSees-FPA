@@ -77,6 +77,7 @@ class Fiber : public TaggedObject, public MovableObject
     virtual double getd(void) =0;
 
     virtual double getEps0(void) = 0;
+    virtual double getBeta(void) = 0;
 
     virtual UniaxialMaterial *getMaterial(void) {return 0;}
     virtual NDMaterial *getNDMaterial(void) {return 0;}

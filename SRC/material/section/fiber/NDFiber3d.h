@@ -52,7 +52,7 @@ class NDFiber3d : public Fiber
   public:
     NDFiber3d ();   
     NDFiber3d (int tag, NDMaterial &theMat, double Area,
-	       double y, double z, double Eps0);
+	       double y, double z, double Eps0, double Beta);
     ~NDFiber3d();
 
     
@@ -82,6 +82,7 @@ class NDFiber3d : public Fiber
 	
 	// Initial strains (LP)
     double getEps0(void) {return eps0;};
+    double getBeta(void) {return beta;};
     
     int setParameter(const char **argv, int argc, Parameter &param);
     int updateParameter(int parameterID, Information &info);
@@ -100,6 +101,7 @@ class NDFiber3d : public Fiber
     double z;
     double dValue;
     double eps0;    // fiber initial strain
+    double beta;    // incidence angle
 
     static Matrix ks;       // static class wide matrix object for returns
     static Vector fs;	    // static class wide vector object for returns

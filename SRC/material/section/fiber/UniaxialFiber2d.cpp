@@ -62,8 +62,8 @@ void* OPS_UniaxialFiber2d()
     }
 
     // get data
-    int numData = 4;
-    double data[4];
+    int numData = 5;
+    double data[5];
     if(OPS_GetDoubleInput(&numData,&data[0]) < 0) {
 	opserr<<"WARNING failed to read double\n";
 	return 0;
@@ -84,16 +84,16 @@ void* OPS_UniaxialFiber2d()
 	return 0;
     }
 
-    return new UniaxialFiber2d(numUniaxialFiber2d++,*theMat,data[2],data[0], data[3]);
+    return new UniaxialFiber2d(numUniaxialFiber2d++,*theMat,data[2],data[0], data[3], data[4]);
 }
 
 
 // constructor:
 UniaxialFiber2d::UniaxialFiber2d(int tag, 
                                  UniaxialMaterial &theMat,
-                                 double Area, double position, double Eps0):
+                                 double Area, double position, double Eps0, double Beta):
                                  Fiber(tag, FIBER_TAG_Uniaxial2d),
-                                 theMaterial(0), area(Area), y(-position), eps0(Eps0)
+                                 theMaterial(0), area(Area), y(-position), eps0(Eps0), beta(Beta)
 {
   theMaterial = theMat.getCopy();  // get a copy of the MaterialModel
   
@@ -110,7 +110,7 @@ UniaxialFiber2d::UniaxialFiber2d(int tag,
 
 // constructor for blank object that recvSelf needs to be invoked upon
 UniaxialFiber2d::UniaxialFiber2d(): Fiber(0, FIBER_TAG_Uniaxial2d),
-                                    theMaterial(0), area(0), y(0.0), eps0(0.0)
+                                    theMaterial(0), area(0), y(0.0), eps0(0.0), beta(0.0)
 {
   if (code(0) != SECTION_RESPONSE_P) {
     code(0) = SECTION_RESPONSE_P;
@@ -179,7 +179,7 @@ UniaxialFiber2d::getCopy (void)
 {
    // make a copy of the fiber 
    UniaxialFiber2d *theCopy = new UniaxialFiber2d (this->getTag(), 
-                                                   *theMaterial, area, -y, eps0);
+                                                   *theMaterial, area, -y, eps0, beta);
    return theCopy;
 }  
 

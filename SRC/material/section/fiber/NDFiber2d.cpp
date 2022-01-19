@@ -62,8 +62,8 @@ void* OPS_NDFiber2d()
     }
 
     // get data
-    int numData = 4;
-    double data[4];
+    int numData = 5;
+    double data[5];
     if(OPS_GetDoubleInput(&numData,&data[0]) < 0) return 0;
 
     // get mat tag
@@ -78,16 +78,16 @@ void* OPS_NDFiber2d()
 	return 0;
     }
 
-    return new NDFiber2d(numNDFiber2d++,*theMat,data[2],data[0],data[3]);
+    return new NDFiber2d(numNDFiber2d++,*theMat,data[2],data[0],data[3],data[4]);
 }
 
 
 // constructor:
 NDFiber2d::NDFiber2d(int tag, 
 		     NDMaterial &theMat,
-		     double Area, double position, double Eps0):
+		     double Area, double position, double Eps0, double Beta):
   Fiber(tag, FIBER_TAG_ND2d),
-  theMaterial(0), area(Area), y(-position), eps0(Eps0)
+  theMaterial(0), area(Area), y(-position), eps0(Eps0), beta(Beta)
 {
   theMaterial = theMat.getCopy("BeamFiber2d");
   
@@ -105,7 +105,7 @@ NDFiber2d::NDFiber2d(int tag,
 
 // constructor for blank object that recvSelf needs to be invoked upon
 NDFiber2d::NDFiber2d(): Fiber(0, FIBER_TAG_ND2d),
-			theMaterial(0), area(0), y(0.0), eps0(0.0)
+			theMaterial(0), area(0), y(0.0), eps0(0.0), beta(0.0)
 {
   if (code(0) != SECTION_RESPONSE_P) {
     code(0) = SECTION_RESPONSE_P;
@@ -166,7 +166,7 @@ NDFiber2d::getCopy (void)
 {
    // make a copy of the fiber 
   NDFiber2d *theCopy = new NDFiber2d (this->getTag(), 
-				      *theMaterial, area, -y, eps0);
+				      *theMaterial, area, -y, eps0, beta);
 
   return theCopy;
 }  

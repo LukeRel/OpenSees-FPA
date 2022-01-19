@@ -101,7 +101,7 @@ class FiberSection3d : public SectionForceDeformation
   private:
     int numFibers, sizeFibers;       // number of fibers in the section
     UniaxialMaterial **theMaterials; // array of pointers to materials
-    double   *matData;               // data for the materials [yloc, zloc, area, eps0]
+    double   *matData;               // data for the materials [yloc, zloc, area, eps0, beta]
     double   kData[16];              // data for ks matrix 
     double   sData[4];               // data for s vector 
 

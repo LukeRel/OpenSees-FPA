@@ -1412,6 +1412,12 @@
     <ClCompile Include="..\..\..\SRC\material\nD\PlasticityDamage\J2FiberDegrading.cpp">
       <Filter>nD\PlasticityDamage</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\SRC\material\nD\PlasticityDamage\J2DamageFiber.cpp">
+      <Filter>nD\PlasticityDamage</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\SRC\material\nD\PlasticityDamage\DPDamageFiber.cpp">
+      <Filter>nD\PlasticityDamage</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\SRC\material\uniaxial\AxialSp.h">
@@ -2616,6 +2622,12 @@
       <Filter>nD\PlasticityDamage</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\SRC\material\nD\PlasticityDamage\J2FiberDegrading.h">
+      <Filter>nD\PlasticityDamage</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\SRC\material\nD\PlasticityDamage\J2DamageFiber.h">
+      <Filter>nD\PlasticityDamage</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\SRC\material\nD\PlasticityDamage\DPDamageFiber.h">
       <Filter>nD\PlasticityDamage</Filter>
     </ClInclude>
   </ItemGroup>

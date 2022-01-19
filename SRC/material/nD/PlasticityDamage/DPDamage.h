@@ -85,7 +85,7 @@ public:
 	int setParameter(const char** argv, int argc, Parameter& param);
 	int updateParameter(int responseID, Information& eleInformation);
 
-	double getRho(void) { return massDen; };
+	double getRho(void) { return 0; };
 
 	double getDamage(void);
 
@@ -107,21 +107,6 @@ public:
 protected:
 
 	//material parameters
-	double mKref;			// reference Bulk Modulus 
-	double mGref;			// reference Shear Modulus
-	double mPatm;		    // reference stress first invariant (pressure)
-	double mK;			// bulk modulus 
-	double mG;			// shear modulus
-	double msigma_y;		// yield strength 
-	double mrho;			// volumetric term
-	double mrho_bar;		// nonassociative flow term
-	double mKinf;			// nonlinear isotropic hardening term
-	double mKo;			// nonlinear isotropic hardening term
-	double mdelta1; 		// exponential hardening term for drucker prager surface
-	double mdelta2;       // exponential hardening term for tension cutoff surface
-	double mHard;			// hardening constant
-	double mtheta;		// hardening constant
-	double mTo;           // initial tension cutoff strength
 	double E;       // Elastic modulus
 	double nu;      // Poisson ratio 
 	double K;		// Bulk modulus
@@ -135,35 +120,32 @@ protected:
 	double H;		// Total hardening coefficient
 	double theta;	// Relative hardening proportion; full isotropic = 0 < theta < 1 = full kinematic
 
-	double massDen;
-
 	//internal variables
-	Vector mEpsilon_n;		// total strain vector at step n
-	Vector mEpsilon;		// total strain vector at step n+1
-	Vector mEpsilon_n_p;	// plastic strain vector at step n, trail e_p
-	Vector mEpsilon_n1_p;	// plastic strain vector at step n+1 
-	Vector mEpsilon_e;		// elastic strain vector
-	Vector mSigma_n;		// stress at step n
-	Vector mSigma;			// stress at step n+1
+	Vector strain_k;		// total strain vector at step n
+	Vector strain;		// total strain vector at step n+1
+	Vector strain_k_p;	// plastic strain vector at step n, trail e_p
+	Vector strain_p;	// plastic strain vector at step n+1 
+	Vector strain_e;		// elastic strain vector
+	Vector stress_k;		// stress at step n
+	Vector stress;			// stress at step n+1
 
-	Vector mZeta_n;		// backstress at step n, beta_np1_trial = beta_n
-	Vector mZeta_n1;		// backstress at step n+1
+	Vector zeta_k;		// backstress at step n, beta_np1_trial = beta_n
+	Vector zeta;		// backstress at step n+1
 
-	double mHprime;		// derivative of linear kinematic hardening term 
-
-	double mAlpha_n;		// alpha1_n
-	double mAlpha_n1;	// alpha1_n+1
+	double alpha_k;		// alpha1_n
+	double alpha;	// alpha1_n+1
 
 	int mElastFlag;    // Flag to determine elastic behavior
 	int mFlag;
 
-	Matrix mCe;			// elastic tangent stiffness matrix
-	Matrix mCep;		// elastoplastic tangent stiffness matrix
-	Matrix mCt;			// damage tangent stiffness matrix
-	Vector mI1;			// 2nd Order Identity Tensor	
-	Matrix mII1;		// 4th Order Identity Tensor
-	Matrix mIIvol;		// IIvol = I1 tensor I1  
-	Matrix mIIdev;		// 4th Order Deviatoric Tensor
+	Matrix Ce;			// elastic tangent stiffness matrix
+	Matrix Cep;		// elastoplastic tangent stiffness matrix
+	Matrix Ct;			// damage tangent stiffness matrix
+	Vector I1;			// 2nd Order Identity Tensor	
+	Matrix II1;		// 4th Order Identity Tensor
+	Matrix IIvol;		// IIvol = I1 tensor I1  
+	Matrix IIdev;		// 4th Order Deviatoric Tensor
+	Matrix II1T;  // 1*1'
 
 	Vector mState;		// state vector for output
 

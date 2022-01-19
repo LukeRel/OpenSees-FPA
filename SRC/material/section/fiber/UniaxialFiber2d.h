@@ -51,7 +51,7 @@ class UniaxialFiber2d : public Fiber
 {
   public:
     UniaxialFiber2d ();   
-    UniaxialFiber2d (int tag, UniaxialMaterial &theMat, double Area, double position, double Eps0);
+    UniaxialFiber2d (int tag, UniaxialMaterial &theMat, double Area, double position, double Eps0, double Beta);
     ~UniaxialFiber2d();
 
     
@@ -80,6 +80,7 @@ class UniaxialFiber2d : public Fiber
     double getd(void) {return 1.0;};
 
     double getEps0(void) { return eps0; };
+    double getBeta(void) { return beta; };
 
     int setParameter(const char **argv, int argc, Parameter &param);
     int updateParameter(int parameterID, Information &info);
@@ -96,6 +97,7 @@ class UniaxialFiber2d : public Fiber
     double area;                          // area of the fiber 
     double y;		// fiber location
     double eps0;    // initial fiber strains
+    double beta;    // tendon angle
 
     static Matrix ks;       // static class wide matrix object for returns
     static Vector fs;	    // static class wide vector object for returns

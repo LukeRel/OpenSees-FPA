@@ -95,22 +95,23 @@ DPDamage::DPDamage(int tag, double _E, double _nu, // Parameters
     : NDMaterial(tag, ND_TAG_DPDamage),
 	E(_E), nu(_nu), sig_c(_sig_c), sig_t(_sig_t), Hk(_Hk), Hi(_Hi),
 	Yt0(_Yt0), bt(_bt), at(_at), Yc0(_Yc0), bc(_bc), ac(_ac), beta(_beta), De(_De),
-    mEpsilon(6),
-	mEpsilon_n(6),
-    mEpsilon_n_p(6),
-    mEpsilon_n1_p(6),
-	mEpsilon_e(6),
-    mSigma(6),
-	mSigma_n(6),
-    mZeta_n(6),
-    mZeta_n1(6),
-    mCe(6, 6),
-    mCep(6, 6),
-	mCt(6, 6),
-    mI1(6),
-	mII1(6,6),
-    mIIvol(6, 6),
-    mIIdev(6, 6),
+    strain(6),
+	strain_k(6),
+    strain_k_p(6),
+    strain_p(6),
+	strain_e(6),
+    stress(6),
+	stress_k(6),
+    zeta_k(6),
+    zeta(6),
+    Ce(6, 6),
+    Cep(6, 6),
+	Ct(6, 6),
+    I1(6),
+	II1(6,6),
+    IIvol(6, 6),
+    IIdev(6, 6),
+	II1T(6,6),
     mState(5),
 	m(3, 3)
 {
@@ -125,28 +126,6 @@ DPDamage::DPDamage(int tag, double _E, double _nu, // Parameters
 	// Total hardening and proportion
 	H = Hi + Hk;
 	theta = Hk / (Hi + Hk);
-	/*
-	opserr << "Hi = " << Hi << endln;
-	opserr << "Hk = " << Hk << endln;
-	opserr << "H = " << H << endln;
-	opserr << "theta = " << theta << endln;
-	*/
-
-	massDen = 0.0;
-    mKref = K;
-    mGref = G;
-    mPatm = 101.0;
-    mK = K;
-    mG = G;
-    msigma_y = sig_y;
-    mrho = mu;
-    mrho_bar = mu;
-    mKinf = K;
-    mKo = K;
-    mdelta1 = 0.0;
-    mdelta2 = 0.0;
-    mHard = H;
-    mtheta = theta;
 
     this->initialize();
 }
@@ -156,22 +135,23 @@ DPDamage::DPDamage()
     : NDMaterial(),
 	E(0.0), nu(0.0), sig_c(0.0), sig_t(0.0), Hk(0.0), Hi(0.0),
 	Yt0(0.0), bt(0.0), at(0.0), Yc0(0.0), bc(0.0), ac(0.0), beta(0.0), De(0.0),
-    mEpsilon(6),
-	mEpsilon_n(6),
-    mEpsilon_n_p(6),
-    mEpsilon_n1_p(6),
-	mEpsilon_e(6),
-    mSigma(6),
-	mSigma_n(6),
-    mZeta_n(6),
-    mZeta_n1(6),
-    mCe(6, 6),
-    mCep(6, 6),
-	mCt(6, 6),
-    mI1(6),
-	mII1(6,6),
-    mIIvol(6, 6),
-    mIIdev(6, 6),
+    strain(6),
+	strain_k(6),
+    strain_k_p(6),
+    strain_p(6),
+	strain_e(6),
+    stress(6),
+	stress_k(6),
+    zeta_k(6),
+    zeta(6),
+    Ce(6, 6),
+    Cep(6, 6),
+	Ct(6, 6),
+    I1(6),
+	II1(6,6),
+    IIvol(6, 6),
+    IIdev(6, 6),
+	II1T(6, 6),
     mState(5),
 	m(3,3)
 {
@@ -187,25 +167,6 @@ DPDamage::DPDamage()
 	H = Hi + Hk;
 	theta = Hk / (Hi+Hk);
 
-    massDen = 0.0;
-    mKref = 0.0;
-    mGref = 0.0;
-    mPatm = 101.0;
-    mK = 0.0;
-    mG = 0.0;
-    msigma_y = 1e+10;
-    mrho = 0.0;
-    mrho_bar = 0.0;
-    mKinf = 0.0;
-    mKo = 0.0;
-    mdelta1 = 0.0;
-    mdelta2 = 0.0;
-    mHard = 0.0;
-    mtheta = 0.0;
-    mTo = 0.0;
-
-    mElastFlag = 2;
-
     this->initialize();
 }
 
@@ -216,22 +177,20 @@ DPDamage::~DPDamage()
 //zero internal variables
 void DPDamage::initialize()
 {
-    mEpsilon.Zero();
-	mEpsilon_n.Zero();
-    mEpsilon_n_p.Zero();
-    mEpsilon_n1_p.Zero();
-	mEpsilon_e.Zero();
+    strain.Zero();
+	strain_k.Zero();
+    strain_k_p.Zero();
+    strain_p.Zero();
+	strain_e.Zero();
 
-    mSigma.Zero();
-	mSigma_n.Zero();
-    mZeta_n.Zero();
-    mZeta_n1.Zero();
+    stress.Zero();
+	stress_k.Zero();
+    zeta_k.Zero();
+    zeta.Zero();
 
-    mAlpha_n = 0.0;
-    mAlpha_n1 = 0.0;
+    alpha_k = 0.0;
+    alpha = 0.0;
     mFlag = 1;
-
-    mHprime = (1 - mtheta) * mHard;
 
 	// Damage variables initialization
 	Dt_k = 0.0;
@@ -243,50 +202,52 @@ void DPDamage::initialize()
 	Dm1sq = 1.0;
 
     // 2nd order Identity Tensor
-    mI1.Zero();
-    mI1(0) = 1;
-    mI1(1) = 1;
-    mI1(2) = 1;
+    I1.Zero();
+    I1(0) = 1;
+    I1(1) = 1;
+    I1(2) = 1;
 
 	// 4th order Identity Tensor
-	mII1.Zero();
-	for (int i = 0;i++;i < 6) mII1(i, i) = 1;
+	II1.Zero();
+	for (int i = 0;i++;i < 6) II1(i, i) = 1;
 
     // 4th order Volumetric Tensor
     // IIvol = I1 tensor I1
-    mIIvol.Zero();
-    mIIvol(0, 0) = 1;
-    mIIvol(0, 1) = 1;
-    mIIvol(0, 2) = 1;
-    mIIvol(1, 0) = 1;
-    mIIvol(1, 1) = 1;
-    mIIvol(1, 2) = 1;
-    mIIvol(2, 0) = 1;
-    mIIvol(2, 1) = 1;
-    mIIvol(2, 2) = 1;
+    IIvol.Zero();
+    IIvol(0, 0) = 1;
+    IIvol(0, 1) = 1;
+    IIvol(0, 2) = 1;
+    IIvol(1, 0) = 1;
+    IIvol(1, 1) = 1;
+    IIvol(1, 2) = 1;
+    IIvol(2, 0) = 1;
+    IIvol(2, 1) = 1;
+    IIvol(2, 2) = 1;
 
     // 4th order Deviatoric Tensor
     // Note:  this is the contravariant form!
     //        useable for s^a = 2G * IIdev^ab * epsilon_b
     // (Need a different form for s^a = IIdev ^a_b * sigma^a)
-    mIIdev.Zero();
-    mIIdev(0, 0) = two3;
-    mIIdev(0, 1) = -one3;
-    mIIdev(0, 2) = -one3;
-    mIIdev(1, 0) = -one3;
-    mIIdev(1, 1) = two3;
-    mIIdev(1, 2) = -one3;
-    mIIdev(2, 0) = -one3;
-    mIIdev(2, 1) = -one3;
-    mIIdev(2, 2) = two3;
-    mIIdev(3, 3) = 0.5;
-    mIIdev(4, 4) = 0.5;
-    mIIdev(5, 5) = 0.5;
+    IIdev.Zero();
+    IIdev(0, 0) = two3;
+    IIdev(0, 1) = -one3;
+    IIdev(0, 2) = -one3;
+    IIdev(1, 0) = -one3;
+    IIdev(1, 1) = two3;
+    IIdev(1, 2) = -one3;
+    IIdev(2, 0) = -one3;
+    IIdev(2, 1) = -one3;
+    IIdev(2, 2) = two3;
+    IIdev(3, 3) = 0.5;
+    IIdev(4, 4) = 0.5;
+    IIdev(5, 5) = 0.5;
 
-    mCe = mK * mIIvol + 2 * mG * mIIdev;
-    mCep = mCe;
-	mCt = mCe;
+    Ce = K * IIvol + 2 * G * IIdev;
+    Cep = Ce;
+	Ct = Ce;
     mState.Zero();
+
+	II1T = I1 % I1;
 
 	m.Zero();
 }
@@ -325,41 +286,41 @@ int DPDamage::setTrialStrain(const Vector& strain_from_element)
 {
 	// Debug
 
-	mEpsilon = strain_from_element;
+	strain = strain_from_element;
 
 	// Debug 1
 	if (dFlag1 == 1) {
 		opserr << "\n----------------------------------------------------------------------------------------------------------------------------\n";
 		opserr << "\nStarted new setTrialStrain.\n\n";
 		opserr << "Inputs before plasticity and damage (initialized at current step):\n";
-		opserr << "strain     = [ "; for (int i = 0;i < 6;i++) opserr << mEpsilon(i) << " "; opserr << "]\n";
-		opserr << "strain_k   = [ "; for (int i = 0;i < 6;i++) opserr << mEpsilon_n(i) << " "; opserr << "]\n";
+		opserr << "strain     = [ "; for (int i = 0;i < 6;i++) opserr << strain(i) << " "; opserr << "]\n";
+		opserr << "strain_k   = [ "; for (int i = 0;i < 6;i++) opserr << strain_k(i) << " "; opserr << "]\n";
 	}
 
 	// Plasticity
 	this->plastic_integrator();
 
 	// Updated elastic strains
-	mEpsilon_e = mEpsilon - mEpsilon_n1_p;
+	strain_e = strain - strain_p;
 
 	// Debug 2
 	if (dFlag1 == 1) {
 		opserr << "\nPlasticity executed!\n\n";
 		opserr << "Outputs after plasticity only:\n";
-		opserr << "strain     = [ "; for (int i = 0;i < 6;i++) opserr << mEpsilon(i) << " "; opserr << "]\n";
-		opserr << "strain_e   = [ "; for (int i = 0;i < 6;i++) opserr << mEpsilon_e(i) << " "; opserr << "]\n";
-		opserr << "strain_p   = [ "; for (int i = 0;i < 6;i++) opserr << mEpsilon_n1_p(i) << " "; opserr << "]\n";
-		opserr << "strain_p_k = [ "; for (int i = 0;i < 6;i++) opserr << mEpsilon_n_p(i) << " "; opserr << "]\n";
-		opserr << "stress     = [ "; for (int i = 0;i < 6;i++) opserr << mSigma(i) << " "; opserr << "]\n";
-		opserr << "stress_k   = [ "; for (int i = 0;i < 6;i++) opserr << mSigma_n(i) << " "; opserr << "]\n";
-		opserr << "elastic tangent:\n[ "; for (int i = 0;i < 6;i++) { for (int j = 0;j < 6;j++) opserr << mCep(j, i) << " "; opserr << "]\n"; }
-		opserr << "elastoplastic tangent:\n[ "; for (int i = 0;i < 6;i++) { for (int j = 0;j < 6;j++) opserr << mCe(j, i) << " "; opserr << "]\n"; }
+		opserr << "strain     = [ "; for (int i = 0;i < 6;i++) opserr << strain(i) << " "; opserr << "]\n";
+		opserr << "strain_e   = [ "; for (int i = 0;i < 6;i++) opserr << strain_e(i) << " "; opserr << "]\n";
+		opserr << "strain_p   = [ "; for (int i = 0;i < 6;i++) opserr << strain_p(i) << " "; opserr << "]\n";
+		opserr << "strain_p_k = [ "; for (int i = 0;i < 6;i++) opserr << strain_k_p(i) << " "; opserr << "]\n";
+		opserr << "stress     = [ "; for (int i = 0;i < 6;i++) opserr << stress(i) << " "; opserr << "]\n";
+		opserr << "stress_k   = [ "; for (int i = 0;i < 6;i++) opserr << stress_k(i) << " "; opserr << "]\n";
+		opserr << "elastic tangent:\n[ "; for (int i = 0;i < 6;i++) { for (int j = 0;j < 6;j++) opserr << Cep(j, i) << " "; opserr << "]\n"; }
+		opserr << "elastoplastic tangent:\n[ "; for (int i = 0;i < 6;i++) { for (int j = 0;j < 6;j++) opserr << Ce(j, i) << " "; opserr << "]\n"; }
 	}
 
 	// Damage routine
-	for (int i = 3; i < 6; i++) { mEpsilon[i] /= 2.0;mEpsilon_n1_p[i] /= 2.0;mEpsilon_e[i] /= 2.0; }
+	for (int i = 3; i < 6; i++) { strain[i] /= 2.0;strain_p[i] /= 2.0;strain_e[i] /= 2.0; }
 	this->damage();
-	for (int i = 3; i < 6; i++) { mEpsilon[i] *= 2.0;mEpsilon_n1_p[i] *= 2.0;mEpsilon_e[i] *= 2.0; }
+	for (int i = 3; i < 6; i++) { strain[i] *= 2.0;strain_p[i] *= 2.0;strain_e[i] *= 2.0; }
 	// ------------------------------------------------------------------------------------------------- //
 
 	// Optional degradation correction
@@ -370,8 +331,8 @@ int DPDamage::setTrialStrain(const Vector& strain_from_element)
 	Dm1sq = pow(1.0 - D, 2.0);	// [1-D]^2
 
 	// Updates
-	mCt = Dm1sq * mCep;
-	mSigma = Dm1sq * mCe * mEpsilon_e;
+	Ct = Dm1sq * Cep;
+	stress = Dm1sq * Ce * strain_e;
 
 	//this->commitState();
 
@@ -379,15 +340,15 @@ int DPDamage::setTrialStrain(const Vector& strain_from_element)
 	if (dFlag1 == 1) {
 		opserr << "\nD = " << D << "\n\n";
 		opserr << "Outputs after both plasticity and damage:\n";
-		opserr << "strain     = [ "; for (int i = 0;i < 6;i++) opserr << mEpsilon(i) << " "; opserr << "]\n";
-		opserr << "strain_k   = [ "; for (int i = 0;i < 6;i++) opserr << mEpsilon_n(i) << " "; opserr << "]\n";
-		opserr << "strain_e   = [ "; for (int i = 0;i < 6;i++) opserr << mEpsilon_e(i) << " "; opserr << "]\n";
-		opserr << "strain_p   = [ "; for (int i = 0;i < 6;i++) opserr << mEpsilon_n1_p(i) << " "; opserr << "]\n";
-		opserr << "strain_p_k = [ "; for (int i = 0;i < 6;i++) opserr << mEpsilon_n_p(i) << " "; opserr << "]\n";
-		opserr << "stress     = [ "; for (int i = 0;i < 6;i++) opserr << mSigma(i) << " "; opserr << "]\n";
-		opserr << "stress_k   = [ "; for (int i = 0;i < 6;i++) opserr << mSigma_n(i) << " "; opserr << "]\n";
-		opserr << "tangent_ep:\n[ "; for (int i = 0;i < 6;i++) { for (int j = 0;j < 6;j++) opserr << mCep(j, i) << " "; opserr << "]\n"; }
-		opserr << "tangent:\n[ "; for (int i = 0;i < 6;i++) { for (int j = 0;j < 6;j++) opserr << mCe(j, i) << " "; opserr << "]\n"; }
+		opserr << "strain     = [ "; for (int i = 0;i < 6;i++) opserr << strain(i) << " "; opserr << "]\n";
+		opserr << "strain_k   = [ "; for (int i = 0;i < 6;i++) opserr << strain_k(i) << " "; opserr << "]\n";
+		opserr << "strain_e   = [ "; for (int i = 0;i < 6;i++) opserr << strain_e(i) << " "; opserr << "]\n";
+		opserr << "strain_p   = [ "; for (int i = 0;i < 6;i++) opserr << strain_p(i) << " "; opserr << "]\n";
+		opserr << "strain_p_k = [ "; for (int i = 0;i < 6;i++) opserr << strain_k_p(i) << " "; opserr << "]\n";
+		opserr << "stress     = [ "; for (int i = 0;i < 6;i++) opserr << stress(i) << " "; opserr << "]\n";
+		opserr << "stress_k   = [ "; for (int i = 0;i < 6;i++) opserr << stress_k(i) << " "; opserr << "]\n";
+		opserr << "tangent_ep:\n[ "; for (int i = 0;i < 6;i++) { for (int j = 0;j < 6;j++) opserr << Cep(j, i) << " "; opserr << "]\n"; }
+		opserr << "tangent:\n[ "; for (int i = 0;i < 6;i++) { for (int j = 0;j < 6;j++) opserr << Ce(j, i) << " "; opserr << "]\n"; }
 	}
 
 	return 0;
@@ -415,35 +376,35 @@ void DPDamage::plastic_integrator()
 	double tol = 1.0e-6;
 
 	// Elastic strains
-	mEpsilon_e = mEpsilon - mEpsilon_n_p;
+	strain_e = strain - strain_k_p;
 
 	// Trial stress
-	mSigma = mCe * mEpsilon_e;
+	stress = Ce * strain_e;
 
 	// Deviatoric stress
-	Invariant_1 = (mSigma(0) + mSigma(1) + mSigma(2));
-	s = mSigma - (Invariant_1 / 3.0) * mI1;
+	Invariant_1 = (stress(0) + stress(1) + stress(2));
+	s = stress - (Invariant_1 / 3.0) * I1;
 
 	// Vector eta = s-zeta
-	eta = s - mZeta_n;
+	eta = s - zeta_k;
 
 	// Norm of eta -> |eta| = |s - zeta|
 	norm_eta = sqrt(eta(0) * eta(0) + eta(1) * eta(1) + eta(2) * eta(2)
 	+ 2 * (eta(3) * eta(3) + eta(4) * eta(4) + eta(5) * eta(5)));
 
 	// Plastic function
-	f1 = norm_eta - root23 * (sig_y + Hi * mAlpha_n1) + mu * Invariant_1;
+	f1 = norm_eta - root23 * (sig_y + Hi * alpha) + mu * Invariant_1;
 
 	// Check trial state
 	if (f1 <= tol) { // Trial state = elastic state - don't need to do any updates.
 
 		// set trial state:
-		mEpsilon_n1_p = mEpsilon_n_p;
-		mAlpha_n1 = mAlpha_n;
-		mZeta_n1 = mZeta_n;
+		strain_p = strain_k_p;
+		alpha = alpha_k;
+		zeta = zeta_k;
 
 		// Elastoplastic matrix
-		mCep = mCe;
+		Cep = Ce;
 
 		return;
 	}
@@ -462,32 +423,30 @@ void DPDamage::plastic_integrator()
 		lambda = f1 / (2 * G + two3 * (Hk + Hi));
 
 		// Plastic strains update
-		mEpsilon_n1_p = mEpsilon_n_p + lambda * n;
+		strain_p = strain_k_p + lambda * n;
 
 		// Back stress variables update
-		mAlpha_n1 = mAlpha_n + root23 * lambda;
-		mZeta_n1 = two3 * Hk * mEpsilon_n1_p;
+		alpha = alpha_k + root23 * lambda;
+		zeta = two3 * Hk * strain_p;
 
 		// Elastic strains
-		mEpsilon_e = mEpsilon_n1_p - mEpsilon;
+		strain_e = strain_p - strain;
 
 		// Update stress
-		mSigma = mCe * (mEpsilon_e);
+		stress = Ce * (strain_e);
 
 		// Additional terms
-		double G2 = pow(mG, 2);
+		double G2 = pow(G, 2);
 
 		// Additional matrixes
 		Matrix nnT(6, 6); // n*n'
-		Matrix II1T(6, 6); // 1*1'
 		Matrix n1T(6, 6); // n*1'
 		nnT = n % n;
-		II1T = mI1 % mI1;
-		n1T = n % mI1;
+		n1T = n % I1;
 
 		// Update tangent
-		mCep = mCe - lambda * 4 * G / norm_eta * (mII1 - one3 * II1T - nnT)
-			- (4 * G2 * nnT + 6 * mG * mK * mu * n1T) / (2 * G + two3 * (Hi + Hk));
+		Cep = Ce - lambda * 4 * G / norm_eta * (II1 - one3 * II1T - nnT)
+			- (4 * G2 * nnT + 6 * G * K * mu * n1T) / (2 * G + two3 * (Hi + Hk));
 
 	}
 
@@ -499,8 +458,8 @@ void DPDamage::damage()
 {
 	//////// 1. Principal strains calculation /////////////////////////////////////////////////////////////////
 	// Strain tensors from strain vectors (sci)
-	Matrix epsilon(3, 3);	epsilon = tens(mEpsilon);
-	Matrix epsilon_e(3, 3);	epsilon_e = tens(mEpsilon_e);
+	Matrix epsilon(3, 3);	epsilon = tens(strain);
+	Matrix epsilon_e(3, 3);	epsilon_e = tens(strain_e);
 
 	// Principal strains
 	Vector strain_m(3);
@@ -562,27 +521,31 @@ void DPDamage::damage()
 
 	// Weighting coefficients GATTA
 	if (algorithm == 0) {
-		if (fabs(Yt_e) / Yt0 + fabs(Yc_e) / Yc0 < 1.0e-10) alpha = 0.0;
+		if (fabs(Yt_e) / Yt0 + fabs(Yc_e) / Yc0 < 1.0e-10)  D = D_k;
 		else {
 			alpha = pow(Yt_e / Yt0, 1) / (pow(Yt_e / Yt0, 1) + pow(Yc_e / Yc0, 1));
 			if (alpha < 0.0) alpha = 0.0;
 			if (alpha > 1.0) alpha = 1.0;
+
+			// Cumulative damage variable
+			D = alpha * Dt + (1.0 - alpha) * Dc;
 		}
 	}
 	// Weighting coefficients DI RE
 	else {
 		double eta_t = Yt_e / (Yt0 + Dt_k * (at * Yt_e + bt));
 		double eta_c = Yc_e / (Yc0 + Dc_k * (ac * Yc_e + bc));
-		if (eta_t == 0) alpha = 0;
+		if (eta_t == 0) D = D_k;
 		else {
 			alpha = pow(eta_t, 2) / (pow(eta_t, 2) + pow(eta_c, 2));
 			if (alpha < 0.0) alpha = 0.0;
 			if (alpha > 1.0) alpha = 1.0;
+
+			// Cumulative damage variable
+			D = alpha * Dt + (1.0 - alpha) * Dc;
 		}
 	}
 
-	// Cumulative damage variable
-	D = alpha * Dt + (1.0 - alpha) * Dc;
 
 	// Final check
 	//D = fmax(D_k, D);
@@ -630,25 +593,25 @@ const Matrix& DPDamage::tens(const Vector& v)
 //send back the strain
 const Vector& DPDamage::getStrain()
 {
-	return mEpsilon;
+	return strain;
 }
 
 //send back the stress 
 const Vector& DPDamage::getStress()
 {
-	return mSigma;
+	return stress;
 }
 
 //send back the tangent 
 const Matrix& DPDamage::getTangent()
 {
-	return mCt;
+	return Ct;
 }
 
 //send back the tangent 
 const Matrix& DPDamage::getInitialTangent()
 {
-	return mCe;
+	return Ce;
 }
 
 double DPDamage::getDamage(void) {
@@ -659,15 +622,15 @@ double DPDamage::getDamage(void) {
 int DPDamage::commitState(void)
 {
 	// Strains
-	mEpsilon_n = mEpsilon;
-	mEpsilon_n_p = mEpsilon_n1_p;
+	strain_k = strain;
+	strain_k_p = strain_p;
 
 	// Stress
-	mSigma_n = mSigma;
+	stress_k = stress;
 
 	// Backstress
-	mAlpha_n = mAlpha_n1;
-	mZeta_n = mZeta_n1;
+	alpha_k = alpha;
+	zeta_k = zeta;
 
 	// Damage
 	Dc_k = Dc;
@@ -786,41 +749,6 @@ int DPDamage::updateParameter(int responseID, Information& info)
 		// materialState called - update mElasticFlag
 		mElastFlag = (int)info.theDouble;
 	}
-	else if (responseID == 7) {
-		// frictionalStrength called - update rho and tension cutoff
-		mrho = info.theDouble;
-		if (mrho == 0.0) {
-			mTo = 1e10;
-		}
-		else {
-			mTo = root23 * msigma_y / mrho;
-		}
-	}
-	else if (responseID == 8) {
-		// nonassociativeTerm called - update rho_bar
-		mrho_bar = info.theDouble;
-	}
-	else if (responseID == 9) {
-		// cohesiveIntercept called - update sigma_y and tension cutoff
-		msigma_y = info.theDouble;
-		if (mrho == 0.0) {
-			mTo = 1e10;
-		}
-		else {
-			mTo = root23 * msigma_y / mrho;
-		}
-	}
-	else if (responseID == 10) {
-		// shearModulus called - update G and Ce
-		mG = info.theDouble;
-		mCe = mK * mIIvol + 2 * mG * mIIdev;
-	}
-	else if (responseID == 11) {
-		// bulkModulus called - update K and Ce
-		mK = info.theDouble;
-		mCe = mK * mIIvol + 2 * mG * mIIdev;
-	}
-
 	return 0;
 }
 
@@ -831,47 +759,31 @@ int DPDamage::sendSelf(int commitTag, Channel& theChannel)
 	// place data in a vector
 	static Vector data(45);
 	data(0) = this->getTag();
-	data(1) = mKref;
-	data(2) = mGref;
-	data(3) = mK;
-	data(4) = mG;
-	data(5) = msigma_y;
-	data(6) = mrho;
-	data(7) = mrho_bar;
-	data(8) = mKinf;
-	data(9) = mKo;
-	data(10) = mdelta1;
-	data(11) = mdelta2;
-	data(12) = mHard;
-	data(13) = mtheta;
-	data(14) = massDen;
-	data(15) = mPatm;
-	data(16) = mTo;
-	data(17) = mHprime;
-	data(18) = mAlpha_n;
+
+	data(18) = alpha_k;
 	data(20) = mElastFlag;
 	data(21) = mFlag;
 
-	data(22) = mEpsilon(0);
-	data(23) = mEpsilon(1);
-	data(24) = mEpsilon(2);
-	data(25) = mEpsilon(3);
-	data(26) = mEpsilon(4);
-	data(27) = mEpsilon(5);
+	data(22) = strain(0);
+	data(23) = strain(1);
+	data(24) = strain(2);
+	data(25) = strain(3);
+	data(26) = strain(4);
+	data(27) = strain(5);
 
-	data(28) = mEpsilon_n_p(0);
-	data(29) = mEpsilon_n_p(1);
-	data(30) = mEpsilon_n_p(2);
-	data(31) = mEpsilon_n_p(3);
-	data(32) = mEpsilon_n_p(4);
-	data(33) = mEpsilon_n_p(5);
+	data(28) = strain_k_p(0);
+	data(29) = strain_k_p(1);
+	data(30) = strain_k_p(2);
+	data(31) = strain_k_p(3);
+	data(32) = strain_k_p(4);
+	data(33) = strain_k_p(5);
 
-	data(34) = mZeta_n(0);
-	data(35) = mZeta_n(1);
-	data(36) = mZeta_n(2);
-	data(37) = mZeta_n(3);
-	data(38) = mZeta_n(4);
-	data(39) = mZeta_n(5);
+	data(34) = zeta_k(0);
+	data(35) = zeta_k(1);
+	data(36) = zeta_k(2);
+	data(37) = zeta_k(3);
+	data(38) = zeta_k(4);
+	data(39) = zeta_k(5);
 
 	data(40) = mState(0);
 	data(41) = mState(1);
@@ -902,47 +814,29 @@ int DPDamage::recvSelf(int commitTag, Channel& theChannel, FEM_ObjectBroker& the
 
 	// set member variables
 	this->setTag((int)data(0));
-	mKref = data(1);
-	mGref = data(2);
-	mK = data(3);
-	mG = data(4);
-	msigma_y = data(5);
-	mrho = data(6);
-	mrho_bar = data(7);
-	mKinf = data(8);
-	mKo = data(9);
-	mdelta1 = data(10);
-	mdelta2 = data(11);
-	mHard = data(12);
-	mtheta = data(13);
-	massDen = data(14);
-	mPatm = data(15);
-	mTo = data(16);
-	mHprime = data(17);
-	mAlpha_n = data(18);
-	mElastFlag = (int)data(20);
-	mFlag = (int)data(21);
 
-	mEpsilon(0) = data(22);
-	mEpsilon(1) = data(23);
-	mEpsilon(2) = data(24);
-	mEpsilon(3) = data(25);
-	mEpsilon(4) = data(26);
-	mEpsilon(5) = data(27);
+	alpha_k = data(18);
 
-	mEpsilon_n_p(0) = data(28);
-	mEpsilon_n_p(1) = data(29);
-	mEpsilon_n_p(2) = data(30);
-	mEpsilon_n_p(3) = data(31);
-	mEpsilon_n_p(4) = data(32);
-	mEpsilon_n_p(5) = data(33);
+	strain(0) = data(22);
+	strain(1) = data(23);
+	strain(2) = data(24);
+	strain(3) = data(25);
+	strain(4) = data(26);
+	strain(5) = data(27);
 
-	mZeta_n(0) = data(34);
-	mZeta_n(1) = data(35);
-	mZeta_n(2) = data(36);
-	mZeta_n(3) = data(37);
-	mZeta_n(4) = data(38);
-	mZeta_n(5) = data(39);
+	strain_k_p(0) = data(28);
+	strain_k_p(1) = data(29);
+	strain_k_p(2) = data(30);
+	strain_k_p(3) = data(31);
+	strain_k_p(4) = data(32);
+	strain_k_p(5) = data(33);
+
+	zeta_k(0) = data(34);
+	zeta_k(1) = data(35);
+	zeta_k(2) = data(36);
+	zeta_k(3) = data(37);
+	zeta_k(4) = data(38);
+	zeta_k(5) = data(39);
 
 	mState(0) = data(40);
 	mState(1) = data(41);
@@ -950,9 +844,9 @@ int DPDamage::recvSelf(int commitTag, Channel& theChannel, FEM_ObjectBroker& the
 	mState(3) = data(43);
 	mState(4) = data(44);
 
-	mCe = mK * mIIvol + 2 * mG * mIIdev;
-	mCep = mCe;
-	mCt = mCe;
+	Ce = K * IIvol + 2 * G * IIdev;
+	Cep = Ce;
+	Ct = Ce;
 
 	return 0;
 }

@@ -129,10 +129,12 @@ extern void* OPS_UVCplanestress(void);
 extern  void *OPS_SAniSandMSMaterial(void);
 
 // Plasticity and damage based on Di Re et al [2018] and Gatta et al [2018]
-extern  void *OPS_DPDamage(void);		// Drucker Prager + Addessi
-extern  void* OPS_J2Damage(void);		// Von Mises (J2) + Addessi
-extern  void* OPS_J2FiberDegrading(void); // Parente steel degradation
-extern  void* OPS_GDamage(void);		// Gatta [2018] damage only
+extern  void *OPS_DPDamage(void);			// Drucker Prager + Addessi
+extern  void* OPS_DPDamageFiber(void);		// Drucker Prager (J2) + Addessi
+extern  void* OPS_J2Damage(void);			// Von Mises (J2) + Addessi
+extern  void* OPS_J2DamageFiber(void);		// Von Mises (J2) + Addessi
+extern  void* OPS_J2FiberDegrading(void);	// Parente steel degradation
+extern  void* OPS_GDamage(void);			// Gatta [2018] damage only
 
 extern  void *OPS_ElasticIsotropicMaterialThermal(void);  //L.Jiang [SIF]
 extern  void *OPS_DruckerPragerMaterialThermal(void);//L.Jiang [SIF]
@@ -225,8 +227,22 @@ TclModelBuilderNDMaterialCommand (ClientData clientData, Tcl_Interp *interp, int
 		else
 			return TCL_ERROR;
 	}
-	else if (strcmp(argv[1], "J2Damage") == 0) {	// Gatta et al [2018]
+	else if (strcmp(argv[1], "DPDamageFiber") == 0) {	// Di Re et al [2018]
+		void* theMat = OPS_DPDamageFiber();
+		if (theMat != 0)
+			theMaterial = (NDMaterial*)theMat;
+		else
+			return TCL_ERROR;
+	}
+	else if (strcmp(argv[1], "J2Damage") == 0) {	// Gatta et al [2018] Di Re et al [2018]
 		void* theMat = OPS_J2Damage();
+		if (theMat != 0)
+			theMaterial = (NDMaterial*)theMat;
+		else
+			return TCL_ERROR;
+	}
+	else if (strcmp(argv[1], "J2DamageFiber") == 0) {	// Di Re et al [2018]
+		void* theMat = OPS_J2DamageFiber();
 		if (theMat != 0)
 			theMaterial = (NDMaterial*)theMat;
 		else
@@ -294,6 +310,16 @@ TclModelBuilderNDMaterialCommand (ClientData clientData, Tcl_Interp *interp, int
 			theMaterial = (NDMaterial*)theMat;
 		else
 			return TCL_ERROR;
+	}
+
+	else if (strcmp(argv[1], "J2FiberDegrading") == 0) {
+	void* theMat = 0;
+	theMat = OPS_J2FiberDegrading();
+
+	if (theMat != 0)
+		theMaterial = (NDMaterial*)theMat;
+	else
+		return TCL_ERROR;
 	}
 
     else if (strcmp(argv[1],"J2PlateFibre") == 0) {

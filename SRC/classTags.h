@@ -399,8 +399,10 @@
 
 // Plasticity and damage based on Di Re et al [2018] and Gatta et al [2018]
 #define ND_TAG_DPDamage            60		// Drucker Prager + Addessi
-#define ND_TAG_J2Damage            61		// Von Mises J2 + Addessi
-#define ND_TAG_GDamage            62		// Gatta [2018] damage only
+#define ND_TAG_DPDamageFiber       61		// Drucker Prager J2 + Addessi
+#define ND_TAG_J2Damage            62		// Von Mises J2 + Addessi
+#define ND_TAG_J2DamageFiber       63		// Von Mises J2 + Addessi
+#define ND_TAG_GDamage             64		// Gatta [2018] damage only
 
 #define ND_TAG_LowTension 65
 #define ND_TAG_LowTensionPlaneStress 66
@@ -433,6 +435,7 @@
 #define ND_TAG_J2BeamFiber		      3011
 
 #define ND_TAG_J2FiberDegrading		  3012 // L. Parente
+#define ND_TAG_DPFiberDegrading		  3013 // L. Parente
 
 
 #define ND_TAG_FeapMaterial                 1000
