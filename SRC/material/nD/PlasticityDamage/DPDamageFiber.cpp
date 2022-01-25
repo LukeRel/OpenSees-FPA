@@ -92,28 +92,13 @@ DPDamageFiber::DPDamageFiber(int tag, double _E, double _nu, // Parameters
 	double _sig_c, double _sig_t, double _Hk, double _Hi, // Plasticity
 	double _Yt0, double _bt, double _at, double _Yc0, double _bc, double _ac, double _beta, // Damage
 	double _De) // Degradation
-    : NDMaterial(tag, ND_TAG_DPDamageFiber),
+	: NDMaterial(tag, ND_TAG_DPDamageFiber),
 	E(_E), nu(_nu), sig_c(_sig_c), sig_t(_sig_t), Hk(_Hk), Hi(_Hi),
 	Yt0(_Yt0), bt(_bt), at(_at), Yc0(_Yc0), bc(_bc), ac(_ac), beta(_beta), De(_De),
-    strain(6),
-	strain_k(6),
-    strain_p_k(6),
-    strain_p(6),
-	strain_e(6),
-    stress(6),
-	stress_k(6),
-    zeta_k(6),
-    zeta(6),
-    Ce(6, 6),
-    Cep(6, 6),
-	Ct(6, 6),
-    I1(6),
-	II1(6,6),
-    IIvol(6, 6),
-    IIdev(6, 6),
-	II1T(6,6),
-    mState(5),
-	m(3, 3),
+	strain(6), strain_k(6), strain_p_k(6), strain_p(6), strain_e(6),
+	stress(6), stress_k(6), zeta_k(6), zeta(6), tangent_e(6, 6), tangent_ep(6, 6),
+	I1(6), II1(6, 6), IIvol(6, 6), IIdev(6, 6), II1T(6, 6),
+	mState(5), m(3, 3), dam(3),
 	strain_m(3), strain_c(3), stress_m(3), stress_c(3),
 	C(6, 6), C_mm(3, 3), C_mc(3, 3), C_cm(3, 3), C_cc(3, 3), C_mm_e(3, 3),
 	strain_m_k(3), strain_c_k(3), stress_m_k(3), stress_c_k(3), C_k(6, 6), C_mm_k(3, 3), C_cc_k(3, 3),
@@ -127,12 +112,7 @@ DPDamageFiber::DPDamageFiber(int tag, double _E, double _nu, // Parameters
 	sig_y = 2.0 * sig_c * sig_t / (sig_c + sig_t);
 	mu = root23 * (sig_c - sig_t) / (sig_c + sig_t);
 
-	// Total hardening and proportion
-	H = Hi + Hk;
-	theta = Hk / (Hi + Hk);
-
     this->initialize();
-	this->init_condens();
 }
 
 //null constructor
@@ -140,25 +120,10 @@ DPDamageFiber::DPDamageFiber()
     : NDMaterial(),
 	E(0.0), nu(0.0), sig_c(0.0), sig_t(0.0), Hk(0.0), Hi(0.0),
 	Yt0(0.0), bt(0.0), at(0.0), Yc0(0.0), bc(0.0), ac(0.0), beta(0.0), De(0.0),
-    strain(6),
-	strain_k(6),
-    strain_p_k(6),
-    strain_p(6),
-	strain_e(6),
-    stress(6),
-	stress_k(6),
-    zeta_k(6),
-    zeta(6),
-    Ce(6, 6),
-    Cep(6, 6),
-	Ct(6, 6),
-    I1(6),
-	II1(6,6),
-    IIvol(6, 6),
-    IIdev(6, 6),
-	II1T(6, 6),
-    mState(5),
-	m(3,3),
+    strain(6), strain_k(6), strain_p_k(6), strain_p(6), strain_e(6),
+    stress(6), stress_k(6), zeta_k(6), zeta(6), tangent_e(6, 6), tangent_ep(6, 6), tangent(6, 6),
+    I1(6), II1(6,6), IIvol(6, 6), IIdev(6, 6), II1T(6, 6),
+    mState(5), m(3,3), dam(3),
 	strain_m(3), strain_c(3), stress_m(3), stress_c(3),
 	C(6, 6), C_mm(3, 3), C_mc(3, 3), C_cm(3, 3), C_cc(3, 3), C_mm_e(3, 3),
 	strain_m_k(3), strain_c_k(3), stress_m_k(3), stress_c_k(3), C_k(6, 6), C_mm_k(3, 3), C_cc_k(3, 3),
@@ -172,12 +137,7 @@ DPDamageFiber::DPDamageFiber()
 	sig_y = 0.0;
 	mu = 0.0;
 
-	// Total hardening and proportion
-	H = Hi + Hk;
-	theta = Hk / (Hi+Hk);
-
     this->initialize();
-	this->init_condens();
 }
 
 //destructor
@@ -210,6 +170,7 @@ void DPDamageFiber::initialize()
 	Dc = Dc_k;
 	D = D_k;
 	Dm1sq = 1.0;
+	dam.Zero();
 
 	// 2nd order Identity Tensor
 	I1.Zero();
@@ -258,12 +219,10 @@ void DPDamageFiber::initialize()
 	II1T = I1 % I1;
 
 	m.Zero();
-}
 
-int DPDamageFiber::init_condens(void) {
 	// Full strains vector = (eps_11 eps_22 eps_33 gamma_12 gamma_23 gamma_31)
 	// Mantained     = 1 4 6 (eps_11 gamma_12 gamma_13) = received
-	// Condensed out = 2 3 5 (eps_22 eps_33 eps_23) = must be determined and eventually condensed
+	// Condensed out = 2 3 5 (eps_22 eps_33 gamma_23) = must be determined and eventually condensed
 	int m[3] = { 0, 3, 5 };
 	int c[3] = { 1, 2, 4 };
 	int perm[6] = { 0, 3, 5, 1, 2, 4 };
@@ -275,8 +234,9 @@ int DPDamageFiber::init_condens(void) {
 	stress_c.Zero();
 
 	// Matrixes at n+1
-	Ce = C;
-	Cep = C;
+	tangent = C;
+	tangent_e = C;
+	tangent_ep = C;
 
 	// Other matrixes initialization
 	C_mm.Zero(); C_mc.Zero(); C_cm.Zero(); C_cc.Zero();
@@ -315,7 +275,6 @@ int DPDamageFiber::init_condens(void) {
 	fiberstress.Zero();
 	fibertangent.Zero();
 
-	return 0;
 }
 
 //make a clone of this material
@@ -395,8 +354,8 @@ int DPDamageFiber::setTrialStrain(const Vector& strain_from_element)
 	int m[3] = { 0, 3, 5 };
 	for (int i = 0;i < 3;i++) fiberstrain_e(i) = strain(m[i]) - strain_p(m[i]);
 
-	// Nota: convergono ->    tangent = [1-D]^2*Cep,   stress = stress_k + Ce*dstrain
-	fibertangent = Dm1sq * Cep;
+	// Nota: convergono ->    tangent = [1-D]^2*tangent_ep,   stress = stress_k + Ce*dstrain
+	fibertangent = Dm1sq * C_mm;
 	fiberstress = Dm1sq * C_mm_e * fiberstrain_e;
 
 	// Debug 3
@@ -410,7 +369,7 @@ int DPDamageFiber::setTrialStrain(const Vector& strain_from_element)
 		opserr << "strain_p_k = [ "; for (int i = 0;i < 6;i++) opserr << strain_p_k(i) << " "; opserr << "]\n";
 		opserr << "stress     = [ "; for (int i = 0;i < 6;i++) opserr << stress(i) << " "; opserr << "]\n";
 		opserr << "stress_k   = [ "; for (int i = 0;i < 6;i++) opserr << stress_k(i) << " "; opserr << "]\n";
-		opserr << "tangent_ep:\n[ "; for (int i = 0;i < 6;i++) { for (int j = 0;j < 6;j++) opserr << Cep(j, i) << " "; opserr << "]\n"; }
+		opserr << "tangent_ep:\n[ "; for (int i = 0;i < 6;i++) { for (int j = 0;j < 6;j++) opserr << tangent_ep(j, i) << " "; opserr << "]\n"; }
 		opserr << "tangent:\n[ "; for (int i = 0;i < 6;i++) { for (int j = 0;j < 6;j++) opserr << C(j, i) << " "; opserr << "]\n"; }
 	}
 
@@ -468,7 +427,7 @@ void DPDamageFiber::condensate_consistent(void)
 	// Condensation process to revert to fiber size starts here.
 
 	// Condensation matrixes
-	C = Cep;
+	C = tangent;
 	for (int i = 0;i < 3;i++) {
 		// Condensation vectors
 		strain_c(i) = strain(c[i]);
@@ -493,8 +452,16 @@ void DPDamageFiber::condensate_consistent(void)
 	// Mantained stresses and tangent
 	Matrix C_temp(3, 3);
 	C_cc.Solve(C_cm, C_temp);
-	stress_m += C_mc * dstrain_c;
+	stress_m += C_mc * strain_c;
 	C_mm = C_mm - C_mc * C_temp;
+
+	// Commit fiber operators
+	strain_c_k = strain_c;
+	stress_m_k = stress_m;	// Mantained stresses (3)
+	stress_c_k = stress_c;	// Condensed out stresses (3)
+	C_k = C;
+	C_mm_k = C_mm;
+	C_cc_k = C_cc;
 
 	// Debug
 	if (dFlag1 == 1) {
@@ -577,7 +544,7 @@ void DPDamageFiber::condensate_iterative(void)
 		//NDmaterial strain order        = 11, 22, 33, 12, 23, 31  
 		//BeamFiberMaterial strain order = 11, 12, 31, 22, 33, 23
 
-		C = Cep;
+		C = tangent;
 		for (int i = 0;i < 3;i++) {
 			// Condensation vectors
 			strain_c(i) = strain(c[i]);
@@ -592,7 +559,6 @@ void DPDamageFiber::condensate_iterative(void)
 				C_cc(i, j) = C(c[i], c[j]);
 			}
 		}
-
 
 	}
 
@@ -643,7 +609,7 @@ void DPDamageFiber::plasticity()
 	strain_e = strain - strain_p_k;
 
 	// Trial stress
-	stress = Ce * strain_e;
+	stress = tangent_e * strain_e;
 
 	// Deviatoric stress
 	Invariant_1 = (stress(0) + stress(1) + stress(2));
@@ -668,7 +634,7 @@ void DPDamageFiber::plasticity()
 		zeta = zeta_k;
 
 		// Elastoplastic matrix
-		Cep = Ce;
+		tangent_ep = tangent_e;
 
 		return;
 	}
@@ -697,7 +663,7 @@ void DPDamageFiber::plasticity()
 		strain_e = strain_p - strain;
 
 		// Update stress
-		stress = Ce * (strain_e);
+		stress = tangent_e * (strain_e);
 
 		// Additional terms
 		double G2 = pow(G, 2);
@@ -709,7 +675,7 @@ void DPDamageFiber::plasticity()
 		n1T = n % I1;
 
 		// Update tangent
-		Cep = Ce - lambda * 4 * G / norm_eta * (II1 - one3 * II1T - nnT)
+		tangent_ep = tangent_e - lambda * 4 * G / norm_eta * (II1 - one3 * II1T - nnT)
 			- (4 * G2 * nnT + 6 * G * K * mu * n1T) / (2 * G + two3 * (Hi + Hk));
 
 	}
@@ -872,7 +838,7 @@ void DPDamageFiber::mat3DState(void)
 		opserr << "strain_p_k = [ "; for (int i = 0;i < 6;i++) opserr << strain_p_k(i) << " "; opserr << "]\n";
 		opserr << "stress     = [ "; for (int i = 0;i < 6;i++) opserr << stress(i) << " "; opserr << "]\n";
 		opserr << "stress_k   = [ "; for (int i = 0;i < 6;i++) opserr << stress_k(i) << " "; opserr << "]\n";
-		opserr << "tangent:\n[ "; for (int i = 0;i < 6;i++) { for (int j = 0;j < 6;j++) opserr << Ct(j, i) << " "; opserr << "]\n"; }
+		opserr << "tangent:\n[ "; for (int i = 0;i < 6;i++) { for (int j = 0;j < 6;j++) opserr << tangent(j, i) << " "; opserr << "]\n"; }
 	}
 
 	// Damage routine
@@ -907,7 +873,7 @@ const Vector& DPDamageFiber::getStrain()
 //send back the stress 
 const Vector& DPDamageFiber::getStress()
 {
-	return stress_m;
+	return fiberstress;
 }
 
 //send back the tangent 
@@ -922,9 +888,11 @@ const Matrix& DPDamageFiber::getInitialTangent()
 	return C_mm_e;
 }
 
-double DPDamageFiber::getDamage(void) {
-
-	return D;
+const Vector& DPDamageFiber::getDamage(void) {
+	dam(0) = Dt;
+	dam(1) = Dc;
+	dam(2) = D;
+	return dam;
 }
 
 int DPDamageFiber::commitState(void)
@@ -1156,9 +1124,9 @@ int DPDamageFiber::recvSelf(int commitTag, Channel& theChannel, FEM_ObjectBroker
 	mState(3) = data(43);
 	mState(4) = data(44);
 
-	Ce = K * IIvol + 2 * G * IIdev;
-	Cep = Ce;
-	Ct = Ce;
+	tangent_e = K * IIvol + 2 * G * IIdev;
+	tangent_ep = tangent_e;
+	tangent = tangent_e;
 
 	return 0;
 }

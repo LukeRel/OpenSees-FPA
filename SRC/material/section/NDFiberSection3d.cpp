@@ -63,6 +63,7 @@
 #include <Domain.h>
 
 ID NDFiberSection3d::code(6);
+static int d_out = 1; // Set to 1 to produce a damage.txt output file
 
 void* OPS_NDFiberSection3d()
 {
@@ -162,6 +163,18 @@ NDFiberSection3d::NDFiberSection3d(int tag, int num, Fiber **fibers, double a, b
   code(5) = SECTION_RESPONSE_T;
 
   theDomain = new Domain;
+
+  // Initializing damage output file
+  if (d_out == 1) {
+      using namespace std;
+      ofstream outdata;
+      outdata.open("out_damage.txt");
+      outdata << "Step y z Dt Dc D" << endln;
+      outdata.close();
+      outdata.open("out_section.txt");
+      outdata << "Step ex ky gz N My Vz" << endln;
+      outdata.close();
+  }
 }
 
 NDFiberSection3d::NDFiberSection3d(int tag, int num, double a, bool compCentroid): 
@@ -852,24 +865,32 @@ NDFiberSection3d::commitState(void)
       err += theMaterials[i]->commitState();
 
   // Damage output
-  int d_out = 1;
   if (d_out == 1) {
       step += ops_Dt;
       
-      if (((step >= 0.000) && (step <= 0.01)) || ((step >= 0.399) && (step <= 0.405)) || ((step >= 0.799) && (step <= 0.805))) {
-          opserr << "Export damage at step " << step*100 << "%" << endln;
-          for (int i = 0; i < numFibers; i++) {
-              double y = matData[3 * i];
-              double z = matData[3 * i + 1];
-              double D = theMaterials[i]->getDamage();
+      //opserr << "Export damage at step " << step*100 << "%" << endln;
+      for (int i = 0; i < numFibers; i++) {
+          double y = matData[5 * i];
+          double z = matData[5 * i + 1];
+          const Vector& dam = theMaterials[i]->getDamage();
 
-              using namespace std;
-              ofstream outdata;
-              outdata.open("damage.txt", ios::app);
-              outdata << step << " " << y << " " << z << " " << D << endln;
-              outdata.close();
-          }
+          // Damage output
+          using namespace std;
+          ofstream outdata;
+          outdata.open("out_damage.txt", ios::app);
+          outdata << step << " " << y << " " << z << " " << dam(0) << " " << dam(1) << " " << dam(2) << endln;
+          outdata.close();
       }
+
+      // Shear output
+      const Vector& strain = this->getSectionDeformation();
+      const Vector& stress = this->getStressResultant();
+      using namespace std;
+      ofstream outdata;
+      outdata.open("out_section.txt", ios::app);
+      outdata << step << " " << strain(0) << " " << strain(2) << " " << strain(4) << " " << stress(0) << " " << stress(2) << " " << stress(4) << endln;
+      outdata.close();
+      
   }
 
   return err;
@@ -1472,7 +1493,7 @@ NDFiberSection3d::setResponse(const char **argv, int argc,
   }
 
   if (theResponse == 0)
-    return SectionForceDeformation::setResponse(argv, argc, output);
+      return SectionForceDeformation::setResponse(argv, argc, output);
 
   return theResponse;
 }

@@ -85,10 +85,6 @@ public:
 	int setParameter(const char** argv, int argc, Parameter& param);
 	int updateParameter(int responseID, Information& eleInformation);
 
-	double getRho(void) { return 0; };
-
-	double getDamage(void);
-
 	int setTrialStrain(const Vector& strain_from_element);
 
 	// Unused trialStrain functions
@@ -104,8 +100,14 @@ public:
 	const Matrix& getTangent();
 	const Matrix& getInitialTangent();
 
+	//send back the damage
+	const Vector& getDamage(void);
+
+	double getRho(void) { return 0; };
+
 protected:
 
+private:
 	//material parameters
 	double E;       // Elastic modulus
 	double nu;      // Poisson ratio 
@@ -117,8 +119,6 @@ protected:
 	double mu;		// Friction
 	double Hk;      // Kinematic hardening coefficient
 	double Hi;      // Isotropic hardening coefficient
-	double H;		// Total hardening coefficient
-	double theta;	// Relative hardening proportion; full isotropic = 0 < theta < 1 = full kinematic
 
 	//internal variables
 	Vector strain_k;		// total strain vector at step n
@@ -133,28 +133,26 @@ protected:
 	Vector zeta;		// backstress at step n+1
 
 	double alpha_k;		// alpha1_n
-	double alpha;	// alpha1_n+1
+	double alpha;		// alpha1_n+1
 
-	int mElastFlag;    // Flag to determine elastic behavior
+	int mElastFlag;		// Flag to determine elastic behavior
 	int mFlag;
 
-	Matrix Ce;			// elastic tangent stiffness matrix
-	Matrix Cep;		// elastoplastic tangent stiffness matrix
-	Matrix Ct;			// damage tangent stiffness matrix
+	Matrix tangent;				// Material stiffness matrix
+	Matrix tangent_e;			// Elastic stiffness matrix
+	Matrix tangent_ep;			// Elastoplastic stiffness matrix
+
 	Vector I1;			// 2nd Order Identity Tensor	
-	Matrix II1;		// 4th Order Identity Tensor
+	Matrix II1;			// 4th Order Identity Tensor
 	Matrix IIvol;		// IIvol = I1 tensor I1  
 	Matrix IIdev;		// 4th Order Deviatoric Tensor
-	Matrix II1T;  // 1*1'
+	Matrix II1T;		// 1*1'
 
 	Vector mState;		// state vector for output
 
 	//functions
-	void initialize();	// initializes variables
-
-	//plasticity integration routine
-	void plasticity(void);
-
+	void initialize();		// initializes variables
+	void plasticity(void);	//plasticity integration routine
 	Vector getState();		// fills vector of state variables for output
 
 	//vector to tensor notation
@@ -165,8 +163,6 @@ protected:
 	static const double one3;
 	static const double two3;
 	static const double root23;
-
-private:
 
 	// Damage stuff -----------------------------------------------------------------------------------
 	void damage();
@@ -188,12 +184,12 @@ private:
 	double Dt_k;				// Tensile damage at step (k)
 	double Dc_k;				// Compressive damage at step (k)
 	double D_k;					// Total damage at previous step (k)
+	Vector dam;
 
 	// Degradation stuff ------------------------------------------------------------------------------
 	double De;
 
 	// Condensation operators -------------------------------------------------------------------------
-	int init_condens(void); // Condensation operators initialization
 	void condensate_consistent(void); // Static condensation
 	void condensate_iterative(void); // Static condensation
 	void mat3DState(void); // 3D material state determination

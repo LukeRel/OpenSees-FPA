@@ -485,7 +485,7 @@ BeamFiberMaterial::getInitialTangent()
   return tangent;
 }
 
-double BeamFiberMaterial::getDamage(void) {
+const Vector& BeamFiberMaterial::getDamage(void) {
 
     return theMaterial->getDamage();
 }

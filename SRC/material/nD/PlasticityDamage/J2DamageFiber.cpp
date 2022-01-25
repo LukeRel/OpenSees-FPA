@@ -99,7 +99,7 @@ J2DamageFiber::J2DamageFiber(int tag, double _E, double _nu, // Parameters
 	strain_m(3), strain_c(3), stress_m(3), stress_c(3),
 	C(6,6), C_mm(3,3), C_mc(3, 3), C_cm(3, 3), C_cc(3, 3), C_mm_e(3, 3),
 	strain_m_k(3), strain_c_k(3), stress_m_k(3), stress_c_k(3), C_k(6,6), C_mm_k(3,3), C_cc_k(3, 3),
-	fiberstress(3), fibertangent(3, 3)
+	fiberstress(3), fibertangent(3, 3), dam(3)
 {
 	// Bulk and shear modulus
 	K = E / (3 * (1 - 2 * nu));
@@ -118,7 +118,7 @@ J2DamageFiber::J2DamageFiber(int tag, double _E, double _nu, // Parameters
 
 	lambda = 0.;
 
-	this->init_condens();
+	this->initialize();
 
 	// Damage variables initialization
 	Dt_k = 0.0;
@@ -127,7 +127,7 @@ J2DamageFiber::J2DamageFiber(int tag, double _E, double _nu, // Parameters
 	Dt = Dt_k;
 	Dc = Dc_k;
 	D = D_k;
-	Dm1sq = 1.0;
+	dam.Zero();
 
 	//opserr << "Finished constructor." << endln;
 }
@@ -142,7 +142,7 @@ stress_k(6), strain_k(6), strain_p_k(6), strain_p_dev_k(6), backstress_k(6),
 strain_m(3), strain_c(3), stress_m(3), stress_c(3),
 C(6, 6), C_mm(3, 3), C_mc(3, 3), C_cm(3, 3), C_cc(3, 3), C_mm_e(3, 3),
 strain_m_k(3), strain_c_k(3), stress_m_k(3), stress_c_k(3), C_k(6, 6), C_mm_k(3, 3), C_cc_k(3, 3),
-fiberstress(3), fibertangent(3,3)
+fiberstress(3), fibertangent(3,3), dam(3)
 {
 	this->ndm = a.ndm;
 	this->G = a.G;
@@ -162,7 +162,7 @@ fiberstress(3), fibertangent(3,3)
 	strain_k.Zero();
 	sig_y_k = a.sig_y;
 
-	this->init_condens();
+	this->initialize();
 
 	// Damage variables initialization
 	Dt_k = 0.0;
@@ -171,14 +171,14 @@ fiberstress(3), fibertangent(3,3)
 	Dt = Dt_k;
 	Dc = Dc_k;
 	D = D_k;
-	Dm1sq = 1.0;
+	dam.Zero();
 }
 
 J2DamageFiber::~J2DamageFiber() {
 	return;
 };
 
-int J2DamageFiber::init_condens(void) {
+int J2DamageFiber::initialize(void) {
 	// Full strains vector = (eps_11 eps_22 eps_33 gamma_12 gamma_23 gamma_31)
 	// Mantained     = 1 4 6 (eps_11 gamma_12 gamma_13) = received
 	// Condensed out = 2 3 5 (eps_22 eps_33 eps_23) = must be determined and eventually condensed
@@ -303,8 +303,8 @@ int J2DamageFiber::setTrialStrain(const Vector& fiberStrain)
 	D = fmax(D, De);
 
 	// Damage correction in order to avoid singularity
-	D = fmin(D,0.95);
-	Dm1sq = pow(1.0 - D, 2.0);	// [1-D]^2
+	double Dm1sq = pow(1.0 - D, 2.0);	// [1-D]^2
+	//Dm1sq = fmax(Dm1sq, 1e-3);
 
 	// Elastic fiber strains (3)
 	Vector fiberstrain_e(3);
@@ -312,8 +312,11 @@ int J2DamageFiber::setTrialStrain(const Vector& fiberStrain)
 	for (int i = 0;i < 3;i++) fiberstrain_e(i) = strain(m[i]) - strain_p(m[i]);
 
 	// Nota: convergono ->    tangent = [1-D]^2*Cep,   stress = stress_k + Ce*dstrain
-	fibertangent = Dm1sq * C_mm_e;
+	fibertangent = Dm1sq * C_mm;
 	fiberstress = Dm1sq * C_mm_e * fiberstrain_e;
+
+	// Commits
+	this->commitState();
 
 	// Debug 3
 	if (dFlag1 == 1) {
@@ -329,8 +332,6 @@ int J2DamageFiber::setTrialStrain(const Vector& fiberStrain)
 		opserr << "tangent_ep:\n[ "; for (int i = 0;i < 6;i++) { for (int j = 0;j < 6;j++) opserr << tangent_ep(j, i) << " "; opserr << "]\n"; }
 		opserr << "tangent:\n[ "; for (int i = 0;i < 6;i++) { for (int j = 0;j < 6;j++) opserr << tangent(j, i) << " "; opserr << "]\n"; }
 	}
-
-	this->commitState();
 
 	return 0;
 };
@@ -409,7 +410,7 @@ void J2DamageFiber::condensate_consistent(void)
 	// Mantained stresses and tangent
 	Matrix C_temp(3, 3);
 	C_cc.Solve(C_cm, C_temp);
-	stress_m += C_mc * dstrain_c;
+	stress_m += C_mc * strain_c;
 	C_mm = C_mm - C_mc * C_temp;
 
 	// Debug
@@ -508,7 +509,6 @@ void J2DamageFiber::condensate_iterative(void)
 				C_cc(i, j) = C(c[i], c[j]);
 			}
 		}
-
 
 	}
 
@@ -698,7 +698,7 @@ void J2DamageFiber::damage()
 	// Strain tensors
 
 	// Tolerance
-	double tol = 1e-6;
+	double tol = 0;
 
 	// Tensor notation
 	Matrix epsilon(3, 3);
@@ -730,9 +730,9 @@ void J2DamageFiber::damage()
 	Vector e_ep(3);	Vector e_en(3);
 	for (int i = 0; i < 3; i++) {
 		if (e_t[i] > 0.0) { e_tp[i] = e_t[i];	e_tn[i] = 0.0; }
-		else			  { e_tp[i] = 0.0;		e_tn[i] = e_t[i]; }
+		else { e_tp[i] = 0.0;		e_tn[i] = e_t[i]; }
 		if (e_e[i] > 0.0) { e_ep[i] = e_e[i];	e_en[i] = 0.0; }
-		else			  { e_ep[i] = 0.0;		e_en[i] = e_e[i]; }
+		else { e_ep[i] = 0.0;		e_en[i] = e_e[i]; }
 	}
 
 	// Total equivalent tensile and compressive strains
@@ -745,35 +745,21 @@ void J2DamageFiber::damage()
 
 	////////// 2. Damage coefficients evaluation part ///////////////////////////////////////////////////////////////////////
 	// Damage functions at step n
-	double Ft = (Yt - Yt0) - Dt_k * (at * Yt + bt);
-	double Fc = (Yc - Yc0) - Dc_k * (ac * Yc + bc);
-
-	// Tensile damage parameter at step n+1
-	if (Ft < 1e-6) Dt = Dt_k;
-	else Dt = (Yt - Yt0) / (at * Yt + bt);
-	//Dt = fmax(Dt, Dt_k);
-	if (Dt < 0.0)	Dt = 0.0;
-	if (Dt > 1.0)	Dt = 1.0;
-
-	// Compressive damage parameter at step n+1
-	if (Fc < 0) Dc = Dc_k;
-	else Dc = (Yc - Yc0) / (ac * Yc + bc);
-	//Dc = fmax(Dc, Dc_k);
-	if (Dc < 0.0)	Dc = 0.0;
-	if (Dc > 1.0)	Dc = 1.0;
-
-	// Condition for tensile damage Dt > Dc ---> Dt = max(Dc,Dt)
+	Dt = fmax((Yt - Yt0) / (at * Yt + bt), Dt_k);
+	Dc = fmax((Yc - Yc0) / (ac * Yc + bc), Dc_k);
 	Dt = fmax(Dc, Dt);
+	Dt = fmin(Dt, 1);
+	Dc = fmin(Dc, 1);
 
 	// Damage 2 parameters coefficients
-	int algorithm = 0; // 0 = GATTA, 1 = DI RE
+	int algorithm = 1; // 0 = GATTA, 1 = DI RE
 	double alpha = 0.0;
 
 	// Weighting coefficients GATTA
 	if (algorithm == 0) {
 		if (fabs(Yt_e) / Yt0 + fabs(Yc_e) / Yc0 < tol) D = D_k;
 		else {
-			alpha = pow(Yt_e / Yt0, 1) / (pow(Yt_e / Yt0, 1) + pow(Yc_e / Yc0, 1));
+			alpha = fabs(Yt_e / Yt0) / (fabs(Yt_e / Yt0) + fabs(Yc_e / Yc0));
 			if (alpha < 0.0) alpha = 0.0;
 			if (alpha > 1.0) alpha = 1.0;
 
@@ -785,22 +771,16 @@ void J2DamageFiber::damage()
 	else {
 		double eta_t = Yt_e / (Yt0 + D_k * (at * Yt_e + bt));
 		double eta_c = Yc_e / (Yc0 + D_k * (ac * Yc_e + bc));
-		if (eta_t < tol) { alpha = 0.0; D = D_k; }
-		else {
-			alpha = pow(eta_t, 2) / (pow(eta_t, 2) + pow(eta_c, 2));
-			if (alpha < 0.0) alpha = 0.0;
-			if (alpha > 1.0) alpha = 1.0;
+		alpha = pow(eta_t, 2) / (pow(eta_t, 2) + pow(eta_c, 2));
+		if (alpha < 0.0) alpha = 0.0;
+		if (alpha > 1.0) alpha = 1.0;
 
-			// Cumulative damage variable
-			D = alpha * Dt + (1.0 - alpha) * Dc;
-		}
+		// Cumulative damage variable
+		D = alpha * Dt + (1.0 - alpha) * Dc;
 	}
 
 	// unilateral effect trigger
-	//D = fmax(D, D_k);
-
-	// Final check
-	//D = fmax(D_k, D);
+	D = fmax(D, D_k);
 
 	if (dFlag2 == 1) {
 		opserr << "\n--- Damage routine internal debug ----------\n";
@@ -956,9 +936,12 @@ const Vector& J2DamageFiber::getCommittedStrain(void) {
 	return strain_m_k;
 };
 
-double J2DamageFiber::getDamage(void) {
-	
-	return D;
+const Vector& J2DamageFiber::getDamage(void) {
+	dam[0] = Dt;
+	dam[1] = Dc;
+	dam[2] = D;
+
+	return dam;
 }
 
 int J2DamageFiber::commitState(void) {
@@ -970,9 +953,9 @@ int J2DamageFiber::commitState(void) {
 	strain_p_dev_k = strain_p_dev;
 	backstress_k = backStress;
 	sig_y_k = sig_y;
+	D_k = D;
 	Dc_k = Dc;
 	Dt_k = Dt;
-	D_k = D;
 
 	// Fiber operators
 	strain_m_k = strain_m;
@@ -1011,6 +994,7 @@ int J2DamageFiber::revertToLastCommit(void) {
 };
 
 int J2DamageFiber::revertToStart(void) {
+	opserr << "Called revertToStart" << endln;
 	// -- to be implemented.
 	return 0;
 }
@@ -1035,6 +1019,7 @@ int J2DamageFiber::recvSelf(int commitTag, Channel& theChannel, FEM_ObjectBroker
   */
 	return 0;
 };
+
 /*
 Response* J2DamageFiber::setResponse(const char** argv, int argc, OPS_Stream& s) {
 
@@ -1085,11 +1070,11 @@ int J2DamageFiber::getResponse(int responseID, Information& matInfo) {
 	return 0;
 }
 */
+
 void J2DamageFiber::Print(OPS_Stream& s, int flag) {
 	// -- to be implemented.
 	return;
 };
-
 
 int J2DamageFiber::setParameter(const char** argv, int argc, Parameter& param) {
 	// -- to be implemented.

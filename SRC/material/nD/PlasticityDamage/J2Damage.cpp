@@ -94,7 +94,7 @@ J2Damage::J2Damage(int tag, double _E, double _nu, // Parameters
 	Yt0(_Yt0), bt(_bt), at(_at), Yc0(_Yc0), bc(_bc), ac(_ac), beta(_beta), De(_De),
 	tangent(6, 6), tangent_e(6, 6), stress(6), strain(6),
 	strain_e(6), strain_p(6), strain_p_dev(6), strain_m(6), strain_e_m(6), backStress(6),
-	stress_k(6), strain_k(6), strain_p_k(6), strain_p_dev_k(6), backstress_k(6)
+	stress_k(6), strain_k(6), strain_p_k(6), strain_p_dev_k(6), backstress_k(6), dam(3)
 {
 	// Bulk and shear modulus
 	K = E / (3 * (1 - 2 * nu));
@@ -128,6 +128,7 @@ J2Damage::J2Damage(int tag, double _E, double _nu, // Parameters
 	Dc = Dc_k;
 	D = D_k;
 	Dm1sq = 1.0;
+	dam.Zero();
 
 }
 
@@ -137,7 +138,7 @@ E(0.0), nu(0.0), sig_y(1e10), Hk(0.0), Hi(0.0),
 Yt0(0.0), bt(0.0), at(0.0), Yc0(0.0), bc(0.0), ac(0.0), beta(0.0), De(0.0),
 tangent(6, 6), tangent_e(6, 6), stress(6), strain(6),
 strain_e(6), strain_p(6), strain_p_dev(6), strain_m(6), strain_e_m(6), backStress(6),
-stress_k(6), strain_k(6), strain_p_k(6), strain_p_dev_k(6), backstress_k(6)
+stress_k(6), strain_k(6), strain_p_k(6), strain_p_dev_k(6), backstress_k(6), dam(3)
 {
 	this->ndm = a.ndm;
 	this->G = a.G;
@@ -177,6 +178,7 @@ stress_k(6), strain_k(6), strain_p_k(6), strain_p_dev_k(6), backstress_k(6)
 	Dc = Dc_k;
 	D = D_k;
 	Dm1sq = 1.0;
+	dam.Zero();
 }
 
 J2Damage::~J2Damage() {
@@ -693,9 +695,11 @@ const Vector& J2Damage::getCommittedStrain(void) {
 	return strain_k;
 };
 
-double J2Damage::getDamage(void) {
-	
-	return D;
+const Vector& J2Damage::getDamage(void) {
+	dam[0] = Dt;
+	dam[1] = Dc;
+	dam[2] = D;
+	return dam;
 }
 
 int J2Damage::commitState(void) {
@@ -795,7 +799,7 @@ int J2Damage::getResponse(int responseID, Information& matInfo) {
 		return 0;
 
 	case 5:
-		matInfo.setDouble(this->getDamage());
+		//matInfo.setDouble(this->getDamage());
 		return 0;
 
 	}

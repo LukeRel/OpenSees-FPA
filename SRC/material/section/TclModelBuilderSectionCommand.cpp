@@ -1620,7 +1620,7 @@ TclCommand_addFiber(ClientData clientData, Tcl_Interp *interp, int argc,
 	if (argc > 5) {
 		opserr << "Fiber at " << yLoc << ", " << zLoc << " has a prestress eps0 = " << argv[5] << endln;
 		if (Tcl_GetDouble(interp, argv[5], &eps0) != TCL_OK) {
-			opserr << "WARNING invalid area: fiber yLoc zLoc area matTag <eps0> <beta>\n";
+			opserr << "WARNING invalid eps0: fiber yLoc zLoc area matTag <eps0> <beta>\n";
 			return TCL_ERROR;
 		}
 	}
@@ -1628,7 +1628,7 @@ TclCommand_addFiber(ClientData clientData, Tcl_Interp *interp, int argc,
 		opserr << "Fiber at "<< yLoc <<", " << zLoc << " has an angle beta = " << argv[6] << endln;
 		for (int i = 0; i++;i < argc) opserr << "arg " << i + 1 << " = " << argv[i] << endln;
 		if (Tcl_GetDouble(interp, argv[6], &beta) != TCL_OK) {
-			opserr << "WARNING invalid area: fiber yLoc zLoc area matTag <eps0> <beta>\n";
+			opserr << "WARNING invalid beta: fiber yLoc zLoc area matTag <eps0> <beta>\n";
 			return TCL_ERROR;
 		}
 	}

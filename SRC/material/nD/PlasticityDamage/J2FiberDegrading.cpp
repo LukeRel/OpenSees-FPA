@@ -92,7 +92,7 @@ J2FiberDegrading::J2FiberDegrading
   NDMaterial(tag, ND_TAG_J2FiberDegrading),
   E(e), nu(g), sigmaY(sy), Hiso(hi), Hkin(hk), De(_De),
   parameterID(0), SHVs(0), Tepsilon(3),
-  alphan(0.0), alphan1(0.0), dg_n1(0.0)
+  alphan(0.0), alphan1(0.0), dg_n1(0.0), dam(3)
 {
   epsPn[0] = 0.0;
   epsPn[1] = 0.0;
@@ -106,13 +106,15 @@ J2FiberDegrading::J2FiberDegrading
   double alpha = 0.2;
   sigmaY = (1 - alpha * De) * sigmaY;
 
+  dam.Zero();
+
 }
 
 J2FiberDegrading::J2FiberDegrading():
   NDMaterial(0, ND_TAG_J2FiberDegrading),
   E(0.0), nu(0.0), sigmaY(0.0), Hiso(0.0), Hkin(0.0), De(0.0),
   parameterID(0), SHVs(0), Tepsilon(3), 
-  alphan(0.0), alphan1(0.0), dg_n1(0.0)
+  alphan(0.0), alphan1(0.0), dg_n1(0.0), dam(3)
 {
   epsPn[0] = 0.0;
   epsPn[1] = 0.0;
@@ -121,6 +123,8 @@ J2FiberDegrading::J2FiberDegrading():
   epsPn1[0] = 0.0;
   epsPn1[1] = 0.0;
   epsPn1[2] = 0.0;
+
+  dam.Zero();
 }
 
 J2FiberDegrading::~J2FiberDegrading ()
@@ -418,9 +422,11 @@ J2FiberDegrading::getStrain (void)
   return Tepsilon;
 }
 
-double J2FiberDegrading::getDamage(void)
+const Vector&
+J2FiberDegrading::getDamage(void)
 {
-    return 0;
+    dam(2) = De;
+    return dam;
 }
 
 int

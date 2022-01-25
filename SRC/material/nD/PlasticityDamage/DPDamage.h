@@ -87,7 +87,7 @@ public:
 
 	double getRho(void) { return 0; };
 
-	double getDamage(void);
+	const Vector& getDamage(void);
 
 	int setTrialStrain(const Vector& strain_from_element);
 
@@ -188,6 +188,7 @@ private:
 	double Dt_k;				// Tensile damage at step (k)
 	double Dc_k;				// Compressive damage at step (k)
 	double D_k;					// Total damage at previous step (k)
+	Vector dam;
 
 	// Degradation stuff ------------------------------------------------------------------------------
 	double De;

@@ -71,7 +71,7 @@ public:
 	const Vector& getCommittedStress(void);
 	const Vector& getCommittedStrain(void);
 
-	double getDamage(void);
+	const Vector& getDamage(void);
 
 	int commitState(void);
 	int revertToLastCommit(void);
@@ -155,18 +155,18 @@ private:
 	double Dt;					// Tensile damage at step (k+1)
 	double Dc;					// Compressive damage at step (k+1)
 	double D;					// Total damage (k+1)
-	double Dm1sq;				// [1-D]^2 
 
 	// History operators
 	double Dt_k;				// Tensile damage at step (k)
 	double Dc_k;				// Compressive damage at step (k)
 	double D_k;					// Total damage at previous step (k)
+	Vector dam;
 
 	// Degradation stuff ------------------------------------------------------------------------------
 	double De;
 
 	// Condensation operators -------------------------------------------------------------------------
-	int init_condens(void); // Condensation operators initialization
+	int initialize(void); // Condensation operators initialization
 	void condensate_consistent(void); // Static condensation
 	void condensate_iterative(void); // Static condensation
 	void mat3DState(void); // 3D material state determination

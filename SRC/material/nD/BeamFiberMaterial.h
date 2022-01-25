@@ -54,7 +54,7 @@ class BeamFiberMaterial: public NDMaterial {
     const Matrix& getInitialTangent(void);
 
     double getRho(void);
-    double getDamage(void);
+    const Vector& getDamage(void);
 
     int commitState(void);
     int revertToLastCommit(void);

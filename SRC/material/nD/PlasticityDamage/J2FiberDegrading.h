@@ -64,7 +64,7 @@ class J2FiberDegrading : public NDMaterial
   const Vector &getStress (void);
   const Vector &getStrain (void);
 
-  double getDamage(void);
+  const Vector& getDamage(void);
   
   int commitState (void);
   int revertToLastCommit (void);
@@ -115,6 +115,7 @@ class J2FiberDegrading : public NDMaterial
 
   // Degradation
   double De;			// Degradation variable
+  Vector dam;
 
 };
 

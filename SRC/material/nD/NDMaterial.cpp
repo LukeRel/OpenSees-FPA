@@ -208,6 +208,13 @@ NDMaterial::getStrain(void)
    return errVector;    
 }
 
+const Vector&
+NDMaterial::getDamage(void)
+{
+    opserr << "NDMaterial::getDamage -- subclass responsibility\n";
+    return errVector;
+}
+
 //Functions for obtaining and updating temperature-dependent information Added by L.Jiang [SIF]
 double
 NDMaterial::getThermalTangentAndElongation(double &TempT, double &ET, double &Elong)
@@ -230,13 +237,6 @@ NDMaterial::getTempAndElong()
 	return errVector;
 }
 //end of adding thermo-mechanical functions, L.Jiang [SIF]
-
-double
-NDMaterial::getDamage(void)
-{
-    opserr << "NDMaterial::getDamage -- subclass responsibility\n";
-    return -1;
-}
 
 Response*
 NDMaterial::setResponse (const char **argv, int argc, OPS_Stream &output)
@@ -323,7 +323,9 @@ NDMaterial::setResponse (const char **argv, int argc, OPS_Stream &output)
       //static Vector vec = Vector(3);
       //for (int i = 0; i < 3; i++) vec[i] = 0;
       output.tag("ResponseType", "Damage");
-      theResponse = new MaterialResponse(this, 5, this->getDamage());
+      const Vector dam = this->getDamage();
+      double D = dam(2);
+      theResponse = new MaterialResponse(this, 5, D);//this->getDamage());
   }
   //default damage output - added by V.K. Papanikolaou [AUTh] - end 
 
@@ -342,8 +344,11 @@ NDMaterial::getResponse (int responseID, Information &matInfo)
   case 2:
     return matInfo.setVector(this->getStrain());
 
-  //case 5:
-    //return matInfo.setVector(this->getDamage());
+  case 5: {
+      const Vector dam = this->getDamage();
+      double D = dam(2);
+      return D;
+  }
     
   default:
     return -1;

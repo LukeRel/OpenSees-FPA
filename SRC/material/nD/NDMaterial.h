@@ -72,7 +72,7 @@ class NDMaterial : public Material
     virtual const Vector &getStress(void);
     virtual const Vector &getStrain(void);
     
-    virtual double getDamage(void);
+    virtual const Vector& getDamage(void);
 
     virtual int commitState(void) = 0;
     virtual int revertToLastCommit(void) = 0;

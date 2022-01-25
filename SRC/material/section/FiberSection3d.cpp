@@ -1227,7 +1227,7 @@ FiberSection3d::setResponse(const char **argv, int argc, OPS_Stream &output)
       output.attr("zLoc",matData[5*key+1]);
       output.attr("area",matData[5*key+2]);
       output.attr("eps0",matData[5*key+3]);
-      output.attr("beta",matData[5*key+3]);
+      output.attr("beta",matData[5*key+4]);
       
       theResponse = theMaterials[key]->setResponse(&argv[passarg], argc-passarg, output);
       
@@ -1242,6 +1242,7 @@ FiberSection3d::setResponse(const char **argv, int argc, OPS_Stream &output)
       output.attr("zLoc", matData[5*j+1]);
       output.attr("area", matData[5*j+2]);
       output.attr("eps0", matData[5*j+3]);
+      output.attr("beta", matData[5*j+4]);
       output.tag("ResponseType","yCoord");
       output.tag("ResponseType","zCoord");
       output.tag("ResponseType","area");

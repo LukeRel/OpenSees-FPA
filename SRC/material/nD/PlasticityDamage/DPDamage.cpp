@@ -113,7 +113,8 @@ DPDamage::DPDamage(int tag, double _E, double _nu, // Parameters
     IIdev(6, 6),
 	II1T(6,6),
     mState(5),
-	m(3, 3)
+	m(3, 3),
+	dam(3)
 {
 	// Bulk and shear modulus
 	K = E / (3.0 * (1.0 - 2.0 * nu));
@@ -153,7 +154,8 @@ DPDamage::DPDamage()
     IIdev(6, 6),
 	II1T(6, 6),
     mState(5),
-	m(3,3)
+	m(3,3),
+	dam(3)
 {
 	// Bulk and shear modulus
 	K = 0.0;
@@ -200,6 +202,7 @@ void DPDamage::initialize()
 	Dc = Dc_k;
 	D = D_k;
 	Dm1sq = 1.0;
+	dam.Zero();
 
     // 2nd order Identity Tensor
     I1.Zero();
@@ -614,9 +617,11 @@ const Matrix& DPDamage::getInitialTangent()
 	return Ce;
 }
 
-double DPDamage::getDamage(void) {
-
-	return D;
+const Vector& DPDamage::getDamage(void) {
+	dam[0] = Dt;
+	dam[1] = Dc;
+	dam[2] = D;
+	return dam;
 }
 
 int DPDamage::commitState(void)
