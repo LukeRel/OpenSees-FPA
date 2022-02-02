@@ -3236,14 +3236,14 @@ ForceBeamColumn3d::getResponse(int responseID, Information &eleInfo)
   }
   //by SAJalali
   else if (responseID == 10) {
-	  double xi[maxNumSections];
-	  double L = crdTransf->getInitialLength();
-	  beamIntegr->getSectionWeights(numSections, L, xi);
-	  double energy = 0;
-	  for (int i = 0; i < numSections; i++) {
-		  energy += sections[i]->getEnergy()*xi[i] * L;
-	  }
-	  return eleInfo.setDouble(energy);
+      double xi[maxNumSections];
+      double L = crdTransf->getInitialLength();
+      beamIntegr->getSectionWeights(numSections, L, xi);
+      double energy = 0;
+      for (int i = 0; i < numSections; i++) {
+          energy += sections[i]->getEnergy() * xi[i] * L;
+      }
+      return eleInfo.setDouble(energy);
   }
 
   else

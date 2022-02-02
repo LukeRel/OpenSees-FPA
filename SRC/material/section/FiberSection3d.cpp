@@ -151,7 +151,7 @@ FiberSection3d::FiberSection3d(int tag, int num, Fiber **fibers,
       matData[i*5+1] = zLoc;
       matData[i*5+2] = Area;
       matData[i*5+3] = eps0;
-      matData[i*5+3] = beta;
+      matData[i*5+4] = beta;
       UniaxialMaterial *theMat = theFiber->getMaterial();
       theMaterials[i] = theMat->getCopy();
 
@@ -214,6 +214,7 @@ FiberSection3d::FiberSection3d(int tag, int num, UniaxialMaterial &torsion, bool
 	    matData[i*5+1] = 0.0;
 	    matData[i*5+2] = 0.0;
 	    matData[i*5+3] = 0.0;
+	    matData[i*5+4] = 0.0;
 	    theMaterials[i] = 0;
 	}
     }
@@ -358,6 +359,7 @@ FiberSection3d::addFiber(Fiber &newFiber)
 	  newMatData[i*5+1] = matData[i*5+1];
 	  newMatData[i*5+2] = matData[i*5+2];
 	  newMatData[i*5+3] = matData[i*5+3];
+	  newMatData[i*5+4] = matData[i*5+4];
       }
 
       // initialize new memomry
@@ -367,6 +369,7 @@ FiberSection3d::addFiber(Fiber &newFiber)
 	  newMatData[i*5+1] = 0.0;
 	  newMatData[i*5+2] = 0.0;
 	  newMatData[i*5+3] = 0.0;
+	  newMatData[i*5+4] = 0.0;
       }
       sizeFibers = newSize;
 
@@ -495,15 +498,18 @@ FiberSection3d::setTrialSectionDeformation (const Vector &deforms)
 
     int ps_set = 0; // 0 = internal load, 1 = external
     if (ps_set == 0) {
-        res += theMaterials[i]->setTrial(strain + eps0, stress, tangent);
+        strain += eps0;
+        res += theMaterials[i]->setTrial(strain, stress, tangent);
         stress *= cos(beta);
     } else {
+        /* Unused until sig0 is placed correctly
         res += theMaterials[i]->setTrial(strain, stress, tangent);
         theMaterials[i]->setTrialStrain(strain + eps0);
         double sig0 = theMaterials[i]->getStress();
         sig0 -= stress;
         stress *= cos(beta);
         sig0 *= cos(beta);
+        */
     }
     
     //opserr << "Fiber " << i+1 << " strain, stress and E are: " << strain << ", " << stress << ", " << tangent << "\n";
@@ -648,6 +654,7 @@ FiberSection3d::getCopy(void)
       theCopy->matData[i*5+1] = matData[i*5+1];
       theCopy->matData[i*5+2] = matData[i*5+2];
       theCopy->matData[i*5+3] = matData[i*5+3];
+      theCopy->matData[i*5+4] = matData[i*5+4];
       theCopy->theMaterials[i] = theMaterials[i]->getCopy();
 
       if (theCopy->theMaterials[i] == 0) {
@@ -1079,6 +1086,7 @@ FiberSection3d::Print(OPS_Stream &s, int flag)
 	s << "\nLocation (y, z) = (" << matData[i*5] << ", " << matData[i*5+1] << ")";
 	s << "\nArea = " << matData[i*5+2] << endln;
     s << "\nEps0 = " << matData[i*5+3] << endln;
+    s << "\nBeta = " << matData[i*5+4] << endln;
 	theMaterials[i]->Print(s, flag);
 	
       }
@@ -1086,7 +1094,7 @@ FiberSection3d::Print(OPS_Stream &s, int flag)
   }
   if (flag == 3) {
     for (int i = 0; i < numFibers; i++) {
-      s << theMaterials[i]->getTag() << " " << matData[i*5] << " "  << matData[i*5+1] << " "  << matData[i*5+2] << " " ;
+      s << theMaterials[i]->getTag() << " " << matData[i*5] << " "  << matData[i*5+1] << " "  << matData[i*5+2] << " " << matData[i * 5 + 3] << " " << matData[i * 5 + 4] << " ";
       s << theMaterials[i]->getStress() << " "  << theMaterials[i]->getStrain() << endln;
     } 
   }
@@ -1580,7 +1588,7 @@ double FiberSection3d::getEnergy() const
 	}
 	else {
 		for (int i = 0; i < numFibers; i++) {
-			fiberArea[i] = matData[5 * i + 1];
+			fiberArea[i] = matData[5 * i + 2];
 		}
 	}
 	double energy = 0;

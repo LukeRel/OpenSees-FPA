@@ -168,11 +168,11 @@ NDFiberSection3d::NDFiberSection3d(int tag, int num, Fiber **fibers, double a, b
   if (d_out == 1) {
       using namespace std;
       ofstream outdata;
-      outdata.open("out_damage.txt");
-      outdata << "Step y z Dt Dc D" << endln;
+      outdata.open("out_fibers.txt");
+      outdata << "Step y z eps11 gam12 gam13 sig11 tau12 tau13 Dt Dc D" << endln;
       outdata.close();
-      outdata.open("out_section.txt");
-      outdata << "Step ex ky gz N My Vz" << endln;
+      outdata.open("out_sections.txt");
+      outdata << "Step ex ky gz N My Vz E" << endln;
       outdata.close();
   }
 }
@@ -516,23 +516,24 @@ NDFiberSection3d::setTrialSectionDeformation (const Vector &deforms)
     double sinBeta = sin(beta);
 
     // Set fiber strains to evaluate stress and tangent
+    if (eps0 != 0) eps(0) += eps0;
     res += theMat->setTrialStrain(eps);
     const Vector& stress = theMat->getStress();
     const Matrix& tangent = theMat->getTangent();
 
-    // Prestress as external loads
+    /* Prestress as external loads - Unused
     stress_0.Zero();
-    if (eps0 != 0) {
-        eps(0) += eps0;
+    int ps_set = 0; // 0 = internal load, 1 = external
+    if (ps_set == 1) {
         theMat->setTrialStrain(eps);
         const Vector& stress_p = theMat->getStress();
-        
+
         // Loads to be carried out
         stress_0 = stress_p - stress;
         // stress_p is the total stress;
         // stress   is the stress coming from the fiber deformation only
         // stress_0 is the difference, so it's the contribute of the external strains only
-    }
+    }*/
 
     // Section tangent matrix construction - K(x)_s
     double d00 = tangent(0,0)*A;
@@ -613,22 +614,23 @@ NDFiberSection3d::setTrialSectionDeformation (const Vector &deforms)
     double sig1 = stress(1)*A;
     double sig2 = stress(2)*A;
 
-    // Additional stress
+    /* Additional stress - Unused
     if (eps0 != 0) {
         sig0 += stress_0(0) * A;
         sig1 += stress_0(1) * A;
         sig2 += stress_0(2) * A;
 
-        // Rotations if necessary
-        if (beta != 0) {
-            //opserr << "Received beta is " << beta << " on fiber " << i+1 << endln;
-            //opserr << "Its cosine is " << cosBeta << endln;
-            //opserr << "Its sine is " << sinBeta << endln;
-            // Normal fiber stress rotation
-            sig0 = sig0 * cosBeta - sig2 * sinBeta;
-            //sig1 = sig1; // No rotations needed because beta is about y-axis
-            sig2 = sig0 * sinBeta + sig2 * cosBeta;
-        }
+    }*/
+
+    // Rotations if necessary
+    if (beta != 0) {
+        //opserr << "Received beta is " << beta << " on fiber " << i+1 << endln;
+        //opserr << "Its cosine is " << cosBeta << endln;
+        //opserr << "Its sine is " << sinBeta << endln;
+        // Normal fiber stress rotation
+        sig0 = sig0 * cosBeta - sig2 * sinBeta;
+        //sig1 = sig1; // No rotations needed because beta is about y-axis
+        sig2 = sig0 * sinBeta + sig2 * cosBeta;
     }
 
     si(0) += sig0;
@@ -873,22 +875,28 @@ NDFiberSection3d::commitState(void)
           double y = matData[5 * i];
           double z = matData[5 * i + 1];
           const Vector& dam = theMaterials[i]->getDamage();
+          const Vector& eps = theMaterials[i]->getStrain();
+          const Vector& sig = theMaterials[i]->getStress();
 
           // Damage output
           using namespace std;
           ofstream outdata;
-          outdata.open("out_damage.txt", ios::app);
-          outdata << step << " " << y << " " << z << " " << dam(0) << " " << dam(1) << " " << dam(2) << endln;
+          outdata.open("out_fibers.txt", ios::app);
+          outdata << step << " " << y << " " << z << " ";
+          outdata << eps(0) << " " << eps(1) << " " << eps(2) << " ";
+          outdata << sig(0) << " " << sig(1) << " " << sig(2) << " ";
+          outdata << dam(0) << " " << dam(1) << " " << dam(2) << endln;
           outdata.close();
       }
 
-      // Shear output
+      // Strains and stresses output
       const Vector& strain = this->getSectionDeformation();
       const Vector& stress = this->getStressResultant();
+      double energy = this->getEnergy();
       using namespace std;
       ofstream outdata;
-      outdata.open("out_section.txt", ios::app);
-      outdata << step << " " << strain(0) << " " << strain(2) << " " << strain(4) << " " << stress(0) << " " << stress(2) << " " << stress(4) << endln;
+      outdata.open("out_sections.txt", ios::app);
+      outdata << step << " " << strain(0) << " " << strain(2) << " " << strain(4) << " " << stress(0) << " " << stress(2) << " " << stress(4) << " " << energy << endln;
       outdata.close();
       
   }
@@ -1842,3 +1850,34 @@ NDFiberSection3d::commitSensitivity(const Vector& defSens,
 }
 
 // AddingSensitivity:END ///////////////////////////////////
+
+// L. Parente
+double NDFiberSection3d::getEnergy() const
+{
+    static double fiberArea[10000];
+
+    if (sectionIntegr != 0) {
+        sectionIntegr->getFiberWeights(numFibers, fiberArea);
+    }
+    else {
+        for (int i = 0; i < numFibers; i++) {
+            fiberArea[i] = matData[5 * i + 2];
+        }
+    }
+    double energy = 0;
+    for (int i = 0; i < numFibers; i++)
+    {
+        double A = fiberArea[i];
+        double dE;
+        dE = A * theMaterials[i]->getEnergy();
+        if (dE == 0) {
+            const Vector& s = theMaterials[i]->getStress();
+            const Vector& e = theMaterials[i]->getStrain();
+            const Vector& sk = theMaterials[i]->getCommittedStress();
+            const Vector& ek = theMaterials[i]->getCommittedStrain();
+            for (int i = 0; i < 3; i++) dE = A * 0.5 * (s(i) + sk(i)) * (e(i) - ek(i));
+        }
+        energy += dE;
+    }
+    return energy;
+}

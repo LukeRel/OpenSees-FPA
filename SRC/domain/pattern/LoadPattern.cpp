@@ -312,6 +312,24 @@ LoadPattern::addElementalLoad(ElementalLoad *load)
     return result;
 }
 
+/*bool
+LoadPattern::addSectionalLoad(SectionalLoad* load)
+{
+    Domain* theDomain = this->getDomain();
+
+    bool result = theSectionalLoads->addComponent(load);
+    if (result == true) {
+        if (theDomain != 0)
+            load->setDomain(theDomain);
+        load->setLoadPatternTag(this->getTag());
+        currentGeoTag++;
+    }
+    else
+        opserr << "WARNING: LoadPattern::addSectionalLoad() - load could not be added\n";
+
+    return result;
+}*/
+
 bool
 LoadPattern::addSP_Constraint(SP_Constraint *theSp)
 {

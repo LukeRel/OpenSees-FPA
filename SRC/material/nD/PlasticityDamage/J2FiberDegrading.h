@@ -63,9 +63,13 @@ class J2FiberDegrading : public NDMaterial
   const Matrix &getInitialTangent (void);
   const Vector &getStress (void);
   const Vector &getStrain (void);
-
-  const Vector& getDamage(void);
   
+  const Vector& getCommittedStress(void);
+  const Vector& getCommittedStrain(void);
+  double getEnergy(void);
+  
+  const Vector& getDamage(void);
+
   int commitState (void);
   int revertToLastCommit (void);
   int revertToStart (void);
@@ -105,6 +109,10 @@ class J2FiberDegrading : public NDMaterial
   static Matrix D;		// Elastic constants
   Vector Tepsilon;		// Trial strains
 
+  // History
+  Vector stress_k;
+  Vector strain_k;
+
   double alphan;
   double alphan1;
 
@@ -116,6 +124,9 @@ class J2FiberDegrading : public NDMaterial
   // Degradation
   double De;			// Degradation variable
   Vector dam;
+
+  // Energy
+  double energy;
 
 };
 

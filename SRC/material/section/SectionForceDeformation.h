@@ -44,6 +44,7 @@
 
 class Information;
 class Response;
+class SectionalLoad;
 
 #define MAX_SECTION_RESPONSE_ID 10000
 
@@ -91,7 +92,10 @@ class SectionForceDeformation : public Material
   virtual int getResponseSensitivity(int responseID, int gradIndex,
 				     Information &info);
   
-  
+  // methods for applying loads
+  virtual void zeroLoad(void);
+  virtual int addLoad(SectionalLoad* theLoad, double loadFactor);
+  virtual int addLoad(SectionalLoad* theLoad, const Vector& loadFactors);
 
   // AddingSensitivity:BEGIN //////////////////////////////////////////
   virtual const Vector &getStressResultantSensitivity(int gradIndex,

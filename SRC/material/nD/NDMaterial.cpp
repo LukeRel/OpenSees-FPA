@@ -209,6 +209,20 @@ NDMaterial::getStrain(void)
 }
 
 const Vector&
+NDMaterial::getCommittedStress(void)
+{
+    //opserr << "NDMaterial::getCommittedStress -- subclass responsibility\n";
+    return errVector;
+}
+
+const Vector&
+NDMaterial::getCommittedStrain(void)
+{
+    //opserr << "NDMaterial::getCommittedStrain -- subclass responsibility\n";
+    return errVector;
+}
+
+const Vector&
 NDMaterial::getDamage(void)
 {
     opserr << "NDMaterial::getDamage -- subclass responsibility\n";

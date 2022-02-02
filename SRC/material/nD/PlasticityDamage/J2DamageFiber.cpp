@@ -129,6 +129,9 @@ J2DamageFiber::J2DamageFiber(int tag, double _E, double _nu, // Parameters
 	D = D_k;
 	dam.Zero();
 
+	// Energy
+	energy = 0;
+
 	//opserr << "Finished constructor." << endln;
 }
 
@@ -172,6 +175,10 @@ fiberstress(3), fibertangent(3,3), dam(3)
 	Dc = Dc_k;
 	D = D_k;
 	dam.Zero();
+
+	// Energy
+	energy = 0;
+
 }
 
 J2DamageFiber::~J2DamageFiber() {
@@ -944,7 +951,16 @@ const Vector& J2DamageFiber::getDamage(void) {
 	return dam;
 }
 
+double J2DamageFiber::getEnergy(void) {
+
+	return energy;
+}
+
 int J2DamageFiber::commitState(void) {
+
+	// Energy
+	for (int i=0; i<3;i++) energy += 0.5 * (stress_m(i) + stress_m_k(i)) * (strain_m(i) - strain_m_k(i));
+	//opserr << "energy is " << energy << endln;
 
 	// 3D operators
 	stress_k = stress;

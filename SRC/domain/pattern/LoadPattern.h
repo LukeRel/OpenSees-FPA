@@ -44,6 +44,7 @@
 class NodalLoad;
 class TimeSeries;
 class ElementalLoad;
+class SectionalLoad;
 class SP_Constraint;
 class NodalLoadIter;
 class ElementalLoadIter;
@@ -71,6 +72,7 @@ class LoadPattern : public DomainComponent
     virtual bool addSP_Constraint(SP_Constraint *);
     virtual bool addNodalLoad(NodalLoad *);
     virtual bool addElementalLoad(ElementalLoad *);
+    //virtual bool addSectionalLoad(SectionalLoad*); // L. Parente
     virtual NodalLoadIter     &getNodalLoads(void);
     virtual ElementalLoadIter &getElementalLoads(void);    
     virtual SP_ConstraintIter &getSPs(void);        
@@ -126,6 +128,7 @@ class LoadPattern : public DomainComponent
     // storage objects for the loads and constraints
     TaggedObjectStorage  *theNodalLoads;
     TaggedObjectStorage  *theElementalLoads;
+    TaggedObjectStorage  *theSectionalLoads;
     TaggedObjectStorage  *theSPs; 	  
 
     // iterator objects for the objects added to the storage objects

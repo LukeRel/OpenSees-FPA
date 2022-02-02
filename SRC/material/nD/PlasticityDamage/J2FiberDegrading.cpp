@@ -91,8 +91,8 @@ J2FiberDegrading::J2FiberDegrading
 (int tag, double e, double g, double sy, double hi, double hk, double _De):
   NDMaterial(tag, ND_TAG_J2FiberDegrading),
   E(e), nu(g), sigmaY(sy), Hiso(hi), Hkin(hk), De(_De),
-  parameterID(0), SHVs(0), Tepsilon(3),
-  alphan(0.0), alphan1(0.0), dg_n1(0.0), dam(3)
+  parameterID(0), SHVs(0), Tepsilon(3), strain_k(3), stress_k(3),
+  alphan(0.0), alphan1(0.0), dg_n1(0.0), dam(3), energy(0)
 {
   epsPn[0] = 0.0;
   epsPn[1] = 0.0;
@@ -106,6 +106,8 @@ J2FiberDegrading::J2FiberDegrading
   double alpha = 0.2;
   sigmaY = (1 - alpha * De) * sigmaY;
 
+  strain_k.Zero();
+  stress_k.Zero();
   dam.Zero();
 
 }
@@ -113,8 +115,8 @@ J2FiberDegrading::J2FiberDegrading
 J2FiberDegrading::J2FiberDegrading():
   NDMaterial(0, ND_TAG_J2FiberDegrading),
   E(0.0), nu(0.0), sigmaY(0.0), Hiso(0.0), Hkin(0.0), De(0.0),
-  parameterID(0), SHVs(0), Tepsilon(3), 
-  alphan(0.0), alphan1(0.0), dg_n1(0.0), dam(3)
+  parameterID(0), SHVs(0), Tepsilon(3), strain_k(3), stress_k(3),
+  alphan(0.0), alphan1(0.0), dg_n1(0.0), dam(3), energy(0)
 {
   epsPn[0] = 0.0;
   epsPn[1] = 0.0;
@@ -124,6 +126,8 @@ J2FiberDegrading::J2FiberDegrading():
   epsPn1[1] = 0.0;
   epsPn1[2] = 0.0;
 
+  strain_k.Zero();
+  stress_k.Zero();
   dam.Zero();
 }
 
@@ -429,16 +433,35 @@ J2FiberDegrading::getDamage(void)
     return dam;
 }
 
+const Vector& J2FiberDegrading::getCommittedStress(void) {
+
+    return stress_k;
+};
+
+const Vector& J2FiberDegrading::getCommittedStrain(void) {
+
+    return strain_k;
+};
+
+double J2FiberDegrading::getEnergy(void) {
+
+    return energy;
+}
+
 int
-J2FiberDegrading::commitState (void)
+J2FiberDegrading::commitState(void)
 {
-  epsPn[0] = epsPn1[0];
-  epsPn[1] = epsPn1[1];
-  epsPn[2] = epsPn1[2];
+    // Energy [only axial!]
+    for (int i = 0; i < 3; i++) energy += 0.5 * (sigma(i) + stress_k(i)) * (Tepsilon(i) - strain_k(i));
+    //opserr << "energy is " << energy << endln;
 
-  alphan = alphan1;
+    epsPn[0] = epsPn1[0];
+    epsPn[1] = epsPn1[1];
+    epsPn[2] = epsPn1[2];
 
-  return 0;
+    alphan = alphan1;
+
+    return 0;
 }
 
 int

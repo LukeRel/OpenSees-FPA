@@ -376,6 +376,22 @@ SectionForceDeformation::getResponseSensitivity(int responseID, int gradIndex,
   }
 }
 
+void
+SectionForceDeformation::zeroLoad(void)
+{
+
+}
+
+int
+SectionForceDeformation::addLoad(SectionalLoad* theLoad, double loadFactor) {
+    return 0;
+}
+
+int
+SectionForceDeformation::addLoad(SectionalLoad* theLoad, const Vector& loadFactors) {
+    return 0;
+}
+
 // AddingSensitivity:BEGIN ////////////////////////////////////////
 const Vector &
 SectionForceDeformation::getStressResultantSensitivity(int gradIndex, bool conditional)

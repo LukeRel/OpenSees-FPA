@@ -77,7 +77,7 @@
 #include <SelfWeight.h>
 #include <LoadPattern.h>
 
-
+#include <FiberLoad.h> // L. Parente
 
 #include <SectionForceDeformation.h>
 #include <SectionRepres.h>
@@ -149,6 +149,7 @@ extern MultiSupportPattern *theTclMultiSupportPattern;
 static int eleArgStart = 0;
 static int nodeLoadTag = 0;
 static int eleLoadTag = 0;
+static int secLoadTag = 0;
 
 // 
 // THE PROTOTYPES OF THE FUNCTIONS INVOKED BY THE INTERPRETER
@@ -263,6 +264,10 @@ TclCommand_addNodalLoad(ClientData clientData, Tcl_Interp *interp, int argc,
 int
 TclCommand_addElementalLoad(ClientData clientData, Tcl_Interp *interp, int argc,   
 			    TCL_Char **argv);
+
+/*int
+TclCommand_addSectionalLoad(ClientData clientData, Tcl_Interp* interp, int argc,
+	TCL_Char** argv);*/
 
 int
 TclCommand_addNodalMass(ClientData clientData, Tcl_Interp *interp, int argc,   
@@ -515,6 +520,9 @@ TclModelBuilder::TclModelBuilder(Domain &theDomain, Tcl_Interp *interp, int NDM,
 
   Tcl_CreateCommand(interp, "eleLoad", TclCommand_addElementalLoad,
 		    (ClientData)NULL, NULL);
+
+  /*Tcl_CreateCommand(interp, "secLoad", TclCommand_addSectionalLoad,
+			(ClientData)NULL, NULL);*/
 
   Tcl_CreateCommand(interp, "mass", TclCommand_addNodalMass,
 		    (ClientData)NULL, NULL);
@@ -1950,8 +1958,7 @@ TclCommand_addElementalLoad(ClientData clientData, Tcl_Interp *interp, int argc,
     return TCL_ERROR;
   } 
   count++;
-  if (strcmp(argv[count],"-beamUniform") == 0 ||
-      strcmp(argv[count],"beamUniform") == 0){
+  if (strcmp(argv[count],"-beamUniform") == 0 || strcmp(argv[count],"beamUniform") == 0){
     count++;
     if (ndm == 2) {
       double wta;
@@ -2077,8 +2084,8 @@ TclCommand_addElementalLoad(ClientData clientData, Tcl_Interp *interp, int argc,
       return TCL_ERROR;
     }
 
-  } else if (strcmp(argv[count],"-beamPoint") == 0 ||
-	     strcmp(argv[count],"beamPoint") == 0 ) {
+  }
+  else if (strcmp(argv[count],"-beamPoint") == 0 || strcmp(argv[count],"beamPoint") == 0 ) {
     count++;
     if (ndm == 2) {
       double P, x;
@@ -3225,6 +3232,118 @@ TclCommand_addElementalLoad(ClientData clientData, Tcl_Interp *interp, int argc,
   return TCL_OK;
 }
 
+
+/*int
+TclCommand_addSectionalLoad(ClientData clientData, Tcl_Interp* interp, int argc,
+	TCL_Char** argv)
+{
+	// ensure the destructor has not been called - 
+	if (theTclBuilder == 0) {
+		opserr << "WARNING current builder has been destroyed - secLoad\n";
+		return TCL_ERROR;
+	}
+
+	if (theTclLoadPattern == 0) {
+		opserr << "WARNING no active load pattern - secLoad\n";
+		return TCL_ERROR;
+	}
+
+	int ndm = theTclBuilder->getNDM();
+	SectionalLoad* theLoad = 0;
+
+	ID theSecTags(0, 16);
+
+	// we first create an ID containing the sec tags of all sections
+	// for which the load applies.
+	int count = 1;
+	int doneSec = 0;
+	int secCount = 0;
+	while (doneSec == 0 && count < argc) {
+		if (strcmp(argv[count], "-sec") == 0) {
+			count++;
+			int secStart = count;
+			int secEnd = 0;
+			int secID;
+			while (count < argc && secEnd == 0) {
+				if (Tcl_GetInt(interp, argv[count], &secID) != TCL_OK)
+					secEnd = count;
+				else
+					count++;
+			}
+			if (secStart != secEnd) {
+				for (int i = secStart; i < secEnd; i++) {
+					Tcl_GetInt(interp, argv[i], &secID);
+					theSecTags[secCount++] = secID;
+				}
+			}
+		}
+		else if (strcmp(argv[count], "-range") == 0) {
+			count++;
+			int secStart, secEnd;
+			if (Tcl_GetInt(interp, argv[count], &secStart) != TCL_OK) {
+				opserr << "WARNING secLoad -range invalid secStart " << argv[count] << "\n";
+				return TCL_ERROR;
+			}
+			count++;
+			if (Tcl_GetInt(interp, argv[count], &secEnd) != TCL_OK) {
+				opserr << "WARNING secLoad -range invalid secEnd " << argv[count] << "\n";
+				return TCL_ERROR;
+			}
+			count++;
+			for (int i = secStart; i <= secEnd; i++)
+				theSecTags[secCount++] = i;
+		}
+		else
+			doneSec = 1;
+	}
+
+
+	// we then create the load
+	if (strcmp(argv[count], "-fiber") != 0) {
+		opserr << "WARNING secLoad - expecting -fiber option but got "
+			<< argv[count] << endln;
+		return TCL_ERROR;
+	}
+	count++;
+	int fiber = 0;
+	if (count >= argc || Tcl_GetInt(interp, argv[count], &fiber) != TCL_OK) {
+		opserr << "WARNING secLoad - invalid fiber integer number.\n";
+		return TCL_ERROR;
+	}
+	count++;
+	double eps0 = 0;
+	if (count < argc && Tcl_GetDouble(interp, argv[count], &eps0) != TCL_OK) {
+		opserr << "WARNING secLoad - invalid initial fiber strain eps0 \n";
+		return TCL_ERROR;
+	}
+	for (int i = 0; i < theSecTags.Size(); i++) {
+		theLoad = new FiberLoad(secLoadTag, fiber, eps0, theSecTags(i));
+
+		if (theLoad == 0) {
+			opserr << "WARNING secLoad - out of memory creating load of type " << argv[count];
+			return TCL_ERROR;
+		}
+
+		// get the current pattern tag if no tag given in i/p
+		int loadPatternTag = theTclLoadPattern->getTag();
+
+		// add the load to the domain
+		if (theTclDomain->addSectionalLoad(theLoad, loadPatternTag) == false) {
+			opserr << "WARNING secLoad - could not add following load to domain:\n ";
+			opserr << theLoad;
+			delete theLoad;
+			return TCL_ERROR;
+		}
+		secLoadTag++;
+	}
+
+	return 0;
+
+
+
+	// if get here we have sucessfully created the load and added it to the domain
+	return TCL_OK;
+}*/
 
 
 int

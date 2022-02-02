@@ -953,6 +953,31 @@ Domain::addElementalLoad(ElementalLoad *load, int pattern)
     return result;
 }
 
+/*
+bool
+Domain::addSectionalLoad(SectionalLoad* load, int pattern)
+{
+    // now add it to the pattern
+    TaggedObject* thePattern = theLoadPatterns->getComponentPtr(pattern);
+    if (thePattern == 0) {
+        opserr << "Domain::addSectionalLoad() - no pattern with tag " << pattern <<
+            "exists in the model, not adding the sec load " << *load << endln;
+
+        return false;
+    }
+    LoadPattern* theLoadPattern = (LoadPattern*)thePattern;
+    bool result = theLoadPattern->addSectionalLoad(load);
+    if (result == false) {
+        opserr << "Domain::addElementalLoad() - no pattern with tag" <<
+            pattern << "in  the model, not adding the sec load" << *load << endln;
+        return false;
+    }
+
+
+    this->domainChange();
+    return result;
+}
+*/
 
 /* GENERAL NOTE ON REMOVAL OF COMPONENTS:
 **   downward casts (while bad) are o.k. as only the type

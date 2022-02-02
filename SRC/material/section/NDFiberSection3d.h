@@ -93,6 +93,8 @@ class NDFiberSection3d : public SectionForceDeformation
 			  int gradIndex, int numGrads);
     // AddingSensitivity:END ///////////////////////////////////////////
 
+    double getEnergy() const; // L. Parente
+
   protected:
     
     //  private:

@@ -72,6 +72,7 @@ public:
 	const Vector& getCommittedStrain(void);
 
 	const Vector& getDamage(void);
+	double getEnergy(void);
 
 	int commitState(void);
 	int revertToLastCommit(void);
@@ -108,6 +109,7 @@ private:
 	double sig_y;   // Yield strength
 	double Hk;      // Kinematic hardening coefficient
 	double Hi;      // Isotropic hardening coefficient
+	double energy;	// Internal energy
 
 	// Trial variables --------------------------------------------------------------------------------
 	Vector stress;				// Stresses vector (k+1)

@@ -46,6 +46,7 @@ class MP_Constraint;
 class Pressure_Constraint;
 class NodalLoad;
 class ElementalLoad;
+class SectionalLoad;
 class LoadPattern;
 class Parameter;
 
@@ -111,6 +112,8 @@ class Domain
     virtual  bool addSP_Constraint(SP_Constraint *, int loadPatternTag); 
     virtual  bool addNodalLoad(NodalLoad *, int loadPatternTag);
     virtual  bool addElementalLoad(ElementalLoad *, int loadPatternTag);
+
+    //virtual  bool addSectionalLoad(SectionalLoad*, int loadPatternTag); // L. Parente
     
     // methods to remove the components 
     virtual void clearAll(void);	
@@ -130,6 +133,7 @@ class Domain
     virtual ElementalLoad *removeElementalLoad(int tag, int loadPattern);
     virtual SP_Constraint *removeSP_Constraint(int tag, int loadPattern);
 
+    //virtual SectionalLoad* removeSectionalLoad(int tag, int loadPattern);
     
     // methods to access the components of a domain
     virtual  ElementIter       &getElements();
