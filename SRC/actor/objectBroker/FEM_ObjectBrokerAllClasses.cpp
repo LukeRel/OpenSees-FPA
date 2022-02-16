@@ -385,6 +385,7 @@
 #include "BrickSelfWeight.h"
 #include "SelfWeight.h"
 #include "SurfaceLoader.h"
+#include "Beam3dSectionLoad.h" // L. Parente
 
 // matrix, vector & id header files
 #include "Matrix.h"
@@ -1045,7 +1046,10 @@ FEM_ObjectBrokerAllClasses::getNewElementalLoad(int classTag)
 	     
     case LOAD_TAG_SurfaceLoader:
       return new SurfaceLoader();     	     
-        
+
+	case LOAD_TAG_Beam3dSectionLoad:
+		return new Beam3dSectionLoad();
+
   default:
     opserr << "FEM_ObjectBrokerAllClasses::getNewNodalLoad - ";
     opserr << " - no NodalLoad type exists for class tag ";

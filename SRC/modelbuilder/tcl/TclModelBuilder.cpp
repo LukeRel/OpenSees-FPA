@@ -77,7 +77,7 @@
 #include <SelfWeight.h>
 #include <LoadPattern.h>
 
-#include <FiberLoad.h> // L. Parente
+#include <Beam3dSectionLoad.h> // L. Parente
 
 #include <SectionForceDeformation.h>
 #include <SectionRepres.h>
@@ -2187,6 +2187,47 @@ TclCommand_addElementalLoad(ClientData clientData, Tcl_Interp *interp, int argc,
       return TCL_ERROR;
     }  
   }
+  // Section loads (added by L. Parente)
+  else if (strcmp(argv[count], "-fiberStrains") == 0 || strcmp(argv[count], "fiberStrains") == 0){
+    count++;
+	// Arguments: secTag fibTag eps0 beta
+	int secTag, fibTag;
+	double eps0;
+	if (count >= argc || Tcl_GetInt(interp, argv[count], &secTag) != TCL_OK) {
+		opserr << "WARNING eleLoad - invalid section tag for -fiberStrains command\n";
+		return TCL_ERROR;
+	}
+	if (count + 1 >= argc || Tcl_GetInt(interp, argv[count + 1], &fibTag) != TCL_OK) {
+		opserr << "WARNING eleLoad - invalid fiber tag for -fiberStrains command\n";
+		return TCL_ERROR;
+	}
+	if (count + 2 >= argc || Tcl_GetDouble(interp, argv[count + 2], &eps0) != TCL_OK) {
+		opserr << "WARNING eleLoad - invalid eps0 for -fiberStrains command\n";
+		return TCL_ERROR;
+	}
+
+	for (int i = 0; i < theEleTags.Size(); i++) {
+		theLoad = new Beam3dSectionLoad(eleLoadTag, theEleTags(i), secTag, fibTag, eps0);
+
+		if (theLoad == 0) {
+			opserr << "WARNING eleLoad - out of memory creating load of type " << argv[count];
+			return TCL_ERROR;
+		}
+
+		// get the current pattern tag if no tag given in i/p
+		int loadPatternTag = theTclLoadPattern->getTag();
+
+		// add the load to the domain
+		if (theTclDomain->addElementalLoad(theLoad, loadPatternTag) == false) {
+			opserr << "WARNING eleLoad - could not add following load to domain:\n ";
+			opserr << theLoad;
+			delete theLoad;
+			return TCL_ERROR;
+		}
+		eleLoadTag++;
+	}
+	return 0;
+	}
   // Added Joey Yang UC Davis
   else if (strcmp(argv[count],"-BrickW") == 0) {
 

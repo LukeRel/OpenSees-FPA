@@ -1516,6 +1516,21 @@ NDFiberSection3d::getResponse(int responseID, Information &sectInfo)
 }
 
 
+void
+NDFiberSection3d::zeroLoad(void)
+{
+
+}
+
+int
+NDFiberSection3d::addLoad(int fibTag, double eps0) {
+    // Adding eps0 and beta to selected fiber
+    matData[5*(fibTag-1)+3] = eps0;
+
+    //opserr << "eps0 = " << eps0 << " in fiber " << fibTag << endln;
+    return 0;
+}
+
 
 // AddingSensitivity:BEGIN ////////////////////////////////////
 int

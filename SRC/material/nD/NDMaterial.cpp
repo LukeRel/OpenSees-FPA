@@ -266,12 +266,12 @@ NDMaterial::setResponse (const char **argv, int argc, OPS_Stream &output)
     const Vector &res = this->getStress();
     int size = res.Size();
     
-    if ( (strcmp(matType,"PlaneStress") == 0 && size == 3) ||
-	 (strcmp(matType,"PlaneStrain") == 0 && size == 3)) {
+    if ( (strcmp(matType,"PlaneStress") == 0 && size == 3) || (strcmp(matType,"PlaneStrain") == 0 && size == 3)) {
 	output.tag("ResponseType","sigma11");
 	output.tag("ResponseType","sigma22");
 	output.tag("ResponseType","sigma12");
-    } else if (strcmp(matType,"ThreeDimensional") == 0 && size == 6) {
+    }
+    else if (strcmp(matType,"ThreeDimensional") == 0 && size == 6) {
 	output.tag("ResponseType","sigma11");
 	output.tag("ResponseType","sigma22");
 	output.tag("ResponseType","sigma33");
@@ -283,21 +283,22 @@ NDMaterial::setResponse (const char **argv, int argc, OPS_Stream &output)
         output.tag("ResponseType", "sigma11");
         output.tag("ResponseType", "sigma12");
         output.tag("ResponseType", "sigma13");
-    } else {
+    }
+    else {
       for (int i=0; i<size; i++) 
 	output.tag("ResponseType","UnknownStress");
     }
     theResponse =  new MaterialResponse(this, 1, this->getStress());
-
-  } else if (strcmp(argv[0],"strain") == 0 || strcmp(argv[0],"strains") == 0) {
+  } 
+  else if (strcmp(argv[0],"strain") == 0 || strcmp(argv[0],"strains") == 0) {
     const Vector &res = this->getStrain();
     int size = res.Size();
-    if ( (strcmp(matType,"PlaneStress") == 0 && size == 3) ||
-	 (strcmp(matType,"PlaneStrain") == 0 && size == 3)) {
+    if ( (strcmp(matType,"PlaneStress") == 0 && size == 3) || (strcmp(matType,"PlaneStrain") == 0 && size == 3)) {
 	output.tag("ResponseType","eta11");
 	output.tag("ResponseType","eta22");
 	output.tag("ResponseType","eta12");
-    } else if (strcmp(matType,"ThreeDimensional") == 0 && size == 6) {
+    }
+    else if (strcmp(matType,"ThreeDimensional") == 0 && size == 6) {
 	output.tag("ResponseType","eps11");
 	output.tag("ResponseType","eps22");
 	output.tag("ResponseType","eps33");

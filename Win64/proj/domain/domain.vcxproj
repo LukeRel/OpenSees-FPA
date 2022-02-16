@@ -200,6 +200,7 @@
     <ClCompile Include="..\..\..\SRC\domain\component\LoadFactorParameter.cpp" />
     <ClCompile Include="..\..\..\SRC\domain\load\Beam2dPartialUniformLoad.cpp" />
     <ClCompile Include="..\..\..\SRC\domain\load\Beam3dPartialUniformLoad.cpp" />
+    <ClCompile Include="..\..\..\SRC\domain\load\Beam3dSectionLoad.cpp" />
     <ClCompile Include="..\..\..\SRC\domain\load\Beam3dThermalAction.cpp" />
     <ClCompile Include="..\..\..\SRC\domain\load\FiberLoad.cpp" />
     <ClCompile Include="..\..\..\SRC\domain\load\NodalThermalAction.cpp" />
@@ -293,6 +294,7 @@
     <ClInclude Include="..\..\..\SRC\domain\component\LoadFactorParameter.h" />
     <ClInclude Include="..\..\..\SRC\domain\load\Beam2dPartialUniformLoad.h" />
     <ClInclude Include="..\..\..\SRC\domain\load\Beam3dPartialUniformLoad.h" />
+    <ClInclude Include="..\..\..\SRC\domain\load\Beam3dSectionLoad.h" />
     <ClInclude Include="..\..\..\SRC\domain\load\Beam3dThermalAction.h" />
     <ClInclude Include="..\..\..\SRC\domain\load\FiberLoad.h" />
     <ClInclude Include="..\..\..\SRC\domain\load\NodalThermalAction.h" />

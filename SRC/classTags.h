@@ -582,6 +582,7 @@
 #define LOAD_TAG_ThermalActionWrapper     16 //L.Jiang [ SIF ]
 #define LOAD_TAG_LysmerVelocityLoader     17  //Jose Abell (UANDES)
 #define LOAD_TAG_FiberLoad				  18 // L. Parente
+#define LOAD_TAG_Beam3dSectionLoad		  19 // L. Parente
 
 
 #define MAT_TAG_IsotropicLinElastic         1001

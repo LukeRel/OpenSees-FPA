@@ -526,9 +526,9 @@ ForceBeamColumn3d::computeReactions(double *p0)
       p0[4] -= V;
     }
     else if (type == LOAD_TAG_Beam3dPartialUniformLoad) {
-      double wa = data(2)*loadFactor;  // Axial
       double wy = data(0)*loadFactor;  // Transverse
       double wz = data(1)*loadFactor;  // Transverse
+      double wa = data(2) * loadFactor;  // Axial
       double a = data(3)*L;
       double b = data(4)*L;
 
@@ -729,7 +729,7 @@ void
     static double factor = 10;
     double dW0 = 0.0;
 
-    maxSubdivisions = 10;
+    maxSubdivisions = 10; // Set to 10 originally
 
     // fmk - modification to get compatible ele forces and deformations 
     //   for a change in deformation dV we try first a newton iteration, if
@@ -1123,9 +1123,11 @@ void
     // if fail to converge we return an error flag & print an error message
 
     if (converged == false) {
-      opserr << "WARNING - ForceBeamColumn3d::update - failed to get compatible ";
-      opserr << "element forces & deformations for element: ";
-      opserr << this->getTag() << "(dW: << " << dW << ", dW0: " << dW0 << ")\n";
+      //opserr << "WARNING - ForceBeamColumn3d::update - failed to get compatible ";
+      //opserr << "element forces & deformations for element: ";
+      double dW_norm = dW / dW0;
+      opserr << "Warning for element ";
+      opserr << this->getTag() << ": Normalized energy = " << dW_norm << endln;
 
       /*
       opserr << "Section Tangent Condition Numbers: ";
@@ -1137,6 +1139,7 @@ void
       opserr << endln;
       */
 
+      //return 0;
       return -1;
     }
 
@@ -1449,6 +1452,14 @@ ForceBeamColumn3d::computeSectionForces(Vector &sp, int isec)
 	  }
 	}
       }
+    }
+    // Section fiber load
+    else if (type == LOAD_TAG_Beam3dSectionLoad) {
+        int secTag = data(0);
+        int fibTag = data(1);
+        double eps0 = data(2) * loadFactor;
+
+        sections[secTag-1]->addLoad(fibTag, eps0);
     }
     else {
       opserr << "ForceBeamColumn3d::addLoad -- load type unknown for element with tag: " <<

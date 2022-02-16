@@ -475,7 +475,6 @@
     <ClCompile Include="..\..\..\SRC\element\HUelements\MultipleShearSpring.cpp" />
     <ClCompile Include="..\..\..\SRC\element\HUelements\YamamotoBiaxialHDR.cpp" />
     <ClCompile Include="..\..\..\SRC\element\NewElement.cpp" />
-    <ClCompile Include="..\..\..\SRC\material\section\SectionalLoad.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\OTHER\tetgen1.4.3\tetgen.h" />
@@ -730,7 +729,6 @@
     <ClInclude Include="..\..\..\SRC\element\HUelements\MultipleShearSpring.h" />
     <ClInclude Include="..\..\..\SRC\element\HUelements\YamamotoBiaxialHDR.h" />
     <ClInclude Include="..\..\..\SRC\element\NewElement.h" />
-    <ClInclude Include="..\..\..\SRC\material\section\SectionalLoad.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

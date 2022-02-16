@@ -63,6 +63,8 @@ UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 #include <vector>
 #include <InterpolatedGroundMotion.h>
 
+#include <Beam3dSectionLoad.h> // by L. Parente
+
 void* OPS_LoadPattern();
 void* OPS_UniformExcitationPattern();
 void* OPS_MultiSupportPattern();
@@ -275,8 +277,7 @@ int OPS_ElementalLoad()
 	return -1;
     }
     const char* type = OPS_GetString();
-    if (strcmp(type,"-beamUniform") == 0 ||
-	strcmp(type,"beamUniform") == 0) {
+    if (strcmp(type,"-beamUniform") == 0 || strcmp(type,"beamUniform") == 0) {
 
 	if (ndm == 2) {
 	    // wta, waa, aL, bL, wtb, wab
@@ -364,8 +365,8 @@ int OPS_ElementalLoad()
 	    return -1;
 	}
 
-    } else if (strcmp(type,"-beamPoint") == 0 ||
-	       strcmp(type,"beamPoint") == 0 ) {
+    }
+	else if (strcmp(type,"-beamPoint") == 0 || strcmp(type,"beamPoint") == 0 ) {
 
 	if (ndm == 2) {
 	    // P, x, N
@@ -459,6 +460,50 @@ int OPS_ElementalLoad()
 	    return -1;
 	}
     }
+	// Section loads (added by L. Parente)
+	else if (strcmp(type, "-prestress") == 0 || strcmp(type, "prestress") == 0) {
+		// Arguments: secTag fibTag eps0 beta
+		int idata[2] = { 0, 0 };
+		double ddata[2] = { 0.0, 0.0};
+		int numdata = OPS_GetNumRemainingInputArgs();
+		if (numdata < 3) {
+			opserr << "WARNING eleLoad - prestress want SectionTag FiberTag eps0 <beta>\n";
+			return -1;
+		}
+		if (numdata > 4) numdata = 4;
+		int inum = 2;
+		int dnum = numdata - 2;
+		if (OPS_GetIntInput(&inum, idata) < 0) {
+			opserr << "WARNING eleLoad - invalid value for section tag and fiber tag\n";
+			return -1;
+		}
+		if (OPS_GetDoubleInput(&dnum, ddata) < 0) {
+			opserr << "WARNING eleLoad - invalid value for eps0 and beta\n";
+			return -1;
+		}
+
+		for (int i = 0; i < theEleTags.Size(); i++) {
+			theLoad = new Beam3dSectionLoad(eleLoadTag, theEleTags(i), idata[0], idata[1], ddata[0], ddata[1]);
+
+			if (theLoad == 0) {
+				opserr << "WARNING eleLoad - out of memory creating load of type " << type;
+				return -1;
+			}
+
+			// get the current pattern tag if no tag given in i/p
+			int loadPatternTag = theActiveLoadPattern->getTag();
+
+			// add the load to the domain
+			if (theDomain->addElementalLoad(theLoad, loadPatternTag) == false) {
+				opserr << "WARNING eleLoad - could not add following load to domain:\n ";
+				opserr << theLoad;
+				delete theLoad;
+				return -1;
+			}
+			eleLoadTag++;
+		}
+		return 0;
+	}
     // Added Joey Yang UC Davis
     else if (strcmp(type,"-BrickW") == 0) {
 

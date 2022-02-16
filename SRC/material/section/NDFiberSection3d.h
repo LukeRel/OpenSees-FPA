@@ -79,6 +79,10 @@ class NDFiberSection3d : public SectionForceDeformation
 			  OPS_Stream &s);
     int getResponse(int responseID, Information &info);
 
+    // Adding fiber loads (L. Parente)
+    void zeroLoad(void);
+    int addLoad(int _fibTag, double _eps0);
+
     int addFiber(Fiber &theFiber);
 
     // AddingSensitivity:BEGIN //////////////////////////////////////////

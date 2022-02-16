@@ -989,9 +989,6 @@
     <ClCompile Include="..\..\..\SRC\element\forceBeamColumn\DistRegIntegration.cpp">
       <Filter>forceBeamColumn\beamIntegration</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\SRC\material\section\SectionalLoad.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\SRC\element\Element.h">
@@ -1749,9 +1746,6 @@
     </ClInclude>
     <ClInclude Include="..\..\..\SRC\element\forceBeamColumn\DistRegIntegration.h">
       <Filter>forceBeamColumn\beamIntegration</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\SRC\material\section\SectionalLoad.h">
-      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

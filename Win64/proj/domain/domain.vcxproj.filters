@@ -315,6 +315,9 @@
     <ClCompile Include="..\..\..\SRC\domain\load\FiberLoad.cpp">
       <Filter>load</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\SRC\domain\load\Beam3dSectionLoad.cpp">
+      <Filter>load\beam</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\SRC\domain\node\NodalLoad.h">
@@ -583,6 +586,9 @@
     </ClInclude>
     <ClInclude Include="..\..\..\SRC\domain\load\FiberLoad.h">
       <Filter>load</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\SRC\domain\load\Beam3dSectionLoad.h">
+      <Filter>load\beam</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

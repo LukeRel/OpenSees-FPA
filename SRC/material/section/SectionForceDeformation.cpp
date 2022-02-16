@@ -383,12 +383,7 @@ SectionForceDeformation::zeroLoad(void)
 }
 
 int
-SectionForceDeformation::addLoad(SectionalLoad* theLoad, double loadFactor) {
-    return 0;
-}
-
-int
-SectionForceDeformation::addLoad(SectionalLoad* theLoad, const Vector& loadFactors) {
+SectionForceDeformation::addLoad(int _fibTag, double _eps0) {
     return 0;
 }
 

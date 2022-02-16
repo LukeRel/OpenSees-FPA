@@ -754,9 +754,9 @@ void J2DamageFiber::damage()
 	// Damage functions at step n
 	Dt = fmax((Yt - Yt0) / (at * Yt + bt), Dt_k);
 	Dc = fmax((Yc - Yc0) / (ac * Yc + bc), Dc_k);
-	Dt = fmax(Dc, Dt);
 	Dt = fmin(Dt, 1);
 	Dc = fmin(Dc, 1);
+	Dt = fmax(Dc, Dt);
 
 	// Damage 2 parameters coefficients
 	int algorithm = 1; // 0 = GATTA, 1 = DI RE
@@ -787,7 +787,7 @@ void J2DamageFiber::damage()
 	}
 
 	// unilateral effect trigger
-	D = fmax(D, D_k);
+	//D = fmax(D, D_k);
 
 	if (dFlag2 == 1) {
 		opserr << "\n--- Damage routine internal debug ----------\n";
