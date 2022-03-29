@@ -1031,6 +1031,9 @@
     <ClInclude Include="..\..\..\SRC\material\yieldSurface\plasticHardeningMaterial\PlasticHardeningMaterial.h" />
     <ClInclude Include="..\..\..\SRC\material\Material.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="cpp.hint" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

@@ -2631,4 +2631,7 @@
       <Filter>nD\PlasticityDamage</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="cpp.hint" />
+  </ItemGroup>
 </Project>
