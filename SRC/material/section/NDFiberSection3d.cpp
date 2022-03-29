@@ -24,7 +24,7 @@
 
 // Written: MHS
 // Created: 2012
-// Modified: 11/2021 - L. Parente
+// Modified: 03/22 - L. Parente
 // 
 // Description: This file contains the class implementation of FiberSection3d.
 //
@@ -91,7 +91,7 @@ void* OPS_NDFiberSection3d()
 // constructors:
 NDFiberSection3d::NDFiberSection3d(int tag, int num, Fiber **fibers, double a, bool compCentroid): 
   SectionForceDeformation(tag, SEC_TAG_NDFiberSection3d),
-  numFibers(num), sizeFibers(num), theMaterials(0), matData(0),
+  numFibers(num), sizeFibers(num), theMaterials(0), matData(0), gammaData(0),
   Abar(0.0), QyBar(0.0), QzBar(0.0), yBar(0.0), zBar(0.0), computeCentroid(compCentroid),
   alpha(a), sectionIntegr(0), e(6), s(0), ks(0), 
   parameterID(0), dedh(6), theDomain(0), step(0.0)
@@ -105,19 +105,28 @@ NDFiberSection3d::NDFiberSection3d(int tag, int num, Fiber **fibers, double a, b
     }
 
     matData = new double [numFibers*5];
+    gammaData = new double [numFibers*2];       // Gamma parabolic scale factors (LP)
 
     if (matData == 0) {
-      opserr << "NDFiberSection3d::NDFiberSection3d -- failed to allocate double array for material data\n";
-      exit(-1);
+        opserr << "NDFiberSection3d::NDFiberSection3d -- failed to allocate double array for material data\n";
+        exit(-1);
+    }
+    if (gammaData == 0) {
+        opserr << "NDFiberSection3d::NDFiberSection3d -- failed to allocate double array for gamma scale factors\n";
+        exit(-1);
     }
 
     double yLoc, zLoc, Area, eps0, beta;
+
+    // Top and bottom coords determination
+    double y1, y2, z1, z2;
+
     for (int i = 0; i < numFibers; i++) {
       Fiber *theFiber = fibers[i];
       theFiber->getFiberLocation(yLoc, zLoc);
       Area = theFiber->getArea();
-      eps0 = theFiber->getEps0();
-      beta = theFiber->getBeta();
+      eps0 = theFiber->getEps0();   // LP
+      beta = theFiber->getBeta();   // LP
 
       //if (eps0 > 0) opserr << "Received eps0 = " << eps0 << " on fiber " << i+1;
 
@@ -127,18 +136,34 @@ NDFiberSection3d::NDFiberSection3d(int tag, int num, Fiber **fibers, double a, b
       matData[5*i] = yLoc;
       matData[5*i+1] = zLoc;
       matData[5*i+2] = Area;
-      matData[5*i+3] = eps0;
-      matData[5*i+4] = beta;
+      matData[5*i+3] = eps0;       // LP
+      matData[5*i+4] = beta;       // LP
       NDMaterial *theMat = theFiber->getNDMaterial();
       theMaterials[i] = theMat->getCopy("BeamFiber");
 
       //opserr << matData[i * 4] << " " << matData[i * 4 + 1] << " " << matData[i * 4 + 2] << " " << matData[i * 4 + 3] << "\n";
 
+      // Top and bottom coords determination
+      if (i == 0) {
+          y1 = yLoc; y2 = yLoc;
+          z1 = zLoc; z2 = zLoc;
+      }
+      y1 = fmin(yLoc, y1); y2 = fmax(yLoc, y2);
+      z1 = fmin(zLoc, z1); z2 = fmax(zLoc, z2);
+
       if (theMaterials[i] == 0) {
 	opserr << "NDFiberSection3d::NDFiberSection3d -- failed to get copy of a Material\n";
 	exit(-1);
       }
-    }    
+    }
+
+    // Scale factors
+    for (int i = 0; i < numFibers; i++) {
+        Fiber* theFiber = fibers[i];
+        theFiber->getFiberLocation(yLoc, zLoc);
+        gammaData[2*i] = 6/pow(y1-y2,2)*(-yLoc*yLoc+yLoc*(y1+y2)-y1*y2);
+        gammaData[2*i+1] = 6/pow(z1-z2,2)*(-zLoc*zLoc+zLoc*(z1+z2)-z1*z2);
+    }
 
     if (computeCentroid) {
       yBar = QzBar/Abar;  
@@ -179,7 +204,7 @@ NDFiberSection3d::NDFiberSection3d(int tag, int num, Fiber **fibers, double a, b
 
 NDFiberSection3d::NDFiberSection3d(int tag, int num, double a, bool compCentroid): 
     SectionForceDeformation(tag, SEC_TAG_NDFiberSection3d),
-    numFibers(0), sizeFibers(num), theMaterials(0), matData(0),
+    numFibers(0), sizeFibers(num), theMaterials(0), matData(0), gammaData(0),
     Abar(0.0), QyBar(0.0), QzBar(0.0), yBar(0.0), zBar(0.0), computeCentroid(compCentroid),
     alpha(a), sectionIntegr(0), e(6), s(0), ks(0), 
     parameterID(0), dedh(6), theDomain(0), step(0.0)
@@ -230,7 +255,7 @@ NDFiberSection3d::NDFiberSection3d(int tag, int num, double a, bool compCentroid
 NDFiberSection3d::NDFiberSection3d(int tag, int num, NDMaterial **mats,
 				   SectionIntegration &si, double a, bool compCentroid):
   SectionForceDeformation(tag, SEC_TAG_NDFiberSection3d),
-  numFibers(num), sizeFibers(num), theMaterials(0), matData(0),
+  numFibers(num), sizeFibers(num), theMaterials(0), matData(0), gammaData(0),
   Abar(0.0), QyBar(0.0), QzBar(0.0), yBar(0.0), zBar(0.0), computeCentroid(compCentroid),
   alpha(a), sectionIntegr(0), e(6), s(0), ks(0),
   parameterID(0), dedh(6), theDomain(0), step(0.0)
@@ -304,7 +329,7 @@ NDFiberSection3d::NDFiberSection3d(int tag, int num, NDMaterial **mats,
 // constructor for blank object that recvSelf needs to be invoked upon
 NDFiberSection3d::NDFiberSection3d():
   SectionForceDeformation(0, SEC_TAG_NDFiberSection3d),
-  numFibers(0), sizeFibers(0), theMaterials(0), matData(0),
+  numFibers(0), sizeFibers(0), theMaterials(0), matData(0), gammaData(0),
   Abar(0.0), QyBar(0.0), QzBar(0.0), yBar(0.0), zBar(0.0), computeCentroid(true),
   alpha(1.0), sectionIntegr(0), e(6), s(0), ks(0),
   parameterID(0), dedh(6), theDomain(0), step(0.0)
