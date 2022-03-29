@@ -568,7 +568,7 @@ int J2Damage::setTrialStrain(const Vector& pStrain)
 	D = fmax(D, De);
 
 	// Damage correction in order to avoid singularity
-	if (D > 0.99) D = 0.99;
+	//if (D > 0.99) D = 0.99;
 	Dm1sq = pow(1.0 - D, 2.0);	// [1-D]^2
 
 	// Nota: convergono ->    tangent = [1-D]^2*Cep,   stress = stress_k + Ce*dstrain
@@ -598,6 +598,7 @@ int J2Damage::setTrialStrain(const Vector& pStrain)
 	
 	// Internal commits
 	//this->commitState();
+
 
 	return 0;
 };

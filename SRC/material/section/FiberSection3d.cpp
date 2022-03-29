@@ -50,6 +50,7 @@
 #include <elementAPI.h>
 
 ID FiberSection3d::code(4);
+static int d_out = 1; // Set to 1 to produce a damage.txt output file
 
 void* OPS_FiberSection3d()
 {
@@ -118,7 +119,7 @@ FiberSection3d::FiberSection3d(int tag, int num, Fiber **fibers,
   SectionForceDeformation(tag, SEC_TAG_FiberSection3d),
   numFibers(num), sizeFibers(num), theMaterials(0), matData(0),
   QzBar(0.0), QyBar(0.0), Abar(0.0), yBar(0.0), zBar(0.0), computeCentroid(compCentroid),
-  sectionIntegr(0), e(4), s(0), ks(0), theTorsion(0)
+  sectionIntegr(0), e(4), s(0), ks(0), theTorsion(0), step(0.0)
 {
   if (numFibers != 0) {
     theMaterials = new UniaxialMaterial *[numFibers];
@@ -186,13 +187,25 @@ FiberSection3d::FiberSection3d(int tag, int num, Fiber **fibers,
   code(1) = SECTION_RESPONSE_MZ;
   code(2) = SECTION_RESPONSE_MY;
   code(3) = SECTION_RESPONSE_T;
+
+  // Initializing damage output file
+  if (d_out == 1) {
+      using namespace std;
+      ofstream outdata;
+      outdata.open("out_fibers.txt");
+      outdata << "Step y z eps11 gam12 gam13 sig11 tau12 tau13 Dt Dc D" << endln;
+      outdata.close();
+      outdata.open("out_sections.txt");
+      outdata << "Step ex ky gz N My Vz E" << endln;
+      outdata.close();
+  }
 }
 
 FiberSection3d::FiberSection3d(int tag, int num, UniaxialMaterial &torsion, bool compCentroid): 
     SectionForceDeformation(tag, SEC_TAG_FiberSection3d),
     numFibers(0), sizeFibers(num), theMaterials(0), matData(0),
     QzBar(0.0), QyBar(0.0), Abar(0.0), yBar(0.0), zBar(0.0), computeCentroid(compCentroid),
-    sectionIntegr(0), e(4), s(0), ks(0), theTorsion(0)
+    sectionIntegr(0), e(4), s(0), ks(0), theTorsion(0), step(0.0)
 {
     if(sizeFibers != 0) {
 	theMaterials = new UniaxialMaterial *[sizeFibers];
@@ -246,7 +259,7 @@ FiberSection3d::FiberSection3d(int tag, int num, UniaxialMaterial **mats,
   SectionForceDeformation(tag, SEC_TAG_FiberSection3d),
   numFibers(num), sizeFibers(num), theMaterials(0), matData(0),
   QzBar(0.0), QyBar(0.0), Abar(0.0), yBar(0.0), zBar(0.0), computeCentroid(compCentroid),
-  sectionIntegr(0), e(4), s(0), ks(0), theTorsion(0)
+  sectionIntegr(0), e(4), s(0), ks(0), theTorsion(0), step(0.0)
 {
   if (numFibers != 0) {
     theMaterials = new UniaxialMaterial *[numFibers];
@@ -319,7 +332,7 @@ FiberSection3d::FiberSection3d():
   SectionForceDeformation(0, SEC_TAG_FiberSection3d),
   numFibers(0), sizeFibers(0), theMaterials(0), matData(0),
   QzBar(0.0), QyBar(0.0), Abar(0.0), yBar(0.0), zBar(0.0), computeCentroid(true),
-  sectionIntegr(0), e(4), s(0), ks(0), theTorsion(0)
+  sectionIntegr(0), e(4), s(0), ks(0), theTorsion(0), step(0.0)
 {
   s = new Vector(sData, 4);
   ks = new Matrix(kData, 4, 4);
@@ -715,6 +728,40 @@ FiberSection3d::commitState(void)
 
   if (theTorsion != 0)
     err += theTorsion->commitState();
+
+  // Damage output
+  if (d_out == 1) {
+      step += ops_Dt;
+
+      //opserr << "Export damage at step " << step*100 << "%" << endln;
+      for (int i = 0; i < numFibers; i++) {
+          double y = matData[5 * i];
+          double z = matData[5 * i + 1];
+          double eps = theMaterials[i]->getStrain();
+          double sig = theMaterials[i]->getStress();
+
+          // Damage output
+          using namespace std;
+          ofstream outdata;
+          outdata.open("out_fibers.txt", ios::app);
+          outdata << step << " " << y << " " << z << " ";
+          outdata << eps << " " << 0 << " " << 0 << " ";
+          outdata << sig << " " << 0 << " " << 0 << " ";
+          outdata << 0 << " " << 0 << " " << 0 << endln;
+          outdata.close();
+      }
+
+      // Strains and stresses output
+      const Vector& strain = this->getSectionDeformation();
+      const Vector& stress = this->getStressResultant();
+      double energy = this->getEnergy();
+      using namespace std;
+      ofstream outdata;
+      outdata.open("out_sections.txt", ios::app);
+      outdata << step << " " << strain(0) << " " << strain(2) << " " << 0 << " " << stress(0) << " " << stress(2) << " " << 0 << " " << energy << endln;
+      outdata.close();
+
+  }
 
   return err;
 }
@@ -1335,6 +1382,21 @@ FiberSection3d::getResponse(int responseID, Information &sectInfo)
   }
 
   return SectionForceDeformation::getResponse(responseID, sectInfo);
+}
+
+void
+FiberSection3d::zeroLoad(void)
+{
+
+}
+
+int
+FiberSection3d::addLoad(int fibTag, double eps0) {
+    // Adding eps0 and beta to selected fiber
+    matData[5 * (fibTag - 1) + 3] = eps0;
+
+    //opserr << "eps0 = " << eps0 << " in fiber " << fibTag << endln;
+    return 0;
 }
 
 int

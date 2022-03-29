@@ -689,7 +689,10 @@ void
     static Vector dv(NEBD);
     dv = crdTransf->getBasicIncrDeltaDisp();    
 
-    if (initialFlag != 0 && dv.Norm() <= DBL_EPSILON && numEleLoads == 0)
+    // Tolerance
+    double tol = 1e-5; // Replaces DBL_EPSILON = 1e-16
+
+    if (initialFlag != 0 && dv.Norm() <= tol && numEleLoads == 0)
       return 0;
 
     static Vector vin(NEBD);
@@ -1081,7 +1084,7 @@ void
 	      vin += dvTrial;
 
 	      // check if we have got to where we wanted
-	      if (dvToDo.Norm() <= DBL_EPSILON) {
+	      if (dvToDo.Norm() <= tol) {
 		converged = true;
 
 	      } else {  // we convreged but we have more to do

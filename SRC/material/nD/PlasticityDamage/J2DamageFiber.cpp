@@ -319,11 +319,11 @@ int J2DamageFiber::setTrialStrain(const Vector& fiberStrain)
 	for (int i = 0;i < 3;i++) fiberstrain_e(i) = strain(m[i]) - strain_p(m[i]);
 
 	// Nota: convergono ->    tangent = [1-D]^2*Cep,   stress = stress_k + Ce*dstrain
-	fibertangent = Dm1sq * C_mm;
+	fibertangent = Dm1sq * C_mm_e;
 	fiberstress = Dm1sq * C_mm_e * fiberstrain_e;
 
 	// Commits
-	this->commitState();
+	//this->commitState();
 
 	// Debug 3
 	if (dFlag1 == 1) {
@@ -441,7 +441,7 @@ void J2DamageFiber::condensate_consistent(void)
 
 }
 
-// Static consistent condensation
+// Static iterative condensation
 void J2DamageFiber::condensate_iterative(void)
 {
 	// Picking up all the others from the previous steps
