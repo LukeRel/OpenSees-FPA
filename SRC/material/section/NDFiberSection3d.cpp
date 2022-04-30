@@ -65,6 +65,9 @@
 #include <Domain.h>
 
 ID NDFiberSection3d::code(6);
+
+// Settings
+static int set_shear = 1; // Set to 1 to produce a parabolic distribution for shear deformations
 static int d_out = 1; // Set to 1 to produce a damage.txt output file
 
 void* OPS_NDFiberSection3d()
@@ -162,8 +165,13 @@ NDFiberSection3d::NDFiberSection3d(int tag, int num, Fiber **fibers, double a, b
     for (int i = 0; i < numFibers; i++) {
         Fiber* theFiber = fibers[i];
         theFiber->getFiberLocation(yLoc, zLoc);
-        gammaData[2*i] = 6/pow(y1-y2,2)*(-yLoc*yLoc+yLoc*(y1+y2)-y1*y2);
-        gammaData[2*i+1] = 6/pow(z1-z2,2)*(-zLoc*zLoc+zLoc*(z1+z2)-z1*z2);
+        if (set_shear == 1) {
+            gammaData[2 * i] = 6 / pow(y1 - y2, 2) * (-yLoc * yLoc + yLoc * (y1 + y2) - y1 * y2);
+            gammaData[2 * i + 1] = 6 / pow(z1 - z2, 2) * (-zLoc * zLoc + zLoc * (z1 + z2) - z1 * z2);
+        } else {
+            gammaData[2 * i] = 1;
+            gammaData[2 * i + 1] = 1;
+        }
     }
 
     if (computeCentroid) {
@@ -627,10 +635,10 @@ NDFiberSection3d::setTrialSectionDeformation (const Vector &deforms)
     ksi(2,1) += tmp;
     
     // Shear terms
-    ksi(3,3) += alpha*d11;
-    ksi(3,4) += alpha*d12;
-    ksi(4,3) += alpha*d21;
-    ksi(4,4) += alpha*d22;
+    ksi(3,3) += sgy*sgy*alpha*d11;
+    ksi(3,4) += sgy*sgz*alpha*d12;
+    ksi(4,3) += sgz*sgz*alpha*d21;
+    ksi(4,4) += sgz*sgy*alpha*d22;
     
     // Torsion term
     ksi(5,5) += z2*d11 - yz*(d12+d21) + y2*d22;
@@ -651,28 +659,28 @@ NDFiberSection3d::setTrialSectionDeformation (const Vector &deforms)
     d20 *= rootAlpha; d21 *= rootAlpha; d22 *= rootAlpha;
     
     // Bending-shear coupling terms
-    ksi(0,3) += d01;
-    ksi(0,4) += d02;
-    ksi(1,3) -= y*d01;
-    ksi(1,4) -= y*d02;
-    ksi(2,3) += z*d01;
-    ksi(2,4) += z*d02;
-    ksi(3,0) += d10;
-    ksi(4,0) += d20;
-    ksi(3,1) -= y*d10;
-    ksi(4,1) -= y*d20;
-    ksi(3,2) += z*d10;
-    ksi(4,2) += z*d20;
+    ksi(0,3) += sgy*d01;
+    ksi(0,4) += sgz*d02;
+    ksi(1,3) -= sgy*y*d01;
+    ksi(1,4) -= sgz*y*d02;
+    ksi(2,3) += sgy*z*d01;
+    ksi(2,4) += sgz*z*d02;
+    ksi(3,0) += sgy*d10;
+    ksi(4,0) += sgz*d20;
+    ksi(3,1) -= sgy*y*d10;
+    ksi(4,1) -= sgz*y*d20;
+    ksi(3,2) += sgy*z*d10;
+    ksi(4,2) += sgz*z*d20;
     
     // Torsion-shear coupling terms
     y2 =  y*d22;
     z2 = -z*d11;
-    ksi(5,3) +=  z2 + y*d21;
-    ksi(5,4) += -z*d12 + y2;
-    ksi(3,5) +=  z2 + y*d12;
-    ksi(4,5) += -z*d21 + y2;
+    ksi(5,3) +=  sgy*( z2 + y*d21);
+    ksi(5,4) +=  sgz*(-z*d12 + y2);
+    ksi(3,5) +=  sgy*( z2 + y*d12);
+    ksi(4,5) +=  sgz*(-z*d21 + y2);
 
-    // Section stress vector - sigma(x)_s - [N My Mz Vy Vz T]'
+    // Section stress vector - sigma(x)_s - [N Mz My Vy Vz T]'
     double sig0 = stress(0)*A;
     double sig1 = stress(1)*A;
     double sig2 = stress(2)*A;
@@ -686,14 +694,14 @@ NDFiberSection3d::setTrialSectionDeformation (const Vector &deforms)
     }*/
 
     // Rotations if necessary
-    if (beta != 0) {
+    if ((beta > 1e-4) || (beta < 1e-4)) {
         //opserr << "Received beta is " << beta << " on fiber " << i+1 << endln;
         //opserr << "Its cosine is " << cosBeta << endln;
         //opserr << "Its sine is " << sinBeta << endln;
         // Normal fiber stress rotation
-        sig0 = sig0 * cosBeta - sig2 * sinBeta;
+        sig0 = sig0 * cosBeta -sig2 * sinBeta;
+        sig2 = sig0 * sinBeta +sig2 * cosBeta;
         //sig1 = sig1; // No rotations needed because beta is about y-axis
-        sig2 = sig0 * sinBeta + sig2 * cosBeta;
     }
 
     si(0) += sig0;
@@ -808,9 +816,9 @@ NDFiberSection3d::getInitialTangent(void)
     ki(5,2) += z*tmp;
     
     // Hit tangent terms with rootAlpha
-    d01 *= rootAlpha*sgy; d02 *= rootAlpha*sgz;
-    d10 *= rootAlpha*sgy; d11 *= rootAlpha*sgy; d12 *= rootAlpha*sgy*sgz;
-    d20 *= rootAlpha*sgz; d21 *= rootAlpha*sgy*sgz; d22 *= rootAlpha*sgz;
+    d01 *= rootAlpha; d02 *= rootAlpha;
+    d10 *= rootAlpha; d11 *= rootAlpha; d12 *= rootAlpha;
+    d20 *= rootAlpha; d21 *= rootAlpha; d22 *= rootAlpha;
     
     // Bending-shear coupling terms
     ki(0,3) += d01;

@@ -989,6 +989,9 @@
     <ClCompile Include="..\..\..\SRC\element\forceBeamColumn\DistRegIntegration.cpp">
       <Filter>forceBeamColumn\beamIntegration</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\SRC\element\forceBeamColumn\ForceBeamColumnCons3d.cpp">
+      <Filter>forceBeamColumn</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\SRC\element\Element.h">
@@ -1746,6 +1749,9 @@
     </ClInclude>
     <ClInclude Include="..\..\..\SRC\element\forceBeamColumn\DistRegIntegration.h">
       <Filter>forceBeamColumn\beamIntegration</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\SRC\element\forceBeamColumn\ForceBeamColumnCons3d.h">
+      <Filter>forceBeamColumn</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

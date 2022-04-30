@@ -46,6 +46,8 @@ Matrix BeamFiberMaterial::tangent(3,3);
 // ND: 11 22 33 12 23 31
 // BF: 11 12 31 22 33 23
 
+static int d_out = 0; // Set to 1 to produce a out_J2damage.txt output file
+static int step = 0;
 
 void* OPS_BeamFiberMaterial()
 {
@@ -81,7 +83,7 @@ BeamFiberMaterial::BeamFiberMaterial(void)
 : NDMaterial(0, ND_TAG_BeamFiberMaterial),
 Tstrain22(0.0), Tstrain33(0.0), Tgamma23(0.0),
 Cstrain22(0.0), Cstrain33(0.0), Cgamma23(0.0),
-theMaterial(0), strain(3),
+theMaterial(0), strain(3), strain3D(6), stress3D(6),
 damage(0.0)
 {
 	// Nothing to do
@@ -100,6 +102,14 @@ damage(0.0)
   if (theMaterial == 0) {
     opserr << "BeamFiberMaterial::BeamFiberMaterial -- failed to get copy of material\n";
     exit(-1);
+  }
+  // Initializing damage output file
+  if (d_out == 1) {
+      using namespace std;
+      ofstream outdata;
+      outdata.open("out_J2Damage.txt");
+      outdata << "Step eps11 eps22 eps33 gam12 gam23 gam31 sig11 sig22 sig33 tau12 tau23 tau31 Dt Dc D" << endln;
+      outdata.close();
   }
 }
 
@@ -190,7 +200,7 @@ BeamFiberMaterial::getRho(void)
 int 
 BeamFiberMaterial::setTrialStrain(const Vector &strainFromElement)
 {
-  static const double tolerance = 1.0e-08;
+  static const double tolerance = 1.0e-6;
 
   strain(0) = strainFromElement(0);
   strain(1) = strainFromElement(1);
@@ -205,7 +215,7 @@ BeamFiberMaterial::setTrialStrain(const Vector &strainFromElement)
   static Matrix dd22(3,3);
 
   int count = 0;
-  const int maxCount = 20;
+  const int maxCount = 100;
   double norm0;
 
   do {
@@ -225,6 +235,10 @@ BeamFiberMaterial::setTrialStrain(const Vector &strainFromElement)
 
     //three dimensional stress
     const Vector &threeDstress = theMaterial->getStress();
+
+    //delete LP
+    strain3D = threeDstrain;
+    stress3D = threeDstress;
 
     //three dimensional tangent 
     const Matrix &threeDtangent = theMaterial->getTangent();
@@ -264,6 +278,22 @@ BeamFiberMaterial::setTrialStrain(const Vector &strainFromElement)
   } while (count++ < maxCount && norm > tolerance);
 
   //theMaterial->commitState();
+
+  if (d_out == 1) {
+      step++;
+
+      // Damage output
+      Vector dam(6);
+      dam = this->getDamage();
+      using namespace std;
+      ofstream outdata;
+      outdata.open("out_J2Damage.txt", ios::app);
+      outdata << step << " ";
+      outdata << strain3D(0) << " " << strain3D(1) << " " << strain3D(2) << " " << strain3D(3) << " " << strain3D(4) << " " << strain3D(5) << " ";
+      outdata << stress3D(0) << " " << stress3D(1) << " " << stress3D(2) << " " << stress3D(3) << " " << stress3D(4) << " " << stress3D(5) << " ";
+      outdata << dam(0) << " " << dam(1) << " " << dam(2) << endln;
+      outdata.close();
+  }
 
   return 0;
 }

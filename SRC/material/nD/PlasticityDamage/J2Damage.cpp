@@ -32,6 +32,8 @@
 
 static int dFlag1 = 1;	// Turn this on for debug
 static int dFlag2 = 1;	// Turn this on for debug on damage subroutine
+static int d_out = 0; // Set to 1 to produce a out_J2damage.txt output file
+static int step = 0;
 
 #include <math.h>
 #include <stdlib.h>
@@ -130,6 +132,14 @@ J2Damage::J2Damage(int tag, double _E, double _nu, // Parameters
 	Dm1sq = 1.0;
 	dam.Zero();
 
+	// Initializing damage output file
+	if (d_out == 1) {
+		using namespace std;
+		ofstream outdata;
+		outdata.open("out_J2Damage.txt");
+		outdata << "Step eps11 eps22 eps33 gam12 gam13 gam23 sig11 sig22 sig33 tau12 tau13 tau33 Dt Dc D" << endln;
+		outdata.close();
+	}
 }
 
 // Null constructor
@@ -414,14 +424,14 @@ void J2Damage::damage()
 	double Fc = (Yc - Yc0) - Dc_k * (ac * Yc + bc);
 
 	// Tensile damage parameter at step n+1
-	if (Ft < 1e-8) Dt = Dt_k;
+	if (Ft < 1e-6) Dt = Dt_k;
 	else Dt = (Yt - Yt0) / (at * Yt + bt);
 	//Dt = fmax(Dt, Dt_k);
 	if (Dt < 0.0)	Dt = 0.0;
 	if (Dt > 1.0)	Dt = 1.0;
 
 	// Compressive damage parameter at step n+1
-	if (Fc < 1e-8) Dc = Dc_k;
+	if (Fc < 1e-6) Dc = Dc_k;
 	else Dc = (Yc - Yc0) / (ac * Yc + bc);
 	//Dc = fmax(Dc, Dc_k);
 	if (Dc < 0.0)	Dc = 0.0;
@@ -566,15 +576,17 @@ int J2Damage::setTrialStrain(const Vector& pStrain)
 
 	// Optional degradation correction
 	D = fmax(D, De);
+	D = fmin(D, 0.999);
 
 	// Damage correction in order to avoid singularity
-	//if (D > 0.99) D = 0.99;
 	Dm1sq = pow(1.0 - D, 2.0);	// [1-D]^2
 
 	// Nota: convergono ->    tangent = [1-D]^2*Cep,   stress = stress_k + Ce*dstrain
-	tangent = Dm1sq * tangent_e;
-	//stress = stress_k + Dm1sq * tangent_e * dstrain_e - 2.0 * (1.0 - D) * dD * tangent_e * strain_e;
-	stress = Dm1sq * tangent_e * strain_e;
+	tangent = Dm1sq * tangent_ep;
+	//tangent = (Dm1sq - 2.0 * (1.0 - D) * dD)* tangent_e;
+	//stress = Dm1sq * tangent_e * strain_e;
+	//stress = tangent * strain_e;
+	stress.addMatrixVector(0, tangent_e, strain_e, Dm1sq);
 
 	// Debug 3
 	if (dFlag1 == 1) {
@@ -598,7 +610,21 @@ int J2Damage::setTrialStrain(const Vector& pStrain)
 	
 	// Internal commits
 	//this->commitState();
+	// Damage output
 
+	if (d_out == 1) {
+		step++;
+
+		// Damage output
+		using namespace std;
+		ofstream outdata;
+		outdata.open("out_J2Damage.txt", ios::app);
+		outdata << step << " ";
+		outdata << strain(0) << " " << strain(1) << " " << strain(2) << " " << strain(3) << " " << strain(4) << " " << strain(5) << " ";
+		outdata << stress(0) << " " << stress(1) << " " << stress(2) << " " << stress(3) << " " << stress(4) << " " << stress(5) << " ";
+		outdata << Dt << " " << Dc << " " << D << endln;
+		outdata.close();
+	}
 
 	return 0;
 };

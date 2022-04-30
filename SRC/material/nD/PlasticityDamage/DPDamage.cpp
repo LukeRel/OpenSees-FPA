@@ -78,11 +78,11 @@ void* OPS_DPDamage(void)
 
 	NDMaterial* theMaterial = new DPDamage(tag,
 		dData[0], dData[1], // E and nu
-		dData[2], dData[3], dData[4], dData[5], // Druker Prager plasticity
+		dData[2], dData[3], dData[4], dData[5], // Drucker Prager plasticity
 		dData[6], dData[7], dData[8], dData[9], dData[10], dData[11], dData[12], // Addessi damage
 		dData[13]); // Parente degradation
 
-	opserr << "DPDamage memory is allocated!" << endln;
+	//opserr << "DPDamage memory is allocated!" << endln;
 	//for (int i = 0;i < 14;i++) opserr << "dData[" << i << "] = " << dData[i] << endln;
 	return theMaterial;
 }
@@ -301,7 +301,7 @@ int DPDamage::setTrialStrain(const Vector& strain_from_element)
 	}
 
 	// Plasticity
-	this->plastic_integrator();
+	this->plasticity();
 
 	// Updated elastic strains
 	strain_e = strain - strain_p;
@@ -364,7 +364,7 @@ int DPDamage::setTrialStrain(const Vector& v, const Vector& r)
 }
 
 //plasticity integration routine
-void DPDamage::plastic_integrator()
+void DPDamage::plasticity()
 {
 	double f1;
 	double norm_eta;

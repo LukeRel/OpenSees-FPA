@@ -161,6 +161,7 @@ void* OPS_ForceBeamColumnCSBDI2d();
 void* OPS_ForceBeamColumnCBDI3d();
 void* OPS_ForceBeamColumnCSBDI3d();
 void* OPS_ForceBeamColumnWarping2d();
+void* OPS_ForceBeamColumnCons3d();		// LP
 void* OPS_ElasticForceBeamColumnWarping2d();
 void* OPS_DispBeamColumn3dID();
 void* OPS_DispBeamColumn2dThermal();
@@ -268,6 +269,19 @@ namespace {
 	    return OPS_ForceBeamColumnCBDI3d();
 	}
     }
+
+	// Consistent only force beam column
+	static void* OPS_ForceBeamColumnCons()	// LP
+	{
+		int ndm = OPS_GetNDM();
+		if (ndm == 2) {
+			opserr << "ForceBeamColumnCons not implemented for 2D case." << endln;
+			return 0;
+		}
+		else {
+			return OPS_ForceBeamColumnCons3d();
+		}
+	}
 
   static void* OPS_ForceBeamColumnCSBDI()
     {
@@ -676,6 +690,7 @@ namespace {
 	functionMap.insert(std::make_pair("dispBeamColumnWarping", &OPS_DispBeamColumnWarping3d));	
 	functionMap.insert(std::make_pair("dispBeamColumnAsym", &OPS_DispBeamColumnAsym3d));
 	functionMap.insert(std::make_pair("forceBeamColumn", &OPS_ForceBeamColumn));
+	functionMap.insert(std::make_pair("forceBeamColumnCons", &OPS_ForceBeamColumnCons));	// LP
 	functionMap.insert(std::make_pair("nonlinearBeamColumn", &OPS_NonlinearBeamColumn));
 	functionMap.insert(std::make_pair("dispBeamColumn", &OPS_DispBeamColumn));
 	functionMap.insert(std::make_pair("dispBeamColumn3dID", &OPS_DispBeamColumn3dID));

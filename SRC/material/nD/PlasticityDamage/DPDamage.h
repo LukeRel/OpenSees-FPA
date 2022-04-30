@@ -153,7 +153,7 @@ protected:
 	void initialize();	// initializes variables
 
 	//plasticity integration routine
-	void plastic_integrator(void);
+	void plasticity(void);
 
 	Vector getState();		// fills vector of state variables for output
 

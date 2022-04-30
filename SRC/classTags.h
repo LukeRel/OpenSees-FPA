@@ -671,6 +671,7 @@
 #define ELE_TAG_ForceBeamColumn2d       73
 #define ELE_TAG_ForceBeamColumnWarping2d 731
 #define ELE_TAG_ForceBeamColumn3d       74
+#define ELE_TAG_ForceBeamColumnCons3d   741
 #define ELE_TAG_ElasticForceBeamColumn2d 75
 #define ELE_TAG_ElasticForceBeamColumnWarping2d 751
 #define ELE_TAG_ElasticForceBeamColumn3d 76
