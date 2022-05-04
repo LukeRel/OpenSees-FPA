@@ -160,23 +160,24 @@ class ForceBeamColumnCons3d: public Element
   // (performs the transformation between the global and basic system)
   double rho;                    // mass density per unit length
   int    maxIters;               // maximum number of local iterations
-  double tol;	                   // tolerance for relative energy norm for local iterations
+  double tol;	                 // tolerance for relative energy norm for local iterations
   
   int    initialFlag;            // indicates if the element has been initialized
   
   Node *theNodes[2];   // pointers to the nodes
   
-  Matrix kv;                     // stiffness matrix in the basic system 
-  Vector Se;                     // element resisting forces in the basic system
+  Matrix kv;                     // stiffness matrix in the basic system (Ee)
+  Vector Se;                     // element resisting forces in the basic system (sige)
   
-  Matrix kvcommit;               // committed stiffness matrix in the basic system
-  Vector Secommit;               // committed element end forces in the basic system
+  Matrix kvcommit;               // committed stiffness matrix in the basic system (Ee_k)
+  Vector Secommit;               // committed element end forces in the basic system (sige_k)
   
-  Matrix *fs;                    // array of section flexibility matrices
-  Vector *vs;                    // array of section deformation vectors
-  Vector *Ssr;                   // array of section resisting force vectors
+  Matrix *fs;                    // array of section flexibility matrices (f_s)
+  Vector *vs;                    // array of section deformation vectors (eps_s)
+  Vector *Ss;                    // array of section resisting force vectors (sig_s)
+  Vector *Ssr;                   // array of section resisting force vectors residuals (sig_sc)
   
-  Vector *vscommit;              // array of committed section deformation vectors
+  Vector *vscommit;              // array of committed section deformation vectors (eps_s_k)
   
   enum {maxNumEleLoads = 100};
   enum {NDM = 3};         // dimension of the problem (3d)
