@@ -95,6 +95,8 @@ class BeamFiberMaterial: public NDMaterial {
     static Vector stress;
     static Matrix tangent;
 
+    Vector strain3D;
+    Vector stress3D;
 };
 
 

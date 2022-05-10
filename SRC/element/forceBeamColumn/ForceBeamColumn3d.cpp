@@ -690,7 +690,7 @@ void
       dv = crdTransf->getBasicIncrDeltaDisp();
 
       // Tolerance
-      double tol = 1e-5; // Replaces DBL_EPSILON = 1e-16
+      double tol = 1e-7; // Replaces DBL_EPSILON = 1e-16
 
       if (initialFlag != 0 && dv.Norm() <= tol && numEleLoads == 0)
           return 0;
@@ -753,6 +753,13 @@ void
           for (int l = 0; l < 3; l++) {
 
               //      if (l == 1) l = 2;
+                    /*
+                    if (l == 1) opserr << "Regular Newton failed. Starting initial tangent iterations for element " << this->getTag() << "." << endln;
+                    if (l == 2) {
+                        opserr << "Initial tangent iteration failed. ";
+                        opserr << "Starting initial tangent on first iteration and then regular Newton for element " << this->getTag() << "." << endln;
+                    }*/
+
               SeTrial = Se;
               kvTrial = kv;
               for (i = 0; i < numSections; i++) {
@@ -1087,13 +1094,14 @@ void
                           vin += dvTrial;
 
                           // check if we have got to where we wanted
-                          if (dvToDo.Norm() <= tol) {
+                          if (dvToDo.Norm() <= 1e-10) {
                               converged = true;
 
                           }
-                          else {  // we convreged but we have more to do
+                          else {  // we converged but we have more to do
 
-                     // reset variables for start of next subdivision
+                              opserr << "Done subdivision at j = " << j + 1 << ". Norm = " << dvToDo.Norm() << "." << endln;
+                              // reset variables for start of next subdivision
                               dvTrial = dvToDo;
                               numSubdivide = 1;  // NOTE setting subdivide to 1 again maybe too much
                           }
@@ -1115,11 +1123,12 @@ void
                       }
                       else {   //  if (fabs(dW) < tol) { 
 
-                     // if we have failed to convrege for all of our newton schemes
-                     // - reduce step size by the factor specified
+                          // if we have failed to converge for all of our newton schemes
+                          // - reduce step size by the factor specified
                           if (j == (numIters - 1) && (l == 2)) {
                               dvTrial /= factor;
                               numSubdivide++;
+                              opserr << "Reducing step size by " << factor << ". numSubdivide = " << numSubdivide << endln;
                           }
                       }
 
@@ -1147,7 +1156,6 @@ void
           opserr << endln;
           */
 
-          //return 0;
           return -1;
       }
 

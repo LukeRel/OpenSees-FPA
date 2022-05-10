@@ -36,6 +36,7 @@
 
 #include <ForceBeamColumn2d.h>
 #include <ForceBeamColumn3d.h>
+#include <ForceBeamColumnCons3d.h>      // LP
 #include <ForceBeamColumnWarping2d.h>
 #include <ElasticForceBeamColumnWarping2d.h>
 #include <TimoshenkoBeamColumn2d.h>
@@ -56,6 +57,7 @@
 #include <ElasticForceBeamColumn3d.h>
 
 #include <ForceBeamColumnCBDI2d.h>
+#include <ForceBeamColumnCBDI3d.h>
 
 #include <LobattoBeamIntegration.h>
 #include <LegendreBeamIntegration.h>
@@ -402,12 +404,16 @@ TclModelBuilder_addForceBeamColumn(ClientData clientData, Tcl_Interp *interp,
     else {
       if (strcmp(argv[1],"elasticForceBeamColumn") == 0)
 	theElement = new ElasticForceBeamColumn3d(eleTag, iNode, jNode, nIP, sections, *beamIntegr, *theTransf3d, mass);
+      else if (strcmp(argv[1],"forceBeamColumnCBDI") == 0)
+    theElement = new ForceBeamColumnCBDI3d(eleTag, iNode, jNode, nIP, sections, *beamIntegr, *theTransf3d, mass, true);
       else if (strcmp(argv[1],"dispBeamColumn") == 0)
 	theElement = new DispBeamColumn3d(eleTag, iNode, jNode, nIP, sections, *beamIntegr, *theTransf3d, mass, cMass);
-      else if (strcmp(argv[1], "dispBeamColumnThermal") == 0)
+      else if (strcmp(argv[1],"dispBeamColumnThermal") == 0)
 	theElement = new DispBeamColumn3dThermal(eleTag, iNode, jNode, nIP, sections, *beamIntegr, *theTransf3d, mass);//added by L.Jiang[SIF]
       else if (strcmp(argv[1],"dispBeamColumnWithSensitivity") == 0)
 	theElement = new DispBeamColumn3dWithSensitivity(eleTag, iNode, jNode, nIP, sections, *beamIntegr, *theTransf3d, mass);
+      else if (strcmp(argv[1],"forceBeamColumnCons") == 0)
+    theElement = new ForceBeamColumnCons3d(eleTag, iNode, jNode, nIP, sections, *beamIntegr, *theTransf3d, mass, numIter, tol); // LP
       else
 	theElement = new ForceBeamColumn3d(eleTag, iNode, jNode, nIP, sections, *beamIntegr, *theTransf3d, mass, numIter, tol);
     }
@@ -1616,6 +1622,10 @@ TclModelBuilder_addForceBeamColumn(ClientData clientData, Tcl_Interp *interp,
       theElement = new ElasticForceBeamColumn3d(eleTag, iNode, jNode, numSections, sections, *beamIntegr, *theTransf3d, mass);
     else if (strcmp(argv[1],"dispBeamColumn") == 0)
       theElement = new DispBeamColumn3d(eleTag, iNode, jNode, numSections, sections, *beamIntegr, *theTransf3d, mass, cMass);
+    else if (strcmp(argv[1],"forceBeamColumnCBDI") == 0)
+        theElement = new ForceBeamColumnCBDI3d(eleTag, iNode, jNode, numSections, sections, *beamIntegr, *theTransf3d, mass);
+    else if (strcmp(argv[1],"forceBeamColumnCons") == 0)
+        theElement = new ForceBeamColumnCons3d(eleTag, iNode, jNode, numSections, sections, *beamIntegr, *theTransf3d, mass);   // LP
     else
       theElement = new ForceBeamColumn3d(eleTag, iNode, jNode, numSections, sections, *beamIntegr, *theTransf3d, mass, numIter, tol);
   }
