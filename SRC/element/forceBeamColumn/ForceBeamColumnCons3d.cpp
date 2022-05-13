@@ -781,13 +781,15 @@ int ForceBeamColumnCons3d::update()
         static Vector S;       // Section resisting forces
         static Vector Strial;  // Section resisting forces trial
         static Vector dS;      // Section resisting forces increments
-        static Vector ts;      // Section displacements increments
-        static Matrix fb;       // Section flexibility matrix
+        static Vector ts;      // Section displacements residuals
+        static Vector dvs;     // Section displacements increments
+        static Matrix fb;      // Section flexibility matrix
 
         S.setData(workArea, order);
         Strial.setData(workArea, order);
         dS.setData(&workArea[order], order);
         ts.setData(&workArea[2 * order], order);
+        dvs.setData(&workArea[2 * order], order);
         fb.setData(&workArea[3 * order], order, NEBD);
 
         double xL = xi[i];
@@ -971,6 +973,7 @@ int ForceBeamColumnCons3d::update()
         // integrate residual deformations --------------------------------------------------
         // vr += (b^ (vs + dvs)) * wtL;
         //vr.addMatrixTransposeVector(1.0, b[i], vs[i] + dvs, wtL);
+        dvs = ts; // CHANGE
         ts.addVector(1.0, vsSubdivide[i], 1.0);
         double dei;
         for (ii = 0; ii < order; ii++) {
@@ -1855,12 +1858,12 @@ ForceBeamColumnCons3d::computeSectionForceSensitivity(Vector &dspdh, int isec,
 
       // Section forces residuals
       // Delete the old
-      if (Ssh != 0)
-          delete[] Ssh;
+      if (Ssr != 0)
+          delete[] Ssr;
 
       // Allocate the right number
-      Ssh = new Vector[numSections];
-      if (Ssh == 0) {
+      Ssr = new Vector[numSections];
+      if (Ssr == 0) {
           opserr << "ForceBeamColumnCons3d::recvSelf -- failed to allocate Ssr array\n";
 
           return -1;

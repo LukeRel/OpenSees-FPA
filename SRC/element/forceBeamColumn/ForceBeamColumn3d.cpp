@@ -92,6 +92,8 @@ Vector ForceBeamColumn3d::vsSubdivide[maxNumSections];
 Matrix ForceBeamColumn3d::fsSubdivide[maxNumSections];
 Vector ForceBeamColumn3d::SsrSubdivide[maxNumSections];
 
+int dFlag = 0; // Debug flag to print out the number of element cycles
+
 void* OPS_ForceBeamColumn3d()
 {
     if (OPS_GetNumRemainingInputArgs() < 5) {
@@ -807,6 +809,7 @@ void
                       vr(3) += v0[3];
                       vr(4) += v0[4];
 
+                      // --- Section i iterations start ---------------------------------------------------------
                       for (i = 0; i < numSections; i++) {
 
                           int order = sections[i]->getOrder();
@@ -866,37 +869,28 @@ void
                           dSs.addVector(1.0, SsrSubdivide[i], -1.0);
 
                           // compute section deformation increments
+                          // 
+                          //  regular newton 
+                          //    vs += fs * dSs;     
                           if (l == 0) {
-
-                              //  regular newton 
-                              //    vs += fs * dSs;     
-
                               dvs.addMatrixVector(0.0, fsSubdivide[i], dSs, 1.0);
-
                           }
-                          else if (l == 2) {
-
-                              //  newton with initial tangent if first iteration
-                              //    vs += fs0 * dSs;     
-                              //  otherwise regular newton 
-                              //    vs += fs * dSs;     
-
-                              if (j == 0) {
-                                  const Matrix& fs0 = sections[i]->getInitialFlexibility();
-
-                                  dvs.addMatrixVector(0.0, fs0, dSs, 1.0);
-                              }
-                              else
-                                  dvs.addMatrixVector(0.0, fsSubdivide[i], dSs, 1.0);
-
-                          }
-                          else {
-
-                              //  newton with initial tangent
-                              //    vs += fs0 * dSs;     
-
+                          //  newton with initial tangent
+                          //    vs += fs0 * dSs; 
+                          else if (l == 1) {
                               const Matrix& fs0 = sections[i]->getInitialFlexibility();
                               dvs.addMatrixVector(0.0, fs0, dSs, 1.0);
+                          }
+                          //  newton with initial tangent if first iteration
+                          //    vs += fs0 * dSs;     
+                          //  otherwise regular newton 
+                          //    vs += fs * dSs; 
+                          else { // l == 1
+                              if (j == 0) {
+                                  const Matrix& fs0 = sections[i]->getInitialFlexibility();
+                                  dvs.addMatrixVector(0.0, fs0, dSs, 1.0);
+                              }
+                              else dvs.addMatrixVector(0.0, fsSubdivide[i], dSs, 1.0);
                           }
 
                           // set section deformations
@@ -1057,6 +1051,7 @@ void
                               }
                           }
                       }
+                      // --- Section i iterations over ----------------------------------------------------------
 
                       if (!isTorsion) {
                           f(5, 5) = DefaultLoverGJ;
@@ -1093,14 +1088,18 @@ void
                           dvToDo -= dvTrial;
                           vin += dvTrial;
 
+                          if (dFlag == 1) opserr << "Step converged at j = " << j + 1 << ". ";
+                          if (dFlag == 1) opserr << "Newton scheme l = " << l << "." << endln;
+                          //opserr << "Remaining increments norm: " << dvToDo.Norm() << "." << endln;
+
                           // check if we have got to where we wanted
-                          if (dvToDo.Norm() <= 1e-10) {
+                          if (dvToDo.Norm() <= DBL_EPSILON) {
                               converged = true;
 
                           }
                           else {  // we converged but we have more to do
 
-                              opserr << "Done subdivision at j = " << j + 1 << ". Norm = " << dvToDo.Norm() << "." << endln;
+                              if (dFlag == 1) opserr << "Remaining displacements norm = " << dvToDo.Norm() << "." << endln;
                               // reset variables for start of next subdivision
                               dvTrial = dvToDo;
                               numSubdivide = 1;  // NOTE setting subdivide to 1 again maybe too much
@@ -1123,12 +1122,14 @@ void
                       }
                       else {   //  if (fabs(dW) < tol) { 
 
+                          if ((j == numIters - 1) && (dFlag == 1))
+                              opserr << "Failed to converge for Newton scheme l = " << l << endln;
                           // if we have failed to converge for all of our newton schemes
                           // - reduce step size by the factor specified
                           if (j == (numIters - 1) && (l == 2)) {
                               dvTrial /= factor;
                               numSubdivide++;
-                              opserr << "Reducing step size by " << factor << ". numSubdivide = " << numSubdivide << endln;
+                              if (dFlag == 1) opserr << "Failed all Newton schemes. Reducing displacements increments by " << factor << ". numSubdivide = " << numSubdivide << endln;
                           }
                       }
 
@@ -1143,8 +1144,8 @@ void
           //opserr << "WARNING - ForceBeamColumn3d::update - failed to get compatible ";
           //opserr << "element forces & deformations for element: ";
           double dW_norm = dW / dW0;
-          opserr << "Warning for element ";
-          opserr << this->getTag() << ": Normalized energy = " << dW_norm << endln;
+          opserr << "Failed to converge at all Newton schemes after " << maxSubdivisions << " step reductions in element";
+          opserr << this->getTag() << ". Norm of residual energy dW/dW0 = " << dW_norm << endln;
 
           /*
           opserr << "Section Tangent Condition Numbers: ";

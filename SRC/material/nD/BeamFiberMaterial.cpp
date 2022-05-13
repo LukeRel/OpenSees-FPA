@@ -47,7 +47,7 @@ Matrix BeamFiberMaterial::tangent(3,3);
 // BF: 11 12 31 22 33 23
 
 static int d_out = 0; // Set to 1 to produce a out_J2damage.txt output file
-static int step = 0;
+static double step = 0.0;
 
 void* OPS_BeamFiberMaterial()
 {
@@ -162,6 +162,10 @@ BeamFiberMaterial::commitState(void)
   Cstrain22 = Tstrain22;
   Cstrain33 = Tstrain33;
   Cgamma23 = Tgamma23;
+
+  //step += ops_Dt;
+
+  //opserr << "Step = " << step << endln;
 
   return theMaterial->commitState();
 }
