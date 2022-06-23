@@ -1343,15 +1343,18 @@ ForceBeamColumnCons3d::computeSectionForces(Vector &sp, int isec)
     }
     // Section fiber load
     else if (type == LOAD_TAG_Beam3dSectionLoad) {
-        int secTag = data(0);
-        int fibTag = data(1);
-        double eps0 = data(2) * loadFactor;
+    // Get data from the load command and apply load factor scale
+    int iSec = data(0);
+    int jSec = data(1);
+    int iFib = data(2);
+    int jFib = data(3);
+    double eps0 = data(4) * loadFactor;
+    double phi_t_t0 = data(5);
+    int creep = data(6);
 
-        sections[secTag-1]->addLoad(fibTag, eps0);
-    }
-    else {
-      opserr << "ForceBeamColumnCons3d::addLoad -- load type unknown for element with tag: " <<
-	this->getTag() << endln;
+    // Apply to fiber section
+    for (int i = 0; i < numSections; i++)
+        sections[i]->addLoad(iFib, jFib, eps0, phi_t_t0, creep);
     }
   }
   

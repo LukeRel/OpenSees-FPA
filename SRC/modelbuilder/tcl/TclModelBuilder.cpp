@@ -2189,25 +2189,45 @@ TclCommand_addElementalLoad(ClientData clientData, Tcl_Interp *interp, int argc,
   }
   // Section loads (added by L. Parente)
   else if (strcmp(argv[count], "-fiberStrains") == 0 || strcmp(argv[count], "fiberStrains") == 0){
-    count++;
 	// Arguments: secTag fibTag eps0 beta
-	int secTag, fibTag;
-	double eps0;
-	if (count >= argc || Tcl_GetInt(interp, argv[count], &secTag) != TCL_OK) {
+	int iSec, jSec, iFib, jFib;
+	double eps0 = 0.0;
+	double phi_t_t0 = 0.0;
+	int creep = 0;
+	if (Tcl_GetInt(interp, argv[5], &iSec) != TCL_OK) {
 		opserr << "WARNING eleLoad - invalid section tag for -fiberStrains command\n";
 		return TCL_ERROR;
 	}
-	if (count + 1 >= argc || Tcl_GetInt(interp, argv[count + 1], &fibTag) != TCL_OK) {
+	if (Tcl_GetInt(interp, argv[6], &jSec) != TCL_OK) {
 		opserr << "WARNING eleLoad - invalid fiber tag for -fiberStrains command\n";
 		return TCL_ERROR;
 	}
-	if (count + 2 >= argc || Tcl_GetDouble(interp, argv[count + 2], &eps0) != TCL_OK) {
+	if (Tcl_GetInt(interp, argv[7], &iFib) != TCL_OK) {
+		opserr << "WARNING eleLoad - invalid section tag for -fiberStrains command\n";
+		return TCL_ERROR;
+	}
+	if (Tcl_GetInt(interp, argv[8], &jFib) != TCL_OK) {
+		opserr << "WARNING eleLoad - invalid fiber tag for -fiberStrains command\n";
+		return TCL_ERROR;
+	}
+	if (argc > 9) // Optional eps0 otherwise 0.0
+	if (Tcl_GetDouble(interp, argv[9], &eps0) != TCL_OK) {
 		opserr << "WARNING eleLoad - invalid eps0 for -fiberStrains command\n";
+		return TCL_ERROR;
+	}
+	if (argc > 10) // Optional creep otherwise 0.0
+	if (Tcl_GetDouble(interp, argv[10], &phi_t_t0) != TCL_OK) {
+		opserr << "WARNING eleLoad - invalid phi_t_t0 for -fiberStrains command\n";
+		return TCL_ERROR;
+	}
+	if (argc > 11) // Optional creep boolean otherwise 0
+	if (Tcl_GetInt(interp, argv[11], &creep) != TCL_OK) {
+		opserr << "WARNING eleLoad - invalid creep boolean for -fiberStrains command\n";
 		return TCL_ERROR;
 	}
 
 	for (int i = 0; i < theEleTags.Size(); i++) {
-		theLoad = new Beam3dSectionLoad(eleLoadTag, theEleTags(i), secTag, fibTag, eps0);
+		theLoad = new Beam3dSectionLoad(eleLoadTag, theEleTags(i), iSec, jSec, iFib, jFib, eps0, phi_t_t0, creep);
 
 		if (theLoad == 0) {
 			opserr << "WARNING eleLoad - out of memory creating load of type " << argv[count];

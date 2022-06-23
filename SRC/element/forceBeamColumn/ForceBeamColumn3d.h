@@ -198,7 +198,7 @@ class ForceBeamColumn3d: public Element
   static Vector theVector;
   static double workArea[];
   
-  enum {maxNumSections = 10};
+  enum {maxNumSections = 11};
   
   // following are added for subdivision of displacement increment
   int    maxSubdivisions;       // maximum number of subdivisons of dv for local iterations

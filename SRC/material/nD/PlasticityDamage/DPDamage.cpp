@@ -18,11 +18,11 @@
 **                                                                    **
 ** ****************************************************************** */
 
-// Written in C++: Daniela Fusco, Luca Parente
-// Created: 11/21
+// Written in C++: Luca Parente
+// Created: 12/21
 // 
-// Plasticity and damage material based on Di Re et al [2018].
-// The plasticity formulation is based on Drucker Prager,
+// Plasticity and damage material based on Gatta et al [2018].
+// The plasticity formulation is based on Von Mises (J2),
 // while the damage formulation is based on Addessi
 // 
 // The constitutive law computes on three steps:
@@ -30,32 +30,32 @@
 //  - Plastic correction
 //  - Damage correction
 
+static int dFlag1 = 1;	// Turn this on for debug
+static int dFlag2 = 1;	// Turn this on for debug on damage subroutine
+static int d_out = 0; // Set to 1 to produce a out_DPDamage.txt output file
+static int step = 0;
+
+#include <math.h>
+#include <stdlib.h>
 #include <DPDamage.h>
-
-#include <string.h>
-#include <Channel.h>
-#include <FEM_ObjectBroker.h>
-
 #include <Information.h>
+#include <ID.h>
 #include <MaterialResponse.h>
 #include <Parameter.h>
-
-static int dFlag1 = 0;	// Turn this on for debug
-static int dFlag2 = 0;	// Turn this on for debug on damage subroutine
-
-const double DPDamage::one3 = 1.0 / 3.0;
-const double DPDamage::two3 = 2.0 / 3.0;
-const double DPDamage::root23 = sqrt(2.0 / 3.0);
-
 #include <elementAPI.h>
+#include <algorithm>
 
-static int numDPDamageMaterials = 0;
+Matrix DPDamage::tmpMatrix(6, 6);
+Vector DPDamage::tmpVector(6);
 
-void* OPS_DPDamage(void)
-{
+// --- element: eps(1,1),eps(2,2),eps(3,3),2*eps(1,2),2*eps(2,3),2*eps(1,3) ----
+// --- material strain: eps(1,1),eps(2,2),eps(3,3),eps(1,2),eps(2,3),eps(1,3) , same sign ----
+
+void* OPS_DPDamage(void) {
+
 	int numArgs = OPS_GetNumRemainingInputArgs();
-	if (numArgs < 13) {
-		opserr << "Want: nDMaterial DPDamage $tag $E $nu $sig_c $sig_t $Hk $Hi\n";
+	if (numArgs < 14) {
+		opserr << "Want: nDMaterial DPDamage $tag $E $nu $sig_t $sig_c $Hk $Hi\n";
 		opserr << "$Yt0, $bt, $at, $Yc0, $bc, $ac, $beta, <$De>)\n";
 		return 0;
 	}
@@ -70,7 +70,7 @@ void* OPS_DPDamage(void)
 		return 0;
 	}
 
-	numData = numArgs - 1;
+	numData = numArgs - 1;;
 	if (OPS_GetDouble(&numData, dData) != 0) {
 		opserr << "WARNING invalid data: nDMaterial DPDamage : " << tag << "\n";
 		return 0;
@@ -78,121 +78,66 @@ void* OPS_DPDamage(void)
 
 	NDMaterial* theMaterial = new DPDamage(tag,
 		dData[0], dData[1], // E and nu
-		dData[2], dData[3], dData[4], dData[5], // Drucker Prager plasticity
+		dData[2], dData[3], dData[4], dData[5], // Druker Prager plasticity
 		dData[6], dData[7], dData[8], dData[9], dData[10], dData[11], dData[12], // Addessi damage
 		dData[13]); // Parente degradation
 
-	//opserr << "DPDamage memory is allocated!" << endln;
-	//for (int i = 0;i < 14;i++) opserr << "dData[" << i << "] = " << dData[i] << endln;
+	//opserr<<"DPDamage memory is allocated!"<<endln;
 	return theMaterial;
 }
 
-//full constructor
+// Full constructor
 DPDamage::DPDamage(int tag, double _E, double _nu, // Parameters
-	double _sig_c, double _sig_t, double _Hk, double _Hi, // Plasticity
+	double _sig_t, double _sig_c, double _Hk, double _Hi, // Plasticity
 	double _Yt0, double _bt, double _at, double _Yc0, double _bc, double _ac, double _beta, // Damage
 	double _De) // Degradation
-    : NDMaterial(tag, ND_TAG_DPDamage),
-	E(_E), nu(_nu), sig_c(_sig_c), sig_t(_sig_t), Hk(_Hk), Hi(_Hi),
+	: NDMaterial(tag, ND_TAG_DPDamage),
+	E(_E), nu(_nu), sig_t(_sig_t), sig_c(_sig_c), Hk(_Hk), Hi(_Hi),
 	Yt0(_Yt0), bt(_bt), at(_at), Yc0(_Yc0), bc(_bc), ac(_ac), beta(_beta), De(_De),
-    strain(6),
-	strain_k(6),
-    strain_k_p(6),
-    strain_p(6),
-	strain_e(6),
-    stress(6),
-	stress_k(6),
-    zeta_k(6),
-    zeta(6),
-    Ce(6, 6),
-    Cep(6, 6),
-	Ct(6, 6),
-    I1(6),
-	II1(6,6),
-    IIvol(6, 6),
-    IIdev(6, 6),
-	II1T(6,6),
-    mState(5),
-	m(3, 3),
-	dam(3)
+	tangent(6, 6), tangent_e(6, 6), stress(6), strain(6), I2(6), Idev(6,6), Ivol(6,6),
+	strain_e(6), strain_p(6), strain_p_dev(6), strain_m(6), strain_e_m(6), backStress(6),
+	stress_k(6), strain_k(6), strain_p_k(6), strain_p_dev_k(6), backstress_k(6), dam(3)
 {
 	// Bulk and shear modulus
-	K = E / (3.0 * (1.0 - 2.0 * nu));
-	G = E / (2.0 * (1.0 + nu));
+	K = E / (3. * (1 - 2 * nu));
+	G = E / (2. * (1 + nu));
 
-	// Yielding and friction coefficient
-	sig_y = 2.0 * sig_c * sig_t / (sig_c + sig_t);
-	mu = root23 * (sig_c - sig_t) / (sig_c + sig_t);
+	// Yield and friction
+	sig_y = 2. * sig_c * sig_t / (sig_c + sig_t);
+	mu = sqrt(2. / 3) * (sig_c - sig_t) / (sig_c + sig_t);
 
-	// Total hardening and proportion
-	H = Hi + Hk;
-	theta = Hk / (Hi + Hk);
+	this->ndm = 3;
 
-    this->initialize();
-}
-
-//null constructor
-DPDamage::DPDamage()
-    : NDMaterial(),
-	E(0.0), nu(0.0), sig_c(0.0), sig_t(0.0), Hk(0.0), Hi(0.0),
-	Yt0(0.0), bt(0.0), at(0.0), Yc0(0.0), bc(0.0), ac(0.0), beta(0.0), De(0.0),
-    strain(6),
-	strain_k(6),
-    strain_k_p(6),
-    strain_p(6),
-	strain_e(6),
-    stress(6),
-	stress_k(6),
-    zeta_k(6),
-    zeta(6),
-    Ce(6, 6),
-    Cep(6, 6),
-	Ct(6, 6),
-    I1(6),
-	II1(6,6),
-    IIvol(6, 6),
-    IIdev(6, 6),
-	II1T(6, 6),
-    mState(5),
-	m(3,3),
-	dam(3)
-{
-	// Bulk and shear modulus
-	K = 0.0;
-	G = 0.0;
-
-	// Yielding and friction coefficient
-	sig_y = 0.0;
-	mu = 0.0;
-
-	// Total hardening and proportion
-	H = Hi + Hk;
-	theta = Hk / (Hi+Hk);
-
-    this->initialize();
-}
-
-//destructor
-DPDamage::~DPDamage()
-{}
-
-//zero internal variables
-void DPDamage::initialize()
-{
-    strain.Zero();
-	strain_k.Zero();
-    strain_k_p.Zero();
-    strain_p.Zero();
+	stress.Zero();
+	strain.Zero();
 	strain_e.Zero();
-
-    stress.Zero();
+	strain_m.Zero();
+	strain_e_m.Zero();
 	stress_k.Zero();
-    zeta_k.Zero();
-    zeta.Zero();
+	strain_k.Zero();
+	sig_y_k = sig_y;
 
-    alpha_k = 0.0;
-    alpha = 0.0;
-    mFlag = 1;
+	lambda = 0.;
+
+	// Elastic tangent
+	for (int i = 0; i < 3; i++)	for (int j = 0; j < 3; j++) tangent(i, j) = K - 2.0 / 3.0 * G;
+	for (int i = 0; i < 6; i++) tangent(i, i) += 2.0 * G;
+	for (int i = 0; i < 6; i++) for (int j = 3; j < 6; j++) tangent(i, j) /= 2.0;
+	tangent_e = tangent;
+	tangent_ep = tangent;
+
+	// Unit vector order 2
+	I2.Zero();
+	for (int i = 0; i < 3; i++)	I2(i) = 1.0;
+
+	// Volumetric tensor
+	Ivol.Zero();
+	for (int i = 0; i < 3; i++) for (int j = 0; j < 3; j++)	Ivol(i, j) = 1.0;
+
+	// Deviatoric tensor
+	Idev.Zero();
+	for (int i = 0; i < 6; i++) Idev(i, i) = 1.0;
+	for (int i = 0; i < 3; i++)	for (int j = 0; j < 3; j++)	Idev(i, j) -= 1.0 / 3.0;
 
 	// Damage variables initialization
 	Dt_k = 0.0;
@@ -204,67 +149,89 @@ void DPDamage::initialize()
 	Dm1sq = 1.0;
 	dam.Zero();
 
-    // 2nd order Identity Tensor
-    I1.Zero();
-    I1(0) = 1;
-    I1(1) = 1;
-    I1(2) = 1;
-
-	// 4th order Identity Tensor
-	II1.Zero();
-	for (int i = 0;i++;i < 6) II1(i, i) = 1;
-
-    // 4th order Volumetric Tensor
-    // IIvol = I1 tensor I1
-    IIvol.Zero();
-    IIvol(0, 0) = 1;
-    IIvol(0, 1) = 1;
-    IIvol(0, 2) = 1;
-    IIvol(1, 0) = 1;
-    IIvol(1, 1) = 1;
-    IIvol(1, 2) = 1;
-    IIvol(2, 0) = 1;
-    IIvol(2, 1) = 1;
-    IIvol(2, 2) = 1;
-
-    // 4th order Deviatoric Tensor
-    // Note:  this is the contravariant form!
-    //        useable for s^a = 2G * IIdev^ab * epsilon_b
-    // (Need a different form for s^a = IIdev ^a_b * sigma^a)
-    IIdev.Zero();
-    IIdev(0, 0) = two3;
-    IIdev(0, 1) = -one3;
-    IIdev(0, 2) = -one3;
-    IIdev(1, 0) = -one3;
-    IIdev(1, 1) = two3;
-    IIdev(1, 2) = -one3;
-    IIdev(2, 0) = -one3;
-    IIdev(2, 1) = -one3;
-    IIdev(2, 2) = two3;
-    IIdev(3, 3) = 0.5;
-    IIdev(4, 4) = 0.5;
-    IIdev(5, 5) = 0.5;
-
-    Ce = K * IIvol + 2 * G * IIdev;
-    Cep = Ce;
-	Ct = Ce;
-    mState.Zero();
-
-	II1T = I1 % I1;
-
-	m.Zero();
+	// Initializing damage output file
+	if (d_out == 1) {
+		using namespace std;
+		ofstream outdata;
+		outdata.open("out_DPDamage.txt");
+		outdata << "Step eps11 eps22 eps33 gam12 gam13 gam23 sig11 sig22 sig33 tau12 tau13 tau33 Dt Dc D" << endln;
+		outdata.close();
+	}
 }
 
-//make a clone of this material
-NDMaterial* DPDamage::getCopy()
+// Null constructor
+DPDamage::DPDamage(const DPDamage& a) : NDMaterial(a.getTag(), ND_TAG_DPDamage),
+E(0.0), nu(0.0), sig_t(1e10), sig_c(1e10), Hk(0.0), Hi(0.0),
+Yt0(0.0), bt(0.0), at(0.0), Yc0(0.0), bc(0.0), ac(0.0), beta(0.0), De(0.0),
+tangent(6, 6), tangent_e(6, 6), stress(6), strain(6), I2(6), Idev(6,6), Ivol(6,6),
+strain_e(6), strain_p(6), strain_p_dev(6), strain_m(6), strain_e_m(6), backStress(6),
+stress_k(6), strain_k(6), strain_p_k(6), strain_p_dev_k(6), backstress_k(6), dam(3)
 {
-	DPDamage* clone;
-	clone = new DPDamage(this->getTag(), E, nu, sig_c, sig_t, Hk, Hi,
-		Yt0, bt, at, Yc0, bc, ac, beta, De);
-	return clone;
+	this->ndm = a.ndm;
+	this->G = a.G;
+	this->K = a.K;
+	this->sig_y = a.sig_y;
+	this->Hk = a.Hk;
+	this->Hi = a.Hi;
+
+	stress.Zero();
+	strain.Zero();
+	strain_e.Zero();
+	strain_m.Zero();
+	strain_e_m.Zero();
+	sig_y = a.sig_y;
+	lambda = 0.;
+	stress_k.Zero();
+	strain_k.Zero();
+	sig_y_k = a.sig_y;
+
+	// Elastic tangent
+	for (int i = 0; i < 3; i++)	for (int j = 0; j < 3; j++)	tangent(i, j) = K - 2.0 / 3.0 * G;
+	for (int i = 0; i < 6; i++)	tangent(i, i) += 2.0 * G;
+	for (int i = 0; i < 6; i++)	for (int j = 3; j < 6; j++)	tangent(i, j) /= 2.0;
+	tangent_e = tangent;
+	tangent_ep = tangent;
+
+	// Unit vector order 2
+	I2.Zero();
+	for (int i = 0; i < 3; i++)	I2(i) = 1.0;
+
+	// Volumetric tensor
+	Ivol.Zero();
+	for (int i = 0; i < 3; i++) for (int j = 0; j < 3; j++)	Ivol(i, j) = 1.0;
+
+	// Deviatoric tensor
+	Idev.Zero();
+	for (int i = 0; i < 6; i++) Idev(i, i) = 1.0;
+	for (int i = 0; i < 3; i++)	for (int j = 0; j < 3; j++)	Idev(i, j) -= 1.0 / 3.0;
+
+	// Damage variables initialization
+	Dt_k = 0.0;
+	Dc_k = 0.0;
+	D_k = 0.0;
+	Dt = Dt_k;
+	Dc = Dc_k;
+	D = D_k;
+	Dm1sq = 1.0;
+	dam.Zero();
 }
 
-NDMaterial* DPDamage::getCopy(const char* type)
+DPDamage::~DPDamage() {
+	return;
+};
+
+NDMaterial*
+DPDamage::getCopy(void)
+{
+	DPDamage* theCopy =
+		new DPDamage(this->getTag(), E, nu, sig_t, sig_c, Hk, Hi,
+			Yt0, bt, at, Yc0, bc, ac, beta, De);
+
+	return theCopy;
+}
+
+NDMaterial*
+DPDamage::getCopy(const char* type)
 {
 	if (strcmp(type, this->getType()) == 0)
 		return this->getCopy();
@@ -272,197 +239,141 @@ NDMaterial* DPDamage::getCopy(const char* type)
 	return 0;
 }
 
-//send back type of material
-const char* DPDamage::getType() const
-{
-	return "ThreeDimensional";
-}
+// Plastic integration routine
+int DPDamage::plasticity() {
 
-//send back order of strain in vector form
-int DPDamage::getOrder() const
-{
-	return 6;
-}
+	// Trace = eps_11 + eps_22 + eps_33
+	double trace = strain(0) + strain(1) + strain(2);
 
-//get the strain and integrate plasticity equations
-int DPDamage::setTrialStrain(const Vector& strain_from_element)
-{
-	// Debug
+	// Deviatoric strains = strain - 1/3*trace*I2
+	Vector strain_dev(6);
+	strain_dev = strain;
+	strain_dev.addVector(1.0, I2, -trace / 3.0);
 
-	strain = strain_from_element;
+	// Deviatoric stress = 2*G*(strain_dev - strain_p_dev_k)
+	Vector Tstress_dev(6);
+	Tstress_dev.addVector(0.0, strain_dev, 2. * G);
+	Tstress_dev.addVector(1.0, strain_p_dev_k, -2. * G);
 
-	// Debug 1
-	if (dFlag1 == 1) {
-		opserr << "\n----------------------------------------------------------------------------------------------------------------------------\n";
-		opserr << "\nStarted new setTrialStrain.\n\n";
-		opserr << "Inputs before plasticity and damage (initialized at current step):\n";
-		opserr << "strain     = [ "; for (int i = 0;i < 6;i++) opserr << strain(i) << " "; opserr << "]\n";
-		opserr << "strain_k   = [ "; for (int i = 0;i < 6;i++) opserr << strain_k(i) << " "; opserr << "]\n";
+	// First invariant = sigt_11 + sigt_22 + sigt_33
+	double I1 = 0;
+	if (sig_c != sig_t) for (int i = 0; i < 3; i++)	for (int j = 0; j < 3; j++) I1 += tangent_e(i, j) * strain(j);
+
+	// Eta vector = stress_dev_trial - backstress_k
+	Vector Teta(6);
+	Teta = Tstress_dev;
+	Teta.addVector(1.0, backstress_k, -1.0);
+	double eta_m = sqrt(Teta && Teta);
+
+	// Yield function = |eta| - sqrt(2/3)*sig_y_k + mu*I1
+	double F = eta_m - sqrt(2. / 3) * sig_y_k + mu*I1;
+
+	// Plastic ----------------------------------------------------------------------------------------------------------
+	if (F > 0) {
+
+		// Plastic multiplier = F/(2*G + 2/3*(Hi + Hk))
+		lambda = F / (2. * G + 2. / 3. * (Hi + Hk));
+
+		if (lambda < 0) {
+			opserr << "Fatal:   DPDamage::lambda is less than zero!" << endln;
+			exit(-1);
+		}
+
+		// New yielding threshold
+		sig_y = sig_y_k + pow(2. / 3., 0.5) * Hi * lambda;
+
+		// Normal vector n = eta/|eta|
+		Vector n(6);
+		n.addVector(0, Teta, 1. / eta_m);
+
+		// Backstress = backstress_k + 2/3*Hk*lambda*n
+		backStress.addVector(0.0, backstress_k, 1.0);
+		backStress.addVector(1.0, n, 2. / 3. * Hk * lambda);
+
+		// Deviatoric plastic strains = strain_p_dev_k + lambda*n
+		strain_p_dev.addVector(0.0, strain_p_dev_k, 1.0);
+		strain_p_dev.addVector(1.0, n, lambda);
+
+		// Stress vector = stress_dev_trial - 2*G*lambda*n + K*trace*I2 ----------------------
+		stress.addVector(0.0, Tstress_dev, 1.0);
+		stress.addVector(1.0, n, -2. * G * lambda);
+		stress.addVector(1.0, I2, K * trace);
+
+		// Consistent tangent modulus --------------------------------------------------------
+		// C^ep = K*Ivol + 2*G*(1-B)*Idev + 2*G*(B-A)*nn - 2*G*C*n*I2'
+
+		double A = 2. * G / (2 * G + 2. / 3 * (Hk + Hi));
+		double B = 2. * G * lambda / eta_m;
+
+		tangent.Zero();
+		tangent.addMatrix(0.0, Ivol, K);
+		tangent.addMatrix(1.0, Idev, 2. * G * (1 - B));
+
+		tmpMatrix.Zero();  // n@n
+		for (int i = 0; i < 6; i++) {
+			for (int j = 0; j < 3; j++)	tmpMatrix(i, j) = n(i) * n(j);
+			for (int j = 3; j < 6; j++) tmpMatrix(i, j) = n(i) * n(j) * 2.0;
+		}
+
+		tangent.addMatrix(1.0, tmpMatrix, 2. * G * (B - A));
+
+		// If Drucker Prager plasticity
+		if (sig_c != sig_t) {
+
+			double C = 3. * K * mu / (2 * G + 2. / 3 * (Hk + Hi));
+
+			tmpMatrix.Zero();  // n@I2
+			for (int i = 0; i < 6; i++) {
+				for (int j = 0; j < 3; j++)	tmpMatrix(i, j) = n(i) * I2(j);
+				for (int j = 3; j < 6; j++) tmpMatrix(i, j) = n(i) * I2(j) * 2.0;
+			}
+
+			tangent.addMatrix(1.0, tmpMatrix, -2. * G * C);
+		}
+	}
+	// Elastic ----------------------------------------------------------------------------------------------------------
+	else {
+
+		// Elastic stress
+		sig_y = sig_y_k;
+		backStress.addVector(0.0, backstress_k, 1.0);
+		strain_p_dev.addVector(0.0, strain_p_dev_k, 1.0);
+
+		// Normal
+		Vector n(6);
+		n.addVector(0, Teta, 1. / pow((Teta && Teta), 0.5));
+
+		// Stress
+		stress.addVector(0.0, Tstress_dev, 1.0);
+		stress.addVector(1.0, I2, K * trace);
+
+		// Elastic stiffness
+		tangent.Zero();
+		for (int i = 0; i < 3; i++)	for (int j = 0; j < 3; j++)	tangent(i, j) = K - 2.0 / 3.0 * G;
+		for (int i = 0; i < 6; i++)	tangent(i, i) += 2.0 * G;
+
 	}
 
-	// Plasticity
-	this->plasticity();
-
-	// Updated elastic strains
-	strain_e = strain - strain_p;
-
-	// Debug 2
-	if (dFlag1 == 1) {
-		opserr << "\nPlasticity executed!\n\n";
-		opserr << "Outputs after plasticity only:\n";
-		opserr << "strain     = [ "; for (int i = 0;i < 6;i++) opserr << strain(i) << " "; opserr << "]\n";
-		opserr << "strain_e   = [ "; for (int i = 0;i < 6;i++) opserr << strain_e(i) << " "; opserr << "]\n";
-		opserr << "strain_p   = [ "; for (int i = 0;i < 6;i++) opserr << strain_p(i) << " "; opserr << "]\n";
-		opserr << "strain_p_k = [ "; for (int i = 0;i < 6;i++) opserr << strain_k_p(i) << " "; opserr << "]\n";
-		opserr << "stress     = [ "; for (int i = 0;i < 6;i++) opserr << stress(i) << " "; opserr << "]\n";
-		opserr << "stress_k   = [ "; for (int i = 0;i < 6;i++) opserr << stress_k(i) << " "; opserr << "]\n";
-		opserr << "elastic tangent:\n[ "; for (int i = 0;i < 6;i++) { for (int j = 0;j < 6;j++) opserr << Cep(j, i) << " "; opserr << "]\n"; }
-		opserr << "elastoplastic tangent:\n[ "; for (int i = 0;i < 6;i++) { for (int j = 0;j < 6;j++) opserr << Ce(j, i) << " "; opserr << "]\n"; }
-	}
-
-	// Damage routine
-	for (int i = 3; i < 6; i++) { strain[i] /= 2.0;strain_p[i] /= 2.0;strain_e[i] /= 2.0; }
-	this->damage();
-	for (int i = 3; i < 6; i++) { strain[i] *= 2.0;strain_p[i] *= 2.0;strain_e[i] *= 2.0; }
-	// ------------------------------------------------------------------------------------------------- //
-
-	// Optional degradation correction
-	D = fmax(D, De);
-
-	// Damage correction in order to avoid singularity
-	if (D > 0.99) D = 0.99;
-	Dm1sq = pow(1.0 - D, 2.0);	// [1-D]^2
-
-	// Updates
-	Ct = Dm1sq * Cep;
-	stress = Dm1sq * Ce * strain_e;
-
-	//this->commitState();
-
-	// Debug 3
-	if (dFlag1 == 1) {
-		opserr << "\nD = " << D << "\n\n";
-		opserr << "Outputs after both plasticity and damage:\n";
-		opserr << "strain     = [ "; for (int i = 0;i < 6;i++) opserr << strain(i) << " "; opserr << "]\n";
-		opserr << "strain_k   = [ "; for (int i = 0;i < 6;i++) opserr << strain_k(i) << " "; opserr << "]\n";
-		opserr << "strain_e   = [ "; for (int i = 0;i < 6;i++) opserr << strain_e(i) << " "; opserr << "]\n";
-		opserr << "strain_p   = [ "; for (int i = 0;i < 6;i++) opserr << strain_p(i) << " "; opserr << "]\n";
-		opserr << "strain_p_k = [ "; for (int i = 0;i < 6;i++) opserr << strain_k_p(i) << " "; opserr << "]\n";
-		opserr << "stress     = [ "; for (int i = 0;i < 6;i++) opserr << stress(i) << " "; opserr << "]\n";
-		opserr << "stress_k   = [ "; for (int i = 0;i < 6;i++) opserr << stress_k(i) << " "; opserr << "]\n";
-		opserr << "tangent_ep:\n[ "; for (int i = 0;i < 6;i++) { for (int j = 0;j < 6;j++) opserr << Cep(j, i) << " "; opserr << "]\n"; }
-		opserr << "tangent:\n[ "; for (int i = 0;i < 6;i++) { for (int j = 0;j < 6;j++) opserr << Ce(j, i) << " "; opserr << "]\n"; }
-	}
+	for (int i = 0; i < 6; i++)	for (int j = 3; j < 6; j++)	tangent(i, j) /= 2.0;
 
 	return 0;
-}
 
-//unused trial strain functions
-int DPDamage::setTrialStrain(const Vector& v, const Vector& r)
-{
-	return this->setTrialStrain(v);
-}
-
-//plasticity integration routine
-void DPDamage::plasticity()
-{
-	double f1;
-	double norm_eta;
-	double Invariant_1;
-	Vector s(6);
-	Vector eta(6);
-	Vector dev_ep(6);
-	Vector Jact(2);
-	Vector n(6);			// normal to the yield surface in strain space
-
-	// Accuracy control
-	double tol = 1.0e-6;
-
-	// Elastic strains
-	strain_e = strain - strain_k_p;
-
-	// Trial stress
-	stress = Ce * strain_e;
-
-	// Deviatoric stress
-	Invariant_1 = (stress(0) + stress(1) + stress(2));
-	s = stress - (Invariant_1 / 3.0) * I1;
-
-	// Vector eta = s-zeta
-	eta = s - zeta_k;
-
-	// Norm of eta -> |eta| = |s - zeta|
-	norm_eta = sqrt(eta(0) * eta(0) + eta(1) * eta(1) + eta(2) * eta(2)
-	+ 2 * (eta(3) * eta(3) + eta(4) * eta(4) + eta(5) * eta(5)));
-
-	// Plastic function
-	f1 = norm_eta - root23 * (sig_y + Hi * alpha) + mu * Invariant_1;
-
-	// Check trial state
-	if (f1 <= tol) { // Trial state = elastic state - don't need to do any updates.
-
-		// set trial state:
-		strain_p = strain_k_p;
-		alpha = alpha_k;
-		zeta = zeta_k;
-
-		// Elastoplastic matrix
-		Cep = Ce;
-
-		return;
-	}
-	else { // Plastic correction required
-
-		// Normal to surface n = eta/|eta|;  (contravaraint)
-		if (norm_eta < 1.0e-13) {
-			n.Zero();
-		}
-		else {
-			n = eta / norm_eta;
-		}
-
-		// Plastic multiplier
-		double lambda;
-		lambda = f1 / (2 * G + two3 * (Hk + Hi));
-
-		// Plastic strains update
-		strain_p = strain_k_p + lambda * n;
-
-		// Back stress variables update
-		alpha = alpha_k + root23 * lambda;
-		zeta = two3 * Hk * strain_p;
-
-		// Elastic strains
-		strain_e = strain_p - strain;
-
-		// Update stress
-		stress = Ce * (strain_e);
-
-		// Additional terms
-		double G2 = pow(G, 2);
-
-		// Additional matrixes
-		Matrix nnT(6, 6); // n*n'
-		Matrix n1T(6, 6); // n*1'
-		nnT = n % n;
-		n1T = n % I1;
-
-		// Update tangent
-		Cep = Ce - lambda * 4 * G / norm_eta * (II1 - one3 * II1T - nnT)
-			- (4 * G2 * nnT + 6 * G * K * mu * n1T) / (2 * G + two3 * (Hi + Hk));
-
-	}
-
-	return;
-}
+};
 
 // Damage integration routine
 void DPDamage::damage()
 {
-	//////// 1. Principal strains calculation /////////////////////////////////////////////////////////////////
-	// Strain tensors from strain vectors (sci)
-	Matrix epsilon(3, 3);	epsilon = tens(strain);
-	Matrix epsilon_e(3, 3);	epsilon_e = tens(strain_e);
+	//////// 0. Principal strains calculation /////////////////////////////////////////////////////////////////
+	// Strain tensors
+	Matrix epsilon(3, 3);
+	Matrix epsilon_e(3, 3);
+	for (int i = 0; i < 3;i++) { epsilon(i, i) = strain(i); epsilon_e(i, i) = strain_e(i); };
+	epsilon(0, 1) = strain(3);epsilon_e(0, 1) = strain_e(3);
+	epsilon(1, 0) = strain(3);epsilon_e(1, 0) = strain_e(3);
+	epsilon(1, 2) = strain(4);epsilon_e(1, 2) = strain_e(4);
+	epsilon(2, 1) = strain(4);epsilon_e(2, 1) = strain_e(4);
+	epsilon(2, 0) = strain(5);epsilon_e(2, 0) = strain_e(5);
+	epsilon(0, 2) = strain(5);epsilon_e(0, 2) = strain_e(5);
 
 	// Principal strains
 	Vector strain_m(3);
@@ -502,14 +413,14 @@ void DPDamage::damage()
 	double Fc = (Yc - Yc0) - Dc_k * (ac * Yc + bc);
 
 	// Tensile damage parameter at step n+1
-	if (Ft < 1e-8) Dt = Dt_k;
+	if (Ft < 1e-6) Dt = Dt_k;
 	else Dt = (Yt - Yt0) / (at * Yt + bt);
 	//Dt = fmax(Dt, Dt_k);
 	if (Dt < 0.0)	Dt = 0.0;
 	if (Dt > 1.0)	Dt = 1.0;
 
 	// Compressive damage parameter at step n+1
-	if (Fc < 1e-8) Dc = Dc_k;
+	if (Fc < 1e-6) Dc = Dc_k;
 	else Dc = (Yc - Yc0) / (ac * Yc + bc);
 	//Dc = fmax(Dc, Dc_k);
 	if (Dc < 0.0)	Dc = 0.0;
@@ -519,36 +430,32 @@ void DPDamage::damage()
 	Dt = fmax(Dc, Dt);
 
 	// Damage 2 parameters coefficients
-	int algorithm = 0; // 0 = GATTA, 1 = DI RE
+	int algorithm = 1; // 0 = GATTA, 1 = DI RE
 	double alpha = 0.0;
 
 	// Weighting coefficients GATTA
 	if (algorithm == 0) {
-		if (fabs(Yt_e) / Yt0 + fabs(Yc_e) / Yc0 < 1.0e-10)  D = D_k;
+		if (fabs(Yt_e) / Yt0 + fabs(Yc_e) / Yc0 < 1.0e-10) { alpha = 0.0; D = D_k; }
 		else {
 			alpha = pow(Yt_e / Yt0, 1) / (pow(Yt_e / Yt0, 1) + pow(Yc_e / Yc0, 1));
 			if (alpha < 0.0) alpha = 0.0;
 			if (alpha > 1.0) alpha = 1.0;
-
-			// Cumulative damage variable
-			D = alpha * Dt + (1.0 - alpha) * Dc;
 		}
 	}
 	// Weighting coefficients DI RE
 	else {
-		double eta_t = Yt_e / (Yt0 + Dt_k * (at * Yt_e + bt));
-		double eta_c = Yc_e / (Yc0 + Dc_k * (ac * Yc_e + bc));
-		if (eta_t == 0) D = D_k;
+		double eta_t = Yt_e / (Yt0 + D_k * (at * Yt_e + bt));
+		double eta_c = Yc_e / (Yc0 + D_k * (ac * Yc_e + bc));
+		if (eta_t == 0) { alpha = 0.0; D = D_k; }
 		else {
 			alpha = pow(eta_t, 2) / (pow(eta_t, 2) + pow(eta_c, 2));
 			if (alpha < 0.0) alpha = 0.0;
 			if (alpha > 1.0) alpha = 1.0;
-
-			// Cumulative damage variable
-			D = alpha * Dt + (1.0 - alpha) * Dc;
 		}
 	}
 
+	// Cumulative damage variable
+	D = alpha * Dt + (1.0 - alpha) * Dc;
 
 	// Final check
 	//D = fmax(D_k, D);
@@ -572,50 +479,179 @@ void DPDamage::damage()
 		opserr << "\nDamage variables:\n";
 		opserr << "D_c     = " << Dc << "\n";
 		opserr << "D_t     = " << Dt << "\n";
-		opserr << "alpha_c = " << 1.0 - alpha << "\n";
+		opserr << "alpha_c = " << 1.0-alpha << "\n";
 		opserr << "alpha_t = " << alpha << "\n";
 		//opserr << "D = " << D << "\n";    -> Moved to setTrialStrain
 		opserr << "\n--- End ------------------------------------\n";
 	}
 }
 
-//vector to tensor
-const Matrix& DPDamage::tens(const Vector& v)
+int DPDamage::setTrialStrain(const Vector& pStrain)
 {
-	for (int i = 0; i < 3;i++) m(i, i) = v(i);
-	m(0, 1) = v(3);
-	m(1, 0) = v(3);
-	m(1, 2) = v(4);
-	m(2, 1) = v(4);
-	m(2, 0) = v(5);
-	m(0, 2) = v(5);
+	// Debug
+	if (D_k < 0.1) {dFlag1 = 0; dFlag2 = 0;}
+	else { dFlag1 = 0; dFlag2 = 0; }
 
-	return m;
-}
+	// Strains from the analysis
+	strain = pStrain;
 
-//send back the strain
-const Vector& DPDamage::getStrain()
-{
-	return strain;
-}
+	// ----- Plasticity and damage part ---------------------------------------------------------------- //
+	// ENG -> SCI strains (x0.5)         gamma_ij --> eps_ij
+	for (int i = 3; i < 6; i++) {strain[i] /= 2.0;}
 
-//send back the stress 
-const Vector& DPDamage::getStress()
-{
+	// Debug 1
+	if (dFlag1 == 1) {
+		opserr << "\n----------------------------------------------------------------------------------------------------------------------------\n";
+		opserr << "\nStarted new setTrialStrain.\n\n";
+		opserr << "Inputs before plasticity and damage (initialized at current step):\n";
+		opserr << "strain     = [ "; for (int i = 0;i < 6;i++) opserr << strain(i) << " "; opserr << "]\n";
+		opserr << "strain_k   = [ "; for (int i = 0;i < 6;i++) opserr << strain_k(i) << " "; opserr << "]\n";
+	}
+
+	// Plasticity routine
+	this->plasticity();
+
+	// Tangent
+	tangent_ep = tangent;
+	
+	// Total plastic strains
+	strain_p = strain_p_dev; // + strain_vol; no volumetric plastic strains exist in J2.
+
+	// Elastoplastic stiffness matrix
+	strain_e = strain - strain_p;
+
+	// Debug 2
+	if (dFlag1 == 1) {
+		opserr << "\nPlasticity executed!\n\n";
+		opserr << "Outputs after plasticity only:\n";
+		opserr << "strain     = [ "; for (int i = 0;i < 6;i++) opserr << strain(i) << " "; opserr << "]\n";
+		opserr << "strain_e   = [ "; for (int i = 0;i < 6;i++) opserr << strain_e(i) << " "; opserr << "]\n";
+		opserr << "strain_p   = [ "; for (int i = 0;i < 6;i++) opserr << strain_p(i) << " "; opserr << "]\n";
+		opserr << "strain_p_k = [ "; for (int i = 0;i < 6;i++) opserr << strain_p_k(i) << " "; opserr << "]\n";
+		opserr << "stress     = [ "; for (int i = 0;i < 6;i++) opserr << stress(i) << " "; opserr << "]\n";
+		opserr << "stress_k   = [ "; for (int i = 0;i < 6;i++) opserr << stress_k(i) << " "; opserr << "]\n";
+		opserr << "tangent:\n[ "; for (int i = 0;i < 6;i++) { for (int j = 0;j < 6;j++) opserr << tangent(j, i) << " "; opserr << "]\n"; }
+	}
+
+	// Damage routine
+	this->damage();
+
+	// SCI -> ENG strains (x2.0)         eps_ij --> gamma_ij
+	for (int i = 3; i < 6; i++) {strain[i] *= 2.0;strain_p[i] *= 2.0;strain_e[i] *= 2.0;}
+	// ------------------------------------------------------------------------------------------------- //
+
+	// Incremental quantities
+	//D = 0;	// Damage trigger
+	//Vector dstress = stress - stress_k;
+	//Vector dstrain = strain - strain_k;
+	//Vector dstrain_p = strain_p - strain_p_k;
+	//Vector dstrain_e = dstrain - dstrain_p;
+	//double dD = D - D_k;
+	//Matrix d_dstrain_e(6,6);
+	//for (int i = 0;i < 6;i++) d_dstrain_e(i,i) = dstrain_e(i) / strain_e(i);
+
+	// Optional degradation correction
+	D = fmax(D, De);
+
+	// Damage correction in order to avoid singularity
+	D = fmin(D, 0.999);
+
+	// Constitutive matrix and stress
+	Dm1sq = pow(1.0 - D, 2.0);	// [1-D]^2
+	tangent = Dm1sq * tangent_ep;
+	stress.addMatrixVector(0, tangent_e, strain_e, Dm1sq);
+
+	// Debug 3
+	if (dFlag1 == 1) {
+		opserr << "\nD = " << D << "\n\n";
+		opserr << "Outputs after both plasticity and damage:\n";
+		opserr << "strain     = [ "; for (int i = 0;i < 6;i++) opserr << strain(i) << " "; opserr << "]\n";
+		opserr << "strain_k   = [ "; for (int i = 0;i < 6;i++) opserr << strain_k(i) << " "; opserr << "]\n";
+		opserr << "strain_e   = [ "; for (int i = 0;i < 6;i++) opserr << strain_e(i) << " "; opserr << "]\n";
+		opserr << "strain_p   = [ "; for (int i = 0;i < 6;i++) opserr << strain_p(i) << " "; opserr << "]\n";
+		opserr << "strain_p_k = [ "; for (int i = 0;i < 6;i++) opserr << strain_p_k(i) << " "; opserr << "]\n";
+		opserr << "stress     = [ "; for (int i = 0;i < 6;i++) opserr << stress(i) << " "; opserr << "]\n";
+		opserr << "stress_k   = [ "; for (int i = 0;i < 6;i++) opserr << stress_k(i) << " "; opserr << "]\n";
+		opserr << "tangent_ep:\n[ "; for (int i = 0;i < 6;i++) { for (int j = 0;j < 6;j++) opserr << tangent_ep(j, i) << " "; opserr << "]\n"; }
+		opserr << "tangent:\n[ "; for (int i = 0;i < 6;i++) { for (int j = 0;j < 6;j++) opserr << tangent(j, i) << " "; opserr << "]\n"; }
+	}
+
+	// Internal commits
+	
+	// Damage output
+	if (d_out == 1) {
+		step++;
+
+		// Damage output
+		using namespace std;
+		ofstream outdata;
+		outdata.open("out_DPDamage.txt", ios::app);
+		outdata << step << " ";
+		outdata << strain(0) << " " << strain(1) << " " << strain(2) << " " << strain(3) << " " << strain(4) << " " << strain(5) << " ";
+		outdata << stress(0) << " " << stress(1) << " " << stress(2) << " " << stress(3) << " " << stress(4) << " " << stress(5) << " ";
+		outdata << Dt << " " << Dc << " " << D << endln;
+		outdata.close();
+	}
+
+	return 0;
+};
+
+//unused
+int DPDamage::setTrialStrain(const Vector& v, const Vector& r) {
+
+	return this->setTrialStrain(v);
+};
+
+//unused
+int DPDamage::setTrialStrainIncr(const Vector& v) {
+
+	opserr << "Warning: unused setTrialStrainIncr invoked within DPDamage material" << endln;
+
+	return 0;
+};
+
+//unused
+int DPDamage::setTrialStrainIncr(const Vector& v, const Vector& r) {
+
+	return this->setTrialStrainIncr(v);
+};
+
+// Calculates current tangent stiffness.
+const Matrix& DPDamage::getTangent(void) {
+
+	if (ndm == 3)
+		return tangent;
+	else {
+		static Matrix workM(3, 3);
+		workM(0, 0) = tangent(0, 0);
+		workM(0, 1) = tangent(0, 1);
+		workM(0, 2) = tangent(0, 3);
+		workM(1, 0) = tangent(1, 0);
+		workM(1, 1) = tangent(1, 1);
+		workM(1, 2) = tangent(1, 3);
+		workM(2, 0) = tangent(3, 0);
+		workM(2, 1) = tangent(3, 1);
+		workM(2, 2) = tangent(3, 3);
+		return workM;
+
+	}
+
+};
+
+const Matrix& DPDamage::getInitialTangent(void) {
+
+	return tangent_e;
+};
+
+const Vector& DPDamage::getStress(void) {
+
 	return stress;
-}
+};
 
-//send back the tangent 
-const Matrix& DPDamage::getTangent()
-{
-	return Ct;
-}
+const Vector& DPDamage::getStrain(void) {
 
-//send back the tangent 
-const Matrix& DPDamage::getInitialTangent()
-{
-	return Ce;
-}
+	return strain;
+};
 
 const Vector& DPDamage::getDamage(void) {
 	dam[0] = Dt;
@@ -624,240 +660,162 @@ const Vector& DPDamage::getDamage(void) {
 	return dam;
 }
 
-int DPDamage::commitState(void)
-{
-	// Strains
-	strain_k = strain;
-	strain_k_p = strain_p;
+int DPDamage::commitState(void) {
 
-	// Stress
 	stress_k = stress;
-
-	// Backstress
-	alpha_k = alpha;
-	zeta_k = zeta;
-
-	// Damage
+	strain_k = strain;
+	strain_p_k = strain_p;
+	strain_p_dev_k = strain_p_dev;
+	backstress_k = backStress;
+	sig_y_k = sig_y;
+	D_k = D;
 	Dc_k = Dc;
 	Dt_k = Dt;
-	D_k = D;
+	Dc_commit = Dc;
+	Dt_commit = Dt;
+	D_commit = D;
 
+	return 0;
+};
+
+int DPDamage::revertToLastCommit(void) {
+	//opserr << "Using DPDamage::revertToLastCommit" << endln;
+	stress = stress_k;
+	strain = strain_k;
+	strain_p = strain_p_k;
+	strain_p_dev = strain_p_dev_k;
+	backStress = backstress_k;
+	sig_y = sig_y_k;
+	Dc = Dc_commit;
+	Dt = Dt_commit;
+	D = D_commit;
+	return 0;
+};
+
+int DPDamage::revertToStart(void) {
+	// -- to be implemented.
 	return 0;
 }
 
-int DPDamage::revertToLastCommit(void)
-{
+int DPDamage::sendSelf(int commitTag, Channel& theChannel) {
+	// -- to be implemented.
+
+  /*static ID data(1);
+  data(0) = tangent;
+  return theChannel.sendID(0, commitTag, data);
+  */
 	return 0;
-}
+};
 
-int DPDamage::revertToStart(void)
-{
-	if (ops_InitialStateAnalysis) {
-		// do nothing, keep state variables from last step
-	}
-	else {
-		// normal call for revertToStart (not initialStateAnalysis)
-		this->initialize();
-	}
+int DPDamage::recvSelf(int commitTag, Channel& theChannel, FEM_ObjectBroker& theBroker) {
+	// -- to be implemented.
 
+  /*static ID data(1);
+  int res = theChannel.recvID(0, commitTag, data);
+  tangent = data(0);
+  return res;
+  */
 	return 0;
-}
+};
 
-Vector DPDamage::getState()
-{
-	return mState;
-}
+Response* DPDamage::setResponse(const char** argv, int argc, OPS_Stream& s) {
 
-Response*
-DPDamage::setResponse(const char** argv, int argc, OPS_Stream& output)
-{
-	Response* theResponse = 0;
-	const char* matType = this->getType();
-
-	output.tag("NdMaterialOutput");
-	output.attr("matType", this->getClassType());
-	output.attr("matTag", this->getTag());
 
 	if (strcmp(argv[0], "stress") == 0 || strcmp(argv[0], "stresses") == 0)
-		return new MaterialResponse(this, 1, this->getStress());
+		return new MaterialResponse(this, 1, stress);
+
 	else if (strcmp(argv[0], "strain") == 0 || strcmp(argv[0], "strains") == 0)
-		return new MaterialResponse(this, 2, this->getStrain());
-	else if (strcmp(argv[0], "state") == 0)
-		return new MaterialResponse(this, 3, this->getState());
+		return new MaterialResponse(this, 2, strain);
+
+	else if (strcmp(argv[0], "tangent") == 0 || strcmp(argv[0], "Tangent") == 0)
+		return new MaterialResponse(this, 3, tangent);
+
+	else if (strcmp(argv[0], "damage") == 0 || strcmp(argv[0], "Damage") == 0) {
+		return new MaterialResponse(this, 5, D);
+	}
 	else
 		return 0;
 }
 
-int DPDamage::getResponse(int responseID, Information& matInfo)
-{
+int DPDamage::getResponse(int responseID, Information& matInfo) {
+
+
+
 	switch (responseID) {
 	case -1:
 		return -1;
 	case 1:
 		if (matInfo.theVector != 0)
-			*(matInfo.theVector) = getStress();
+			*(matInfo.theVector) = stress;
 		return 0;
+
 	case 2:
 		if (matInfo.theVector != 0)
-			*(matInfo.theVector) = getStrain();
+			*(matInfo.theVector) = strain;
 		return 0;
+
 	case 3:
-		if (matInfo.theVector != 0)
-			*(matInfo.theVector) = getState();
+		if (matInfo.theMatrix != 0)
+			*(matInfo.theMatrix) = tangent;
 		return 0;
-	default:
-		return -1;
-	}
-}
 
-int DPDamage::setParameter(const char** argv, int argc, Parameter& param)
-{
-	if (strcmp(argv[0], "materialState") == 0) {
-		// switch elastic/plastic state
-		return param.addObject(5, this);
-	}
-	else if (strcmp(argv[0], "frictionalStrength") == 0) {
-		// update rho parameter
-		return param.addObject(7, this);
-	}
-	else if (strcmp(argv[0], "nonassociativeTerm") == 0) {
-		// update nonassociative rho_bar parameter
-		return param.addObject(8, this);
-	}
-	else if (strcmp(argv[0], "cohesiveIntercept") == 0) {
-		// update zero confinement yield strength
-		return param.addObject(9, this);
-	}
-	else if (strcmp(argv[0], "shearModulus") == 0) {
-		// update shear modulus
-		return param.addObject(10, this);
-	}
-	else if (strcmp(argv[0], "bulkModulus") == 0) {
-		// update bulk modulus
-		return param.addObject(11, this);
-	}
-	else if (strcmp(argv[0], "updateMaterialStage") == 0) {
-		return -1;
-	}
-	else {
-		// invalid parameter type
-		opserr << "WARNING: invalid parameter command for DPDamage nDMaterial with tag: " << this->getTag() << endln;
-		return -1;
+	case 5:
+		//matInfo.setDouble(this->getDamage());
+		return 0;
+
 	}
 
-	return -1;
-}
 
-int DPDamage::updateParameter(int responseID, Information& info)
-{
-	if (responseID == 5) {
-		// materialState called - update mElasticFlag
-		mElastFlag = (int)info.theDouble;
-	}
-	return 0;
-}
-
-int DPDamage::sendSelf(int commitTag, Channel& theChannel)
-{
-	int res = 0;
-
-	// place data in a vector
-	static Vector data(45);
-	data(0) = this->getTag();
-
-	data(18) = alpha_k;
-	data(20) = mElastFlag;
-	data(21) = mFlag;
-
-	data(22) = strain(0);
-	data(23) = strain(1);
-	data(24) = strain(2);
-	data(25) = strain(3);
-	data(26) = strain(4);
-	data(27) = strain(5);
-
-	data(28) = strain_k_p(0);
-	data(29) = strain_k_p(1);
-	data(30) = strain_k_p(2);
-	data(31) = strain_k_p(3);
-	data(32) = strain_k_p(4);
-	data(33) = strain_k_p(5);
-
-	data(34) = zeta_k(0);
-	data(35) = zeta_k(1);
-	data(36) = zeta_k(2);
-	data(37) = zeta_k(3);
-	data(38) = zeta_k(4);
-	data(39) = zeta_k(5);
-
-	data(40) = mState(0);
-	data(41) = mState(1);
-	data(42) = mState(2);
-	data(43) = mState(3);
-	data(44) = mState(4);
-
-	res = theChannel.sendVector(this->getDbTag(), commitTag, data);
-	if (res < 0) {
-		opserr << "WARNING: DPDamage::sendSelf - failed to send vector to channel" << endln;
-		return -1;
-	}
 
 	return 0;
 }
 
-int DPDamage::recvSelf(int commitTag, Channel& theChannel, FEM_ObjectBroker& theBroker)
-{
-	int res = 0;
+void DPDamage::Print(OPS_Stream& s, int flag) {
+	// -- to be implemented.
+	return;
+};
 
-	// receive data
-	static Vector data(45);
-	res = theChannel.recvVector(this->getDbTag(), commitTag, data);
-	if (res < 0) {
-		opserr << "WARNING: DPDamage::recvSelf - failed to receive vector from channel" << endln;
-		return -1;
-	}
+int DPDamage::setParameter(const char** argv, int argc, Parameter& param) {
+	// -- to be implemented.
 
-	// set member variables
-	this->setTag((int)data(0));
-
-	alpha_k = data(18);
-
-	strain(0) = data(22);
-	strain(1) = data(23);
-	strain(2) = data(24);
-	strain(3) = data(25);
-	strain(4) = data(26);
-	strain(5) = data(27);
-
-	strain_k_p(0) = data(28);
-	strain_k_p(1) = data(29);
-	strain_k_p(2) = data(30);
-	strain_k_p(3) = data(31);
-	strain_k_p(4) = data(32);
-	strain_k_p(5) = data(33);
-
-	zeta_k(0) = data(34);
-	zeta_k(1) = data(35);
-	zeta_k(2) = data(36);
-	zeta_k(3) = data(37);
-	zeta_k(4) = data(38);
-	zeta_k(5) = data(39);
-
-	mState(0) = data(40);
-	mState(1) = data(41);
-	mState(2) = data(42);
-	mState(3) = data(43);
-	mState(4) = data(44);
-
-	Ce = K * IIvol + 2 * G * IIdev;
-	Cep = Ce;
-	Ct = Ce;
 
 	return 0;
-}
+};
 
-void DPDamage::Print(OPS_Stream& s, int flag)
-{
-	s << "DPDamage" << endln;
-}
+int DPDamage::updateParameter(int responseID, Information& eleInformation) {
+	// -- to be implemented.
+	/*switch (passedParameterID) {
+	case -1:
+		return -1;
 
+	case 1:
+		this->Nd= info.theDouble; //
+		break;
+
+	case 2:
+		this->G  = info.theDouble;
+		break;
+
+	case 3:
+		this->K = info.theDouble; //
+		break;
+
+	case 4:
+		this->SigmaY0  = info.theDouble;
+		break;
+
+
+	case 5:
+		this->Hk= info.theDouble; //
+		break;
+
+	case 6:
+		this->Hi= info.theDouble; //
+		break;
+
+	}
+	*/
+
+
+	return 0;
+};

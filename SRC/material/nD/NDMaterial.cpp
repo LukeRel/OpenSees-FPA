@@ -43,6 +43,7 @@
 
 #include <PlaneStressMaterial.h>
 #include <BeamFiberMaterial.h>
+#include <BeamFiberMaterialEB.h>
 #include <BeamFiberMaterial2d.h>
 #include <PlateFiberMaterial.h>
 #include <string.h>
@@ -136,6 +137,12 @@ NDMaterial::getCopy(const char *type)
     NDMaterial *copy = this->getCopy("ThreeDimensional");
     BeamFiberMaterial *clone = new BeamFiberMaterial(this->getTag(),*copy);
     return clone;
+  }
+  else if (strcmp(type, "BeamFiberEB") == 0 || strcmp(type, "EuleroBernoulliFiber") == 0 ||
+      strcmp(type, "BeamFiber1") == 0) {
+      NDMaterial* copy = this->getCopy("ThreeDimensional");
+      BeamFiberMaterialEB* clone = new BeamFiberMaterialEB(this->getTag(), *copy);
+      return clone;
   }
   else if (strcmp(type,"BeamFiber2d") == 0 ||
 	   strcmp(type,"TimoshenkoFiber2d") == 0) {

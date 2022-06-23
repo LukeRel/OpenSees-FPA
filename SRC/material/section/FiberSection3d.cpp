@@ -1391,7 +1391,7 @@ FiberSection3d::zeroLoad(void)
 }
 
 int
-FiberSection3d::addLoad(int fibTag, double eps0) {
+FiberSection3d::addLoad(int fibTag, double eps0, double phi_t_t0, int creep) {
     // Adding eps0 and beta to selected fiber
     matData[5 * (fibTag - 1) + 3] = eps0;
 

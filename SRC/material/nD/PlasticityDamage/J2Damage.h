@@ -159,6 +159,11 @@ private:
 	double D_k;					// Total damage at previous step (k)
 	Vector dam;
 
+	// Damage commit
+	double D_commit;
+	double Dt_commit;
+	double Dc_commit;
+
 	// Degradation stuff ------------------------------------------------------------------------------
 	double De;
 };

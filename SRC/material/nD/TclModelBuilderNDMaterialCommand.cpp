@@ -119,6 +119,7 @@ extern  void *OPS_PlaneStressLayeredMaterial(void);
 extern  void *OPS_PlaneStressRebarMaterial(void);
 extern  void *OPS_PlateFiberMaterial(void);
 extern  void *OPS_BeamFiberMaterial(void);
+extern  void *OPS_BeamFiberMaterialEB(void);
 extern  void *OPS_BeamFiberMaterial2d(void);
 extern  void *OPS_BeamFiberMaterial2dPS(void);
 extern void *OPS_LinearCap(void);
@@ -1873,6 +1874,18 @@ TclModelBuilderNDMaterialCommand (ClientData clientData, Tcl_Interp *interp, int
        else 
 	 return TCL_ERROR;
      }
+
+	 else if (strcmp(argv[1], "BeamFiberMaterialEB") == 0 ||
+	 strcmp(argv[1], "BeamFiberEB") == 0 ||
+	 strcmp(argv[1], "EuleroBernoulliFiber") == 0 ||
+	 strcmp(argv[1], "BeamFiber1") == 0) {
+
+	 void* theMat = OPS_BeamFiberMaterialEB();
+	 if (theMat != 0)
+		 theMaterial = (NDMaterial*)theMat;
+	 else
+		 return TCL_ERROR;
+	 }
 
      else if (strcmp(argv[1],"BeamFiberMaterial2d") == 0 ||
  	     strcmp(argv[1],"BeamFiber2d") == 0) {

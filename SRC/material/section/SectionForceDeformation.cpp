@@ -376,14 +376,8 @@ SectionForceDeformation::getResponseSensitivity(int responseID, int gradIndex,
   }
 }
 
-void
-SectionForceDeformation::zeroLoad(void)
-{
-
-}
-
 int
-SectionForceDeformation::addLoad(int _fibTag, double _eps0) {
+SectionForceDeformation::addLoad(int iFib, int jFib, double eps0, double phi_t_t0, int creep) {
     return 0;
 }
 

@@ -20,48 +20,49 @@
 
 // $Revision: 1.4 $
 // $Date: 2003-02-14 23:01:24 $
-// $Source: /usr/local/cvs/OpenSees/SRC/material/nD/BeamFiberMaterial.cpp,v $
+// $Source: /usr/local/cvs/OpenSees/SRC/material/nD/BeamFiberMaterialEB.cpp,v $
 
 // Written: MHS
 // Created: Aug 2001
+// Modified: LP - May 2022
 //
-// Description: This file contains the class definition of BeamFiberMaterial.
-// The BeamFiberMaterial class is a wrapper class that performs static
-// condensation on a three-dimensional material model to give the 11, 12, and 13
-// stress components which can then be integrated over an area to model a
-// shear flexible 3D beam.
+// Description: This file contains the class definition of BeamFiberMaterialEB.
+// The BeamFiberMaterialEB class is a wrapper class that performs static
+// condensation on a three-dimensional material model to give only the 11
+// stress components which can then be integrated over an area to model an
+// Eulero Bernoulli 3D beam.
 
 
-#include <BeamFiberMaterial.h>
+#include <BeamFiberMaterialEB.h>
 #include <Channel.h>
 #include <FEM_ObjectBroker.h>
 #include <string.h>
 #include <elementAPI.h>
 #include <MaterialResponse.h>
 
-Vector BeamFiberMaterial::stress(3);
-Matrix BeamFiberMaterial::tangent(3,3);
+Vector BeamFiberMaterialEB::stress(3);
+Matrix BeamFiberMaterialEB::tangent(3,3);
 
 //      0  1  2  3  4  5
 // ND: 11 22 33 12 23 31
-// BF: 11 12 31 22 33 23
+// BF: 11 22 33 12 23 31
 
 static int d_out = 0; // Set to 1 to produce a out_J2damage.txt output file
 static double step = 0.0;
 
-void* OPS_BeamFiberMaterial()
+void* OPS_BeamFiberMaterialEB()
 {
     int argc = OPS_GetNumRemainingInputArgs() + 2;
     if (argc < 4) {
 	opserr << "WARNING insufficient arguments\n";
-	opserr << "Want: nDMaterial BeamFiber tag? matTag?" << endln;
+	opserr << "Want: nDMaterial BeamFiberEB tag? matTag?" << endln;
 	return 0;
     }
 
     int tags[2];
     int numdata = 2;
     if (OPS_GetIntInput(&numdata, tags) < 0) {
-	opserr << "WARNING invalid nDMaterial BeamFiber tag or matTag" << endln;
+	opserr << "WARNING invalid nDMaterial BeamFiberEB tag or matTag" << endln;
 	return 0;
     }
 
@@ -72,35 +73,35 @@ void* OPS_BeamFiberMaterial()
     if (threeDMaterial == 0) {
 	opserr << "WARNING nD material does not exist\n";
 	opserr << "nD material: " << matTag;
-	opserr << "\nBeamFiber nDMaterial: " << tag << endln;
+	opserr << "\nBeamFiberEB nDMaterial: " << tag << endln;
 	return 0;
     }
 
-    return new BeamFiberMaterial(tag, *threeDMaterial);
+    return new BeamFiberMaterialEB(tag, *threeDMaterial);
 }
 
-BeamFiberMaterial::BeamFiberMaterial(void)
-: NDMaterial(0, ND_TAG_BeamFiberMaterial),
-Tstrain22(0.0), Tstrain33(0.0), Tgamma23(0.0),
-Cstrain22(0.0), Cstrain33(0.0), Cgamma23(0.0),
-theMaterial(0), strain(3), strain_k(3), stress_k(3), strain3D(6), stress3D(6),
+BeamFiberMaterialEB::BeamFiberMaterialEB(void)
+: NDMaterial(0, ND_TAG_BeamFiberMaterialEB),
+Tstrain22(0.0), Tstrain33(0.0), Tgamma12(0.0), Tgamma23(0.0), Tgamma31(0.0),
+Cstrain22(0.0), Cstrain33(0.0), Cgamma12(0.0), Cgamma23(0.0), Cgamma31(0.0),
+theMaterial(0), strain(3), strain3D(6), stress3D(6),
 damage(0.0)
 {
 	// Nothing to do
 }
 
-BeamFiberMaterial::BeamFiberMaterial(int tag, NDMaterial &theMat)
-: NDMaterial(tag, ND_TAG_BeamFiberMaterial),
-Tstrain22(0.0), Tstrain33(0.0), Tgamma23(0.0),
-Cstrain22(0.0), Cstrain33(0.0), Cgamma23(0.0),
-theMaterial(0), strain(3), strain_k(3), stress_k(3),
+BeamFiberMaterialEB::BeamFiberMaterialEB(int tag, NDMaterial &theMat)
+: NDMaterial(tag, ND_TAG_BeamFiberMaterialEB),
+Tstrain22(0.0), Tstrain33(0.0), Tgamma12(0.0), Tgamma23(0.0), Tgamma31(0.0),
+Cstrain22(0.0), Cstrain33(0.0), Cgamma12(0.0), Cgamma23(0.0), Cgamma31(0.0),
+theMaterial(0), strain(3),
 damage(0.0)
 {
   // Get a copy of the material
   theMaterial = theMat.getCopy("ThreeDimensional");
   
   if (theMaterial == 0) {
-    opserr << "BeamFiberMaterial::BeamFiberMaterial -- failed to get copy of material\n";
+    opserr << "BeamFiberMaterialEB::BeamFiberMaterialEB -- failed to get copy of material\n";
     exit(-1);
   }
   // Initializing damage output file
@@ -113,30 +114,34 @@ damage(0.0)
   }
 }
 
-BeamFiberMaterial::~BeamFiberMaterial(void) 
+BeamFiberMaterialEB::~BeamFiberMaterialEB(void) 
 { 
   if (theMaterial != 0)
     delete theMaterial;
 } 
 
 NDMaterial*
-BeamFiberMaterial::getCopy(void) 
+BeamFiberMaterialEB::getCopy(void) 
 {
-  BeamFiberMaterial *theCopy =
-    new BeamFiberMaterial(this->getTag(), *theMaterial);
+  BeamFiberMaterialEB *theCopy =
+    new BeamFiberMaterialEB(this->getTag(), *theMaterial);
 
   theCopy->Tstrain22 = this->Tstrain22;
   theCopy->Tstrain33 = this->Tstrain33;
+  theCopy->Tgamma23  = this->Tgamma12;
   theCopy->Tgamma23  = this->Tgamma23;
+  theCopy->Tgamma23  = this->Tgamma31;
   theCopy->Cstrain22 = this->Cstrain22;
   theCopy->Cstrain33 = this->Cstrain33;
+  theCopy->Cgamma23  = this->Cgamma12;
   theCopy->Cgamma23  = this->Cgamma23;
+  theCopy->Cgamma23  = this->Cgamma31;
   
   return theCopy;
 }
 
 NDMaterial* 
-BeamFiberMaterial::getCopy(const char *type)
+BeamFiberMaterialEB::getCopy(const char *type)
 {
   if (strcmp(type, "BeamFiber") == 0)
     return this->getCopy();
@@ -145,23 +150,25 @@ BeamFiberMaterial::getCopy(const char *type)
 }
 
 int 
-BeamFiberMaterial::getOrder(void) const
+BeamFiberMaterialEB::getOrder(void) const
 {
   return 3;
 }
 
 const char*
-BeamFiberMaterial::getType(void) const 
+BeamFiberMaterialEB::getType(void) const 
 {
   return "BeamFiber";
 }
 
 int 
-BeamFiberMaterial::commitState(void)
+BeamFiberMaterialEB::commitState(void)
 {
   Cstrain22 = Tstrain22;
   Cstrain33 = Tstrain33;
+  Cgamma12 = Tgamma12;
   Cgamma23 = Tgamma23;
+  Cgamma31 = Tgamma31;
 
   //step += ops_Dt;
 
@@ -171,30 +178,36 @@ BeamFiberMaterial::commitState(void)
 }
 
 int 
-BeamFiberMaterial::revertToLastCommit(void)
+BeamFiberMaterialEB::revertToLastCommit(void)
 {
   Tstrain22 = Cstrain22;
   Tstrain33 = Cstrain33;
+  Tgamma12 = Cgamma12;
   Tgamma23 = Cgamma23;
+  Tgamma31 = Cgamma31;
   
   return theMaterial->revertToLastCommit();
 }
 
 int
-BeamFiberMaterial::revertToStart()
+BeamFiberMaterialEB::revertToStart()
 {
   this->Tstrain22 = 0.0;
   this->Tstrain33 = 0.0;
+  this->Tgamma12  = 0.0;
   this->Tgamma23  = 0.0;
+  this->Tgamma31  = 0.0;
   this->Cstrain22 = 0.0;
   this->Cstrain33 = 0.0;
+  this->Cgamma12  = 0.0;
   this->Cgamma23  = 0.0;
+  this->Cgamma31  = 0.0;
 
   return theMaterial->revertToStart();
 }
 
 double
-BeamFiberMaterial::getRho(void)
+BeamFiberMaterialEB::getRho(void)
 {
   return theMaterial->getRho();
 }
@@ -202,24 +215,24 @@ BeamFiberMaterial::getRho(void)
 
 //receive the strain
 int 
-BeamFiberMaterial::setTrialStrain(const Vector &strainFromElement)
+BeamFiberMaterialEB::setTrialStrain(const Vector &strainFromElement)
 {
-  static const double tolerance = 1.0e-6;
+  static const double tolerance = 1.0e-10;
 
   strain(0) = strainFromElement(0);
-  strain(1) = strainFromElement(1);
-  strain(2) = strainFromElement(2);
+  strain(1) = 0.0;// strainFromElement(1);
+  strain(2) = 0.0;// strainFromElement(2);
 
   //newton loop to solve for out-of-plane strains
 
   double norm;
-  static Vector condensedStress(3);
-  static Vector strainIncrement(3);
+  static Vector condensedStress(5);
+  static Vector strainIncrement(5);
   static Vector threeDstrain(6);
-  static Matrix dd22(3,3);
+  static Matrix dd22(5,5);
 
   int count = 0;
-  const int maxCount = 100;
+  const int maxCount = 2;
   double norm0;
 
   do {
@@ -233,7 +246,7 @@ BeamFiberMaterial::setTrialStrain(const Vector &strainFromElement)
     threeDstrain(5) = this->strain(2);
 
     if (theMaterial->setTrialStrain(threeDstrain) < 0) {
-      opserr << "BeamFiberMaterial::setTrialStrain - setStrain failed in material with strain " << threeDstrain;
+      opserr << "BeamFiberMaterialEB::setTrialStrain - setStrain failed in material with strain " << threeDstrain;
       return -1;   
     }
 
@@ -247,24 +260,14 @@ BeamFiberMaterial::setTrialStrain(const Vector &strainFromElement)
     //three dimensional tangent 
     const Matrix &threeDtangent = theMaterial->getTangent();
 
-    //NDmaterial strain order        = 11, 22, 33, 12, 23, 31  
-    //BeamFiberMaterial strain order = 11, 12, 31, 22, 33, 23
+    //NDmaterial strain order          = 11, 22, 33, 12, 23, 31  
+    //BeamFiberMaterialEB strain order = 11, 22, 33, 12, 23, 31
 
-    condensedStress(0) = threeDstress(1);
-    condensedStress(1) = threeDstress(2);
-    condensedStress(2) = threeDstress(4);
+    for (int i = 0;i < 5; i++) condensedStress(i) = threeDstress(i+1);
 
-    dd22(0,0) = threeDtangent(1,1);
-    dd22(1,0) = threeDtangent(2,1);
-    dd22(2,0) = threeDtangent(4,1);
-
-    dd22(0,1) = threeDtangent(1,2);
-    dd22(1,1) = threeDtangent(2,2);
-    dd22(2,1) = threeDtangent(4,2);
-
-    dd22(0,2) = threeDtangent(1,4);
-    dd22(1,2) = threeDtangent(2,4);
-    dd22(2,2) = threeDtangent(4,4);
+    for (int i = 0; i < 5; i++) {
+        for (int j = 0; j < 5; j++) dd22(j,i) = threeDtangent(j+1,i+1);
+    }
 
     //set norm
     norm = condensedStress.Norm();
@@ -277,11 +280,13 @@ BeamFiberMaterial::setTrialStrain(const Vector &strainFromElement)
     //update out of plane strains
     this->Tstrain22 -= strainIncrement(0);
     this->Tstrain33 -= strainIncrement(1);
-    this->Tgamma23  -= strainIncrement(2);
+    this->Tgamma12  -= strainIncrement(2);
+    this->Tgamma23  -= strainIncrement(3);
+    this->Tgamma31  -= strainIncrement(4);
 
   } while (count++ < maxCount && norm > tolerance);
 
-  theMaterial->commitState();
+  //theMaterial->commitState();
 
   if (d_out == 1) {
       step++;
@@ -303,49 +308,25 @@ BeamFiberMaterial::setTrialStrain(const Vector &strainFromElement)
 }
 
 const Vector& 
-BeamFiberMaterial::getStrain(void)
+BeamFiberMaterialEB::getStrain(void)
 {
   return strain;
 }
 
 const Vector&  
-BeamFiberMaterial::getStress()
+BeamFiberMaterialEB::getStress()
 {
   const Vector &threeDstress = theMaterial->getStress();
 
   stress(0) = threeDstress(0);
-  stress(1) = threeDstress(3);
-  stress(2) = threeDstress(5);
+  stress(1) = 0.0;// threeDstress(3);
+  stress(2) = 0.0;// threeDstress(5);
 
   return stress;
 }
 
-const Vector&
-BeamFiberMaterial::getCommittedStrain(void)
-{
-    const Vector& threeDstrain = theMaterial->getCommittedStrain();
-
-    strain_k(0) = threeDstrain(0);
-    strain_k(1) = threeDstrain(3);
-    strain_k(2) = threeDstrain(5);
-
-    return strain_k;
-}
-
-const Vector&
-BeamFiberMaterial::getCommittedStress()
-{
-    const Vector& threeDstress = theMaterial->getCommittedStress();
-
-    stress_k(0) = threeDstress(0);
-    stress_k(1) = threeDstress(3);
-    stress_k(2) = threeDstress(5);
-
-    return stress_k;
-}
-
 const Vector& 
-BeamFiberMaterial::getStressSensitivity(int gradIndex,
+BeamFiberMaterialEB::getStressSensitivity(int gradIndex,
 					bool conditional)
 {
   const Vector &threeDstress = theMaterial->getStressSensitivity(gradIndex, conditional);
@@ -398,7 +379,7 @@ BeamFiberMaterial::getStressSensitivity(int gradIndex,
 }
 
 const Matrix&  
-BeamFiberMaterial::getTangent()
+BeamFiberMaterialEB::getTangent()
 {
   const Matrix &threeDtangent = theMaterial->getTangent();
 
@@ -471,7 +452,7 @@ BeamFiberMaterial::getTangent()
 }
 
 const Matrix&  
-BeamFiberMaterial::getInitialTangent()
+BeamFiberMaterialEB::getInitialTangent()
 {
   const Matrix &threeDtangent = theMaterial->getInitialTangent();
 
@@ -543,13 +524,13 @@ BeamFiberMaterial::getInitialTangent()
   return tangent;
 }
 
-const Vector& BeamFiberMaterial::getDamage(void) {
+const Vector& BeamFiberMaterialEB::getDamage(void) {
 
     return theMaterial->getDamage();
 }
 
 /*
-Response* BeamFiberMaterial::setResponse(const char** argv, int argc, OPS_Stream& s) {
+Response* BeamFiberMaterialEB::setResponse(const char** argv, int argc, OPS_Stream& s) {
     
     if (strcmp(argv[0], "stress") == 0 || strcmp(argv[0], "stresses") == 0)
         return new MaterialResponse(this, 1, this->getStress());
@@ -567,7 +548,7 @@ Response* BeamFiberMaterial::setResponse(const char** argv, int argc, OPS_Stream
 		return 0;
 }
 
-int BeamFiberMaterial::getResponse(int responseID, Information& matInfo) {
+int BeamFiberMaterialEB::getResponse(int responseID, Information& matInfo) {
     
     switch (responseID) {
     
@@ -599,16 +580,16 @@ int BeamFiberMaterial::getResponse(int responseID, Information& matInfo) {
 */
 
 void  
-BeamFiberMaterial::Print(OPS_Stream &s, int flag)
+BeamFiberMaterialEB::Print(OPS_Stream &s, int flag)
 {
-  s << "BeamFiberMaterial, tag: " << this->getTag() << endln;
+  s << "BeamFiberMaterialEB, tag: " << this->getTag() << endln;
   s << "\tWrapped material: "<< theMaterial->getTag() << endln;
 
   theMaterial->Print(s, flag);
 }
 
 int 
-BeamFiberMaterial::sendSelf(int commitTag, Channel &theChannel) 
+BeamFiberMaterialEB::sendSelf(int commitTag, Channel &theChannel) 
 {
   int res = 0;
 
@@ -625,32 +606,34 @@ BeamFiberMaterial::sendSelf(int commitTag, Channel &theChannel)
 
   res = theChannel.sendID(this->getDbTag(), commitTag, idData);
   if (res < 0) {
-    opserr << "BeamFiberMaterial::sendSelf() - failed to send id data\n";
+    opserr << "BeamFiberMaterialEB::sendSelf() - failed to send id data\n";
     return res;
   }
 
   // put the strains in a vector and send it
-  static Vector vecData(3);
+  static Vector vecData(5);
   vecData(0) = Cstrain22;
   vecData(1) = Cstrain33;
-  vecData(2) = Cgamma23;
+  vecData(2) = Cgamma12;
+  vecData(3) = Cgamma23;
+  vecData(4) = Cgamma31;
 
   res = theChannel.sendVector(this->getDbTag(), commitTag, vecData);
   if (res < 0) {
-    opserr << "BeamFiberMaterial::sendSelf() - failed to send vector data\n";
+    opserr << "BeamFiberMaterialEB::sendSelf() - failed to send vector data\n";
     return res;
   }
 
   // now send the materials data
   res = theMaterial->sendSelf(commitTag, theChannel);
   if (res < 0) 
-    opserr << "BeamFiberMaterial::sendSelf() - failed to send vector material\n";
+    opserr << "BeamFiberMaterialEB::sendSelf() - failed to send vector material\n";
 
   return res;
 }
 
 int 
-BeamFiberMaterial::recvSelf(int commitTag, Channel &theChannel, FEM_ObjectBroker &theBroker)
+BeamFiberMaterialEB::recvSelf(int commitTag, Channel &theChannel, FEM_ObjectBroker &theBroker)
 {
   int res = 0;
 
@@ -658,7 +641,7 @@ BeamFiberMaterial::recvSelf(int commitTag, Channel &theChannel, FEM_ObjectBroker
   static ID idData(3);
   res = theChannel.sendID(this->getDbTag(), commitTag, idData);
   if (res < 0) {
-    opserr << "BeamFiberMaterial::sendSelf() - failed to send id data\n";
+    opserr << "BeamFiberMaterialEB::sendSelf() - failed to send id data\n";
     return res;
   }
 
@@ -672,38 +655,42 @@ BeamFiberMaterial::recvSelf(int commitTag, Channel &theChannel, FEM_ObjectBroker
       delete theMaterial;
     theMaterial = theBroker.getNewNDMaterial(matClassTag);
     if (theMaterial == 0) {
-      opserr << "BeamFiberMaterial::recvSelf() - failed to get a material of type: " << matClassTag << endln;
+      opserr << "BeamFiberMaterialEB::recvSelf() - failed to get a material of type: " << matClassTag << endln;
       return -1;
     }
   }
   theMaterial->setDbTag(idData(2));
 
   // recv a vector containing strains and set the strains
-  static Vector vecData(3);
+  static Vector vecData(5);
   res = theChannel.recvVector(this->getDbTag(), commitTag, vecData);
   if (res < 0) {
-    opserr << "BeamFiberMaterial::sendSelf() - failed to send vector data\n";
+    opserr << "BeamFiberMaterialEB::sendSelf() - failed to send vector data\n";
     return res;
   }
 
   Cstrain22 = vecData(0);
   Cstrain33 = vecData(1);
-  Cgamma23  = vecData(2);
+  Cgamma12  = vecData(2);
+  Cgamma23  = vecData(3);
+  Cgamma31  = vecData(4);
 
   Tstrain22 = Cstrain22;
   Tstrain33 = Cstrain33;
+  Tgamma12  = Cgamma12;
   Tgamma23  = Cgamma23;
+  Tgamma31  = Cgamma31;
 
   // now receive the materials data
   res = theMaterial->recvSelf(commitTag, theChannel, theBroker);
   if (res < 0) 
-    opserr << "BeamFiberMaterial::sendSelf() - failed to send vector material\n";
+    opserr << "BeamFiberMaterialEB::sendSelf() - failed to send vector material\n";
   
   return res;
 }
 
 int
-BeamFiberMaterial::setParameter(const char **argv, int argc,
+BeamFiberMaterialEB::setParameter(const char **argv, int argc,
 				Parameter &param)
 {
   return theMaterial->setParameter(argv, argc, param);

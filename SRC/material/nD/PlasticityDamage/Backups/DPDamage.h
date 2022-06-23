@@ -17,12 +17,19 @@
 **   Filip C. Filippou (filippou@ce.berkeley.edu)                     **
 **                                                                    **
 ** ****************************************************************** */
+                                                                        
+// $Revision: 1.6 $
+// $Date: 2006-08-04 18:18:37 $
+// $Source: /usr/local/cvs/OpenSees/SRC/material/nD/ElasticIsotropicPlaneStress2D.h,v $
 
-// Written in C++: Luca Parente
-// Created: 12/21
+#ifndef DPDamage_h
+#define DPDamage_h
+
+// Written in C++: Daniela Fusco, Luca Parente
+// Created: 11/21
 // 
-// Plasticity and damage material based on Gatta et al [2018].
-// The plasticity formulation is based on Von Mises (J2),
+// Plasticity and damage material based on Di Re et al [2018].
+// The plasticity formulation is based on Drucker Prager,
 // while the damage formulation is based on Addessi
 // 
 // The constitutive law computes on three steps:
@@ -30,120 +37,137 @@
 //  - Plastic correction
 //  - Damage correction
 
+#include <NDMaterial.h>
+#include <Vector.h>
+#include <Matrix.h>
 
-#ifndef DPDamage_h
-#define DPDamage_h
+#include "DPDamage.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
 
 #include <NDMaterial.h>
-
-#include <T2Vector.h>
-#include <Matrix.h>
-#include <Vector.h>
-
+#include <ID.h>
 
 class DPDamage : public NDMaterial
 {
 public:
-
+	// Full Constructor
 	DPDamage(int tag, double _E, double _nu, // Parameters
-		double sig_t, double sig_c, double _Hk, double _Hi, // Plasticity
+		double _sig_c, double _sig_t, double _Hk, double _Hi, // Plasticity
 		double _Yt0, double _bt, double _at, double _Yc0, double _bc, double _ac, double _beta, // Damage
 		double _De); // Degradation
 
-	DPDamage(const DPDamage&);
-	virtual ~DPDamage();
+	//Null Constructor
+	DPDamage();
 
-	const char* getClassType(void) const { return "DPDamage"; };
-	const char* getType(void) const { return "ThreeDimensional"; };
-	int setTrialStrain(const Vector& strain);
-	int setTrialStrain(const Vector& v, const Vector& r);
-	int setTrialStrainIncr(const Vector& v);
-	int setTrialStrainIncr(const Vector& v, const Vector& r);
-
-	// Calculates current tangent stiffness.
-	const Matrix& getTangent(void);
-	const Matrix& getInitialTangent(void);
-
-	// Calculates the corresponding stress increment (rate), for a given strain increment. 
-	const Vector& getStress(void);
-	const Vector& getStrain(void);
-	const Vector& getCommittedStress(void) { return stress_k; };
-	const Vector& getCommittedStrain(void) { return strain_k; };
-
-	const Vector& getDamage(void);
+	//Destructor
+	~DPDamage();
 
 	int commitState(void);
 	int revertToLastCommit(void);
 	int revertToStart(void);
 
 	NDMaterial* getCopy(void);
-	NDMaterial* getCopy(const char* code);
+	NDMaterial* getCopy(const char* type);
+
+	const char* getType(void) const;
+	int getOrder(void) const;
+
+	Response* setResponse(const char** argv, int argc, OPS_Stream& output);
+	int getResponse(int responseID, Information& matInformation);
 
 	int sendSelf(int commitTag, Channel& theChannel);
-	int recvSelf(int commitTag, Channel& theChannel,
-		FEM_ObjectBroker& theBroker);
+	int recvSelf(int commitTag, Channel& theChannel, FEM_ObjectBroker& theBroker);
 
-	Response* setResponse(const char** argv, int argc, OPS_Stream& s);
-	int getResponse(int responseID, Information& matInformation);
 	void Print(OPS_Stream& s, int flag = 0);
-
 	int setParameter(const char** argv, int argc, Parameter& param);
 	int updateParameter(int responseID, Information& eleInformation);
 
+	double getRho(void) { return 0; };
+
+	const Vector& getDamage(void);
+
+	int setTrialStrain(const Vector& strain_from_element);
+
+	// Unused trialStrain functions
+	int setTrialStrain(const Vector& v, const Vector& r);
+
+	//send back the strain
+	const Vector& getStrain();
+
+	//send back the stress 
+	const Vector& getStress();
+
+	//send back the tangent 
+	const Matrix& getTangent();
+	const Matrix& getInitialTangent();
+
 protected:
+
+	//material parameters
+	double E;       // Elastic modulus
+	double nu;      // Poisson ratio 
+	double K;		// Bulk modulus
+	double G;		// Shear modulus
+	double sig_c;   // Compressive strength
+	double sig_t;   // Tensile strength
+	double sig_y;   // Compressive strength
+	double mu;		// Friction
+	double Hk;      // Kinematic hardening coefficient
+	double Hi;      // Isotropic hardening coefficient
+	double H;		// Total hardening coefficient
+	double theta;	// Relative hardening proportion; full isotropic = 0 < theta < 1 = full kinematic
+
+	//internal variables
+	Vector strain_k;		// total strain vector at step n
+	Vector strain;		// total strain vector at step n+1
+	Vector strain_k_p;	// plastic strain vector at step n, trail e_p
+	Vector strain_p;	// plastic strain vector at step n+1 
+	Vector strain_e;		// elastic strain vector
+	Vector stress_k;		// stress at step n
+	Vector stress;			// stress at step n+1
+
+	Vector zeta_k;		// backstress at step n, beta_np1_trial = beta_n
+	Vector zeta;		// backstress at step n+1
+
+	double alpha_k;		// alpha1_n
+	double alpha;	// alpha1_n+1
+
+	int mElastFlag;    // Flag to determine elastic behavior
+	int mFlag;
+
+	Matrix Ce;			// elastic tangent stiffness matrix
+	Matrix Cep;		// elastoplastic tangent stiffness matrix
+	Matrix Ct;			// damage tangent stiffness matrix
+	Vector I1;			// 2nd Order Identity Tensor	
+	Matrix II1;		// 4th Order Identity Tensor
+	Matrix IIvol;		// IIvol = I1 tensor I1  
+	Matrix IIdev;		// 4th Order Deviatoric Tensor
+	Matrix II1T;  // 1*1'
+
+	Vector mState;		// state vector for output
+
+	//functions
+	void initialize();	// initializes variables
+
+	//plasticity integration routine
+	void plasticity(void);
+
+	Vector getState();		// fills vector of state variables for output
+
+	//vector to tensor notation
+	Matrix m;
+	const Matrix& tens(const Vector& v);
+
+	//parameters
+	static const double one3;
+	static const double two3;
+	static const double root23;
 
 private:
 
-	// Custom plasticity routine
-	int plasticity();
-
-	// Internal parameters
-	int ndm;
-	double E;       // Elastic modulus
-	double nu;      // Poisson ratio
-	double K;		// Bulk modulus
-	double G;		// Shear modulus
-	double sig_t;   // Yield at tension
-	double sig_c;   // Yield at compression
-	double Hk;      // Kinematic hardening coefficient
-	double Hi;      // Isotropic hardening coefficient
-	double sig_y;	// Yield threshold
-	double mu;		// Friction
-
-	// Trial variables --------------------------------------------------------------------------------
-	Vector stress;				// Stresses vector (k+1)
-	Vector strain;				// Total strains vector (k+1)
-	Vector strain_e;			// Elastic strains vector (k+1)
-	Vector strain_m;			// Vector containing 3 principal total strains
-	Vector strain_e_m;			// Vector containint 3 principal elastic strains
-	Vector strain_p_dev;		// Deviatoric part of plastic strains (k+1)
-	Vector strain_p;			// Total plastic strains (k+1)
-	Vector backStress;			// Backstress vector (k+1)
-	
-	// Constant vector and matrices
-	Vector I2;
-	Matrix Idev;
-	Matrix Ivol;
-	
-	// ---
-	double lambda;				// Positive deviatoric plastic strain increment
-	Matrix tangent;				// Material stiffness matrix
-	Matrix tangent_e;			// Elastic stiffness matrix
-	Matrix tangent_ep;			// Elastoplastic stiffness matrix
-
-	// Define classwide variables
-	static Vector tmpVector;
-	static Matrix tmpMatrix;
-
-	// Committed variables ----------------------------------------------------------------------------
-	Vector stress_k;			// Stresses vector at previous step (k)
-	Vector strain_k;			// Total strains vector at previous step (k)
-	Vector strain_p_k;			// Plastic strains at previous step (k)
-	Vector strain_p_dev_k;		// Deviatoric part of plastic strains at previous step (k)
-	Vector backstress_k;		// Total plastic strains at previous step (k)
-	double sig_y_k;				// Backstress vector at previous step (k)
-	//double CcumPlastStrainDev;
-	
 	// Damage stuff -----------------------------------------------------------------------------------
 	void damage();
 
@@ -166,13 +190,9 @@ private:
 	double D_k;					// Total damage at previous step (k)
 	Vector dam;
 
-	// Damage commit
-	double D_commit;
-	double Dt_commit;
-	double Dc_commit;
-
 	// Degradation stuff ------------------------------------------------------------------------------
 	double De;
+
 };
 
 #endif

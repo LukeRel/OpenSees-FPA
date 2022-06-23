@@ -278,9 +278,6 @@ int J2Damage::plasticity() {
 		strain_p_dev.addVector(0.0, strain_p_dev_k, 1.0);
 		strain_p_dev.addVector(1.0, n, lambda);
 
-		//cumPlastStrainDev = CcumPlastStrainDev + pow(2./3.,0.5)*lambda;
-		// sig_y = sig_y_k + Hi*pow(2./3., 0.5) * lambda;
-
 		// Stress vector -----------------------------------------------------------
 		stress.addVector(0.0, Tstress_dev, 1.0);
 		stress.addVector(1.0, n, -2. * G * lambda);
@@ -554,38 +551,22 @@ int J2Damage::setTrialStrain(const Vector& pStrain)
 	// Incremental quantities
 	//D = 0;	// Damage trigger
 	//Vector dstress = stress - stress_k;
-	Vector dstrain = strain - strain_k;
-	Vector dstrain_p = strain_p - strain_p_k;
-	Vector dstrain_e = dstrain - dstrain_p;
-	double dD = D - D_k;
+	//Vector dstrain = strain - strain_k;
+	//Vector dstrain_p = strain_p - strain_p_k;
+	//Vector dstrain_e = dstrain - dstrain_p;
+	//double dD = D - D_k;
 	//Matrix d_dstrain_e(6,6);
 	//for (int i = 0;i < 6;i++) d_dstrain_e(i,i) = dstrain_e(i) / strain_e(i);
 
-	// Constitutive matrix and stress
-
-	// Procedura Gatta
-	//Nota: stress = tangent_e * strain_e restituisce le tensioni giuste post plasticità
-	//tangent = Dm1sq * tangent_e;
-	//stress = Dm1sq * tangent_e * strain_e;
-
-	/* Procedura Addessi
-	tangent = Dm1sq * tangent_e;	// Secant damage
-	stress = stress_k + (Dm1sq - 2.0 * (1.0 - D)*dD) * tangent_e * (dstrain_e - strain_e);		// Exact stress (35)
-	//stress = stress_k + (Dm1sq - 2.0 * (1.0 - dD)) * tangent_e * (dstrain_e - dstrain);		// Exact stress (45)
-	*/
-
 	// Optional degradation correction
 	D = fmax(D, De);
-	D = fmin(D, 0.999);
 
 	// Damage correction in order to avoid singularity
-	Dm1sq = pow(1.0 - D, 2.0);	// [1-D]^2
+	D = fmin(D, 0.999);
 
-	// Nota: convergono ->    tangent = [1-D]^2*Cep,   stress = stress_k + Ce*dstrain
+	// Constitutive matrix and stress
+	Dm1sq = pow(1.0 - D, 2.0);	// [1-D]^2
 	tangent = Dm1sq * tangent_ep;
-	//tangent = (Dm1sq - 2.0 * (1.0 - D) * dD)* tangent_e;
-	//stress = Dm1sq * tangent_e * strain_e;
-	//stress = tangent * strain_e;
 	stress.addMatrixVector(0, tangent_e, strain_e, Dm1sq);
 
 	// Debug 3
@@ -603,15 +584,9 @@ int J2Damage::setTrialStrain(const Vector& pStrain)
 		opserr << "tangent:\n[ "; for (int i = 0;i < 6;i++) { for (int j = 0;j < 6;j++) opserr << tangent(j, i) << " "; opserr << "]\n"; }
 	}
 
-	/* Nota: Ho ottenuto un ottimo risultato con i seguenti (commit interno attivo)
-	tangent = pow(1 - D, 2) * tangent; <- qui tangent è elastoplastica
-	stress = stress_k + tangent * dstrain_e - 2 * (1 - D) * dD * tangent * strain_e;
-	*/
-	
 	// Internal commits
-	//this->commitState();
+	
 	// Damage output
-
 	if (d_out == 1) {
 		step++;
 
@@ -638,34 +613,8 @@ int J2Damage::setTrialStrain(const Vector& v, const Vector& r) {
 //unused
 int J2Damage::setTrialStrainIncr(const Vector& v) {
 
-	// ----- change to real strain instead of eng. strain
-   // ---- since all strain in material is the true strain, not eng.strain. 
-	/*
-	for (int i = 0; i < 3;i++) {
-		tmpVector(i) = v(i);
-		tmpVector(i + 3) = v(i + 3) / 2.0;
-	}
+	opserr << "Warning: unused setTrialStrainIncr invoked within J2Damage material" << endln;
 
-	if (ndm == 3 && v.Size() == 6)
-		strain = strain_k + v;
-
-	else if (ndm == 2 && v.Size() == 3) {
-		strain[0] = strain_k[0] + v[0];
-		strain[1] = strain_k[1] + v[1];
-		strain[2] = 0.0;
-		strain[3] = strain_k[2] + v[2];
-		strain[4] = 0.0;
-		strain[5] = 0.0;
-	}
-	else {
-		opserr << "Fatal:J2Damage:: Material dimension is: " << ndm << endln;
-		opserr << "But strain vector size is: " << v.Size() << endln;
-		exit(-1);
-	}
-
-
-	this->plasticity();
-	*/
 	return 0;
 };
 
@@ -737,24 +686,27 @@ int J2Damage::commitState(void) {
 	strain_p_dev_k = strain_p_dev;
 	backstress_k = backStress;
 	sig_y_k = sig_y;
+	D_k = D;
 	Dc_k = Dc;
 	Dt_k = Dt;
-	D_k = D;
+	Dc_commit = Dc;
+	Dt_commit = Dt;
+	D_commit = D;
 
 	return 0;
 };
 
 int J2Damage::revertToLastCommit(void) {
-
+	//opserr << "Using J2Damage::revertToLastCommit" << endln;
 	stress = stress_k;
 	strain = strain_k;
 	strain_p = strain_p_k;
 	strain_p_dev = strain_p_dev_k;
 	backStress = backstress_k;
 	sig_y = sig_y_k;
-	Dc = Dc_k;
-	Dt = Dt_k;
-	D = D_k;
+	Dc = Dc_commit;
+	Dt = Dt_commit;
+	D = D_commit;
 	return 0;
 };
 
