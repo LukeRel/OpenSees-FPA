@@ -30,8 +30,8 @@
 //  - Plastic correction
 //  - Damage correction
 
-static int dFlag1 = 1;	// Turn this on for debug
-static int dFlag2 = 1;	// Turn this on for debug on damage subroutine
+static int dFlag2 = 1;	// Turn this on for debug
+static int dFlag3 = 1;	// Turn this on for debug on damage subroutine
 
 #include <math.h>
 #include <stdlib.h>
@@ -272,7 +272,7 @@ void GDamage::damage()
 
 	if (fabs(Yt_e) / Yt0 + fabs(Yc_e) / Yc0 < tol) D = D_k;
 
-	if (dFlag2 == 1) {
+	if (dFlag3 == 1) {
 		opserr << "\n--- Damage routine internal debug ----------\n";
 		opserr << "\nEquivalent strains:\n";
 		opserr << "eps_m  = [ "; for (int i = 0;i < 3;i++) opserr << strain_m(i) << " "; opserr << "]\n";
@@ -315,8 +315,8 @@ const Matrix& GDamage::tens(const Vector& v)
 int GDamage::setTrialStrain(const Vector& pStrain)
 {
 	// Debug
-	if (D_k < 0.1) {dFlag1 = 0; dFlag2 = 0;}
-	else { dFlag1 = 0; dFlag2 = 0; }
+	if (D_k < 0.1) {dFlag2 = 0; dFlag3 = 0;}
+	else { dFlag2 = 0; dFlag3 = 0; }
 
 	// Strains from the analysis
 	strain = pStrain;
@@ -326,7 +326,7 @@ int GDamage::setTrialStrain(const Vector& pStrain)
 	for (int i = 3; i < 6; i++) {strain[i] /= 2.0;}
 
 	// Debug 1
-	if (dFlag1 == 1) {
+	if (dFlag2 == 1) {
 		opserr << "\n----------------------------------------------------------------------------------------------------------------------------\n";
 		opserr << "\nStarted new setTrialStrain.\n\n";
 		opserr << "Inputs before plasticity and damage (initialized at current step):\n";
@@ -361,7 +361,7 @@ int GDamage::setTrialStrain(const Vector& pStrain)
 	stress = tangent*strain_e;
 
 	// Debug 2
-	if (dFlag1 == 1) {
+	if (dFlag2 == 1) {
 		opserr << "\nD = " << D << "\n\n";
 		opserr << "Outputs after both plasticity and damage:\n";
 		opserr << "strain     = [ "; for (int i = 0;i < 6;i++) opserr << strain(i) << " "; opserr << "]\n";

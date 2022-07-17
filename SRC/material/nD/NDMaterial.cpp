@@ -340,16 +340,44 @@ NDMaterial::setResponse (const char **argv, int argc, OPS_Stream &output)
 	  const Matrix &res = this->getTangent();
 	  theResponse = new MaterialResponse(this, 4, this->getTangent());
   }
-  //default damage output - added by V.K. Papanikolaou [AUTh] - start
+  // Plastic strains
+  else if (strcmp(argv[0], "plasticStrain") == 0 || strcmp(argv[0], "plasticStrains") == 0) {
+      const Vector& res = this->getStrain();
+      int size = res.Size();
+      if ((strcmp(matType, "PlaneStress") == 0 && size == 3) || (strcmp(matType, "PlaneStrain") == 0 && size == 3)) {
+          output.tag("ResponseType", "eta11");
+          output.tag("ResponseType", "eta22");
+          output.tag("ResponseType", "eta12");
+      }
+      else if (strcmp(matType, "ThreeDimensional") == 0 && size == 6) {
+          output.tag("ResponseType", "eps11");
+          output.tag("ResponseType", "eps22");
+          output.tag("ResponseType", "eps33");
+          output.tag("ResponseType", "eps12");
+          output.tag("ResponseType", "eps23");
+          output.tag("ResponseType", "eps13");
+      }
+      else if (strcmp(matType, "BeamFiber") == 0 && size == 3) {
+          output.tag("ResponseType", "eps11");
+          output.tag("ResponseType", "eps12");
+          output.tag("ResponseType", "eps13");
+      }
+      else {
+          for (int i = 0; i < size; i++)
+              output.tag("ResponseType", "UnknownStrain");
+      }
+      theResponse = new MaterialResponse(this, 2, this->getStrain());
+  }
+  //default damage output - added by V.K. Papanikolaou [AUTh] modified by L.P - start
   else if (strcmp(argv[0], "Damage") == 0 || strcmp(argv[0], "damage") == 0) {
       //static Vector vec = Vector(3);
       //for (int i = 0; i < 3; i++) vec[i] = 0;
       output.tag("ResponseType", "Damage");
       const Vector dam = this->getDamage();
       double D = dam(2);
-      theResponse = new MaterialResponse(this, 5, D);//this->getDamage());
+      theResponse = new MaterialResponse(this, 5, dam);//this->getDamage());
   }
-  //default damage output - added by V.K. Papanikolaou [AUTh] - end 
+  //default damage output - end 
 
   output.endTag(); // NdMaterialOutput
 
@@ -359,22 +387,26 @@ NDMaterial::setResponse (const char **argv, int argc, OPS_Stream &output)
 int 
 NDMaterial::getResponse (int responseID, Information &matInfo)
 {
-  switch (responseID) {
-  case 1:
-    return matInfo.setVector(this->getStress());
-    
-  case 2:
-    return matInfo.setVector(this->getStrain());
+    switch (responseID) {
+    case 1:
+        return matInfo.setVector(this->getStress());
 
-  case 5: {
-      const Vector dam = this->getDamage();
-      double D = dam(2);
-      return D;
-  }
-    
-  default:
-    return -1;
-  }
+    case 2:
+        return matInfo.setVector(this->getStrain());
+
+    case 3:
+        return matInfo.setMatrix(this->getTangent());
+
+    case 4:
+        return matInfo.setVector(this->getStrain());
+
+    case 5: {
+        return matInfo.setVector(this->getDamage());
+    }
+
+    default:
+        return -1;
+    }
 }
 
 // AddingSensitivity:BEGIN ////////////////////////////////////////

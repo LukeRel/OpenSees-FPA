@@ -173,9 +173,9 @@ class ForceBeamColumnCons3d: public Element
   Vector Secommit;               // committed element end forces in the basic system (sige_k)
   
   Matrix *fs;                    // array of section flexibility matrices (f_s)
-  Vector *vs;                    // array of section deformation vectors (eps_s)
-  Vector *Ss;                    // array of section resisting force vectors (sig_s)
-  Vector *Ssr;                   // array of section resisting force vectors residuals (sig_sc)
+  Vector *e;                     // array of section deformation vectors (eps_s)
+  Vector *Ssr;                   // array of section resisting force vectors (sig_sr)
+  Vector *Ssu;                   // array of section unbalanced force residuals (sig_su)
   
   Vector *vscommit;              // array of committed section deformation vectors (eps_s_k)
   

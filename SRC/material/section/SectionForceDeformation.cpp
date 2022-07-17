@@ -376,11 +376,6 @@ SectionForceDeformation::getResponseSensitivity(int responseID, int gradIndex,
   }
 }
 
-int
-SectionForceDeformation::addLoad(int iFib, int jFib, double eps0, double phi_t_t0, int creep) {
-    return 0;
-}
-
 // AddingSensitivity:BEGIN ////////////////////////////////////////
 const Vector &
 SectionForceDeformation::getStressResultantSensitivity(int gradIndex, bool conditional)

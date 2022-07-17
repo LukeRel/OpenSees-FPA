@@ -30,8 +30,8 @@
 //  - Plastic correction
 //  - Damage correction
 
-static int dFlag1 = 1;	// Turn this on for debug
-static int dFlag2 = 1;	// Turn this on for debug on damage subroutine
+static int dFlag2 = 1;	// Turn this on for debug
+static int dFlag3 = 1;	// Turn this on for debug on damage subroutine
 static int d_out = 0; // Set to 1 to produce a out_J2damage.txt output file
 static int step = 0;
 
@@ -468,7 +468,7 @@ void J2Damage::damage()
 	// Final check
 	//D = fmax(D_k, D);
 
-	if (dFlag2 == 1) {
+	if (dFlag3 == 1) {
 		opserr << "\n--- Damage routine internal debug ----------\n";
 		opserr << "\nEquivalent strains:\n";
 		opserr << "eps_m  = [ "; for (int i = 0;i < 3;i++) opserr << strain_m(i) << " "; opserr << "]\n";
@@ -497,8 +497,8 @@ void J2Damage::damage()
 int J2Damage::setTrialStrain(const Vector& pStrain)
 {
 	// Debug
-	if (D_k < 0.1) {dFlag1 = 0; dFlag2 = 0;}
-	else { dFlag1 = 0; dFlag2 = 0; }
+	if (D_k < 0.1) {dFlag2 = 0; dFlag3 = 0;}
+	else { dFlag2 = 0; dFlag3 = 0; }
 
 	// Strains from the analysis
 	strain = pStrain;
@@ -508,7 +508,7 @@ int J2Damage::setTrialStrain(const Vector& pStrain)
 	for (int i = 3; i < 6; i++) {strain[i] /= 2.0;}
 
 	// Debug 1
-	if (dFlag1 == 1) {
+	if (dFlag2 == 1) {
 		opserr << "\n----------------------------------------------------------------------------------------------------------------------------\n";
 		opserr << "\nStarted new setTrialStrain.\n\n";
 		opserr << "Inputs before plasticity and damage (initialized at current step):\n";
@@ -529,7 +529,7 @@ int J2Damage::setTrialStrain(const Vector& pStrain)
 	strain_e = strain - strain_p;
 
 	// Debug 2
-	if (dFlag1 == 1) {
+	if (dFlag2 == 1) {
 		opserr << "\nPlasticity executed!\n\n";
 		opserr << "Outputs after plasticity only:\n";
 		opserr << "strain     = [ "; for (int i = 0;i < 6;i++) opserr << strain(i) << " "; opserr << "]\n";
@@ -570,7 +570,7 @@ int J2Damage::setTrialStrain(const Vector& pStrain)
 	stress.addMatrixVector(0, tangent_e, strain_e, Dm1sq);
 
 	// Debug 3
-	if (dFlag1 == 1) {
+	if (dFlag2 == 1) {
 		opserr << "\nD = " << D << "\n\n";
 		opserr << "Outputs after both plasticity and damage:\n";
 		opserr << "strain     = [ "; for (int i = 0;i < 6;i++) opserr << strain(i) << " "; opserr << "]\n";
@@ -748,16 +748,17 @@ Response* J2Damage::setResponse(const char** argv, int argc, OPS_Stream& s) {
 	else if (strcmp(argv[0], "tangent") == 0 || strcmp(argv[0], "Tangent") == 0)
 		return new MaterialResponse(this, 3, tangent);
 
-	else if (strcmp(argv[0], "damage") == 0 || strcmp(argv[0], "Damage") == 0) {
-		return new MaterialResponse(this, 5, D);
-	}
+	else if (strcmp(argv[0], "plasticStrain") == 0 || strcmp(argv[0], "plasticStrain") == 0)
+		return new MaterialResponse(this, 4, strain_p);
+
+	else if (strcmp(argv[0], "damage") == 0 || strcmp(argv[0], "Damage") == 0)
+		return new MaterialResponse(this, 5, this->getDamage());
+
 	else
 		return 0;
 }
 
 int J2Damage::getResponse(int responseID, Information& matInfo) {
-
-
 
 	switch (responseID) {
 	case -1:
@@ -777,8 +778,14 @@ int J2Damage::getResponse(int responseID, Information& matInfo) {
 			*(matInfo.theMatrix) = tangent;
 		return 0;
 
+	case 4:
+		if (matInfo.theVector != 0)
+			*(matInfo.theVector) = strain_p;
+		return 0;
+
 	case 5:
-		//matInfo.setDouble(this->getDamage());
+		if (matInfo.theVector != 0)
+			*(matInfo.theVector) = this->getDamage();
 		return 0;
 
 	}

@@ -1409,7 +1409,7 @@ LinearCrdTransf3d::getPointGlobalDisplFromBasic(double xi, const Vector &uxb)
     
     // compute displacements at point xi, in local coordinates
     static double uxl[3];
-    static Vector uxg(3);
+    static Vector uxg(3);  
     
     uxl[0] = uxb(0) +        ul[0];
     uxl[1] = uxb(1) + (1-xi)*ul[1] + xi*ul[7];

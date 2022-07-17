@@ -30,8 +30,8 @@
 //  - Plastic correction
 //  - Damage correction
 
-static int dFlag1 = 0;	// Turn this on for debug
-static int dFlag2 = 0;	// Turn this on for debug on damage subroutine
+static int dFlag2 = 0;	// Turn this on for debug
+static int dFlag3 = 0;	// Turn this on for debug on damage subroutine
 
 #include <math.h>
 #include <stdlib.h>
@@ -276,7 +276,7 @@ int J2DamageFiber::setTrialStrain(const Vector& fiberStrain)
 	// Mantained fiber strains
 	strain_m = fiberStrain;
 
-	if (dFlag1 == 1) opserr << "New setTrialStrain cycle ----------------------------------------------\n" << endln;
+	if (dFlag2 == 1) opserr << "New setTrialStrain cycle ----------------------------------------------\n" << endln;
 
 	// Consistent condensation routine [3 > 6 > 3] --------------------------------------
 	//
@@ -286,7 +286,7 @@ int J2DamageFiber::setTrialStrain(const Vector& fiberStrain)
 	// ----------------------------------------------------------------------------------
 
 	// Debug
-	if (dFlag1 == 1) {
+	if (dFlag2 == 1) {
 		opserr << "Condensation complete\n" << endln;
 		opserr << "C is: \n"; for (int i = 0;i < 6;i++) { for (int j = 0;j < 6;j++) opserr << C(i, j) << " ";	opserr << endln; }
 		opserr << "C_mm is: \n"; for (int i = 0;i < 3;i++) { for (int j = 0;j < 3;j++) opserr << C_mm(i, j) << " ";	opserr << endln; }
@@ -326,7 +326,7 @@ int J2DamageFiber::setTrialStrain(const Vector& fiberStrain)
 	//this->commitState();
 
 	// Debug 3
-	if (dFlag1 == 1) {
+	if (dFlag2 == 1) {
 		opserr << "\nD = " << D << "\n\n";
 		opserr << "Outputs after both plasticity and damage:\n";
 		opserr << "strain     = [ "; for (int i = 0;i < 6;i++) opserr << strain(i) << " "; opserr << "]\n";
@@ -369,7 +369,7 @@ void J2DamageFiber::condensate_consistent(void)
 		strain(c[i]) = strain_c(i);
 	}
 
-	if (dFlag1 == 1) {
+	if (dFlag2 == 1) {
 		opserr << "\nCondensate internal debug --------------------------------------------\n" << endln;
 		opserr << "Started condensate. Got:" << endln;
 		opserr << "strain_m =\n"; for (int i = 0;i < 3;i++) opserr << strain_m(i) << " "; opserr << endln;
@@ -421,7 +421,7 @@ void J2DamageFiber::condensate_consistent(void)
 	C_mm = C_mm - C_mc * C_temp;
 
 	// Debug
-	if (dFlag1 == 1) {
+	if (dFlag2 == 1) {
 		opserr << "\nDone mat3DState and condensed stuff. Got:\n" << endln;
 		opserr << "C is: \n"; for (int i = 0;i < 6;i++) { for (int j = 0;j < 6;j++) opserr << C(i, j) << " ";	opserr << endln; }
 		opserr << "C_mm is: \n"; for (int i = 0;i < 3;i++) { for (int j = 0;j < 3;j++) opserr << C_mm(i, j) << " ";	opserr << endln; }
@@ -478,7 +478,7 @@ void J2DamageFiber::condensate_iterative(void)
 			strain(c[i]) = strain_c(i);
 		}
 
-		if (dFlag1 == 1) {
+		if (dFlag2 == 1) {
 			opserr << "\nCondensate internal debug --------------------------------------------\n" << endln;
 			opserr << "Started condensate. Got:" << endln;
 			opserr << "strain_m =\n"; for (int i = 0;i < 3;i++) opserr << strain_m(i) << " "; opserr << endln;
@@ -789,7 +789,7 @@ void J2DamageFiber::damage()
 	// unilateral effect trigger
 	//D = fmax(D, D_k);
 
-	if (dFlag2 == 1) {
+	if (dFlag3 == 1) {
 		opserr << "\n--- Damage routine internal debug ----------\n";
 		opserr << "\nEquivalent strains:\n";
 		opserr << "eps_m  = [ "; for (int i = 0;i < 3;i++) opserr << strain_s(i) << " "; opserr << "]\n";
@@ -823,7 +823,7 @@ void J2DamageFiber::mat3DState(void)
 	for (int i = 3; i < 6; i++) { strain[i] /= 2.0; }
 
 	// Debug 1
-	if (dFlag1 == 1) {
+	if (dFlag2 == 1) {
 		opserr << "\n----------------------------------------------------------------------------------------------------------------------------\n";
 		opserr << "\nStarted new setTrialStrain.\n\n";
 		opserr << "Inputs before plasticity and damage (initialized at current step):\n";
@@ -844,7 +844,7 @@ void J2DamageFiber::mat3DState(void)
 	strain_e = strain - strain_p;
 
 	// Debug 2
-	if (dFlag1 == 1) {
+	if (dFlag2 == 1) {
 		opserr << "\nPlasticity executed!\n\n";
 		opserr << "Outputs after plasticity only:\n";
 		opserr << "strain     = [ "; for (int i = 0;i < 6;i++) opserr << strain(i) << " "; opserr << "]\n";
