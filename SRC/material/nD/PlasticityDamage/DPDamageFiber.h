@@ -25,7 +25,7 @@
 #ifndef DPDamageFiber_h
 #define DPDamageFiber_h
 
-// Written in C++: Daniela Fusco, Luca Parente
+// Written in C++: Luca Parente
 // Created: 11/21
 // 
 // Plasticity and damage material based on Di Re et al [2018].
