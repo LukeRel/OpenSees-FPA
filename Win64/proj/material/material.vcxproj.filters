@@ -1418,6 +1418,9 @@
     <ClCompile Include="..\..\..\SRC\material\nD\PlasticityDamage\DPDamageFiber.cpp">
       <Filter>nD\PlasticityDamage</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\SRC\material\nD\BeamFiberMaterialEB.cpp">
+      <Filter>nD\wrappers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\SRC\material\uniaxial\AxialSp.h">
@@ -2629,6 +2632,9 @@
     </ClInclude>
     <ClInclude Include="..\..\..\SRC\material\nD\PlasticityDamage\DPDamageFiber.h">
       <Filter>nD\PlasticityDamage</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\SRC\material\nD\BeamFiberMaterialEB.h">
+      <Filter>nD\wrappers</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

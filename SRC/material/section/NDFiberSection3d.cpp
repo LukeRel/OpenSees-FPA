@@ -1643,7 +1643,7 @@ NDFiberSection3d::zeroLoad(void)
 
 }
 
-int
+void
 NDFiberSection3d::addLoad(int iFib, int jFib, double eps0, double phi_t_t0, int creep)
 {
     // Save previous phi
@@ -1675,8 +1675,6 @@ NDFiberSection3d::addLoad(int iFib, int jFib, double eps0, double phi_t_t0, int 
             opserr << "phi = " << phi_t_t0 << " phik = " << phi_k << endln;
         }*/
     }
-
-    return 0;
 }
 
 

@@ -51,14 +51,14 @@ public:
 		double _De); // Degradation
 
 	DPDamage(const DPDamage&);
-	virtual ~DPDamage();
+	virtual ~DPDamage() {};
 
 	const char* getClassType(void) const { return "DPDamage"; };
 	const char* getType(void) const { return "ThreeDimensional"; };
 	int setTrialStrain(const Vector& strain);
-	int setTrialStrain(const Vector& v, const Vector& r);
-	int setTrialStrainIncr(const Vector& v);
-	int setTrialStrainIncr(const Vector& v, const Vector& r);
+	int setTrialStrain(const Vector& v, const Vector& r) { return this->setTrialStrain(v); };
+	int setTrialStrainIncr(const Vector& v) { return 0; };
+	int setTrialStrainIncr(const Vector& v, const Vector& r) { return 0; };
 
 	// Calculates current tangent stiffness.
 	const Matrix& getTangent(void);
@@ -95,7 +95,7 @@ protected:
 private:
 
 	// Custom plasticity routine
-	int plasticity();
+	void plasticity();
 
 	// Internal parameters
 	int ndm;

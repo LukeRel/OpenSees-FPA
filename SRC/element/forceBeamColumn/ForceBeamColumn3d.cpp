@@ -2314,95 +2314,95 @@ ForceBeamColumn3d::getInitialDeformations(Vector &v0)
 }
 
   void
-  ForceBeamColumn3d::compSectionDisplacements(Vector sectionCoords[],
-					      Vector sectionDispls[]) const
+      ForceBeamColumn3d::compSectionDisplacements(Vector sectionCoords[],
+          Vector sectionDispls[]) const
   {
-     // get basic displacements and increments
-     static Vector ub(NEBD);
-     ub = crdTransf->getBasicTrialDisp();    
+      // get basic displacements and increments
+      static Vector ub(NEBD);
+      ub = crdTransf->getBasicTrialDisp();
 
-     double L = crdTransf->getInitialLength();
+      double L = crdTransf->getInitialLength();
 
-     // get integration point positions and weights
-     static double pts[maxNumSections];
-     beamIntegr->getSectionLocations(numSections, L, pts);
+      // get integration point positions and weights
+      static double pts[maxNumSections];
+      beamIntegr->getSectionLocations(numSections, L, pts);
 
-     // setup Vandermode and CBDI influence matrices
-     int i;
-     double xi;
+      // setup Vandermode and CBDI influence matrices
+      int i;
+      double xi;
 
-     // get CBDI influence matrix
-     Matrix ls(numSections, numSections);
-     getCBDIinfluenceMatrix(numSections, pts, L, ls);
+      // get CBDI influence matrix
+      Matrix ls(numSections, numSections);
+      getCBDIinfluenceMatrix(numSections, pts, L, ls);
 
-     // get section curvatures
-     Vector kappa_y(numSections);  // curvature
-     Vector kappa_z(numSections);  // curvature
-     static Vector vs;                // section deformations 
+      // get section curvatures
+      Vector kappa_y(numSections);  // curvature
+      Vector kappa_z(numSections);  // curvature
+      static Vector vs;                // section deformations 
 
-     for (i=0; i<numSections; i++) {
-	 // THIS IS VERY INEFFICIENT ... CAN CHANGE IF RUNS TOO SLOW
-	 int sectionKey1 = 0;
-	 int sectionKey2 = 0;
-	 const ID &code = sections[i]->getType();
-	 int j;
-	 for (j = 0; j < code.Size(); j++)
-	 {
-	     if (code(j) == SECTION_RESPONSE_MZ)
-		 sectionKey1 = j;
-	     if (code(j) == SECTION_RESPONSE_MY)
-		 sectionKey2 = j;
-	 }
-	 if (sectionKey1 == 0) {
-	   opserr << "FATAL ForceBeamColumn3d::compSectionResponse - section does not provide Mz response\n";
-	   exit(-1);
-	 }
-	 if (sectionKey2 == 0) {
-	   opserr << "FATAL ForceBeamColumn3d::compSectionResponse - section does not provide My response\n";
-	   exit(-1);
-	 }
+      for (i = 0; i < numSections; i++) {
+          // THIS IS VERY INEFFICIENT ... CAN CHANGE IF RUNS TOO SLOW
+          int sectionKey1 = 0;
+          int sectionKey2 = 0;
+          const ID& code = sections[i]->getType();
+          int j;
+          for (j = 0; j < code.Size(); j++)
+          {
+              if (code(j) == SECTION_RESPONSE_MZ)
+                  sectionKey1 = j;
+              if (code(j) == SECTION_RESPONSE_MY)
+                  sectionKey2 = j;
+          }
+          if (sectionKey1 == 0) {
+              opserr << "FATAL ForceBeamColumn3d::compSectionResponse - section does not provide Mz response\n";
+              exit(-1);
+          }
+          if (sectionKey2 == 0) {
+              opserr << "FATAL ForceBeamColumn3d::compSectionResponse - section does not provide My response\n";
+              exit(-1);
+          }
 
-	 // get section deformations
-	 vs = sections[i]->getSectionDeformation();
+          // get section deformations
+          vs = sections[i]->getSectionDeformation();
 
-	 kappa_z(i) = vs(sectionKey1);
-	 kappa_y(i) = vs(sectionKey2); 
-     }
+          kappa_z(i) = vs(sectionKey1);
+          kappa_y(i) = vs(sectionKey2);
+      }
 
-     //cout << "kappa_y: " << kappa_y;   
-     //cout << "kappa_z: " << kappa_z;   
+      //cout << "kappa_y: " << kappa_y;   
+      //cout << "kappa_z: " << kappa_z;   
 
-     Vector v(numSections), w(numSections);
-     static Vector xl(NDM), uxb(NDM);
-     static Vector xg(NDM), uxg(NDM); 
-     // double theta;                             // angle of twist of the sections
+      Vector v(numSections), w(numSections);
+      static Vector xl(NDM), uxb(NDM);
+      static Vector xg(NDM), uxg(NDM);
+      // double theta;                             // angle of twist of the sections
 
-     // v = ls * kappa_z;  
-     v.addMatrixVector (0.0, ls, kappa_z, 1.0);  
-     // w = ls * kappa_y *  (-1);  
-     w.addMatrixVector (0.0, ls, kappa_y, -1.0);
+      // v = ls * kappa_z;  
+      v.addMatrixVector(0.0, ls, kappa_z, 1.0);
+      // w = ls * kappa_y *  (-1);  
+      w.addMatrixVector(0.0, ls, kappa_y, -1.0);
 
-     for (i=0; i<numSections; i++)
-     {
-	xi = pts[i];
+      for (i = 0; i < numSections; i++)
+      {
+          xi = pts[i];
 
-	xl(0) = xi * L;
-	xl(1) = 0;
-	xl(2) = 0;
+          xl(0) = xi * L;
+          xl(1) = 0;
+          xl(2) = 0;
 
-	// get section global coordinates
-	sectionCoords[i] = crdTransf->getPointGlobalCoordFromLocal(xl);
+          // get section global coordinates
+          sectionCoords[i] = crdTransf->getPointGlobalCoordFromLocal(xl);
 
-	// compute section displacements
-	//theta  = xi * ub(5); // consider linear variation for angle of twist. CHANGE LATER!!!!!!!!!!
-	uxb(0) = xi * ub(0); // consider linear variation for axial displacement. CHANGE LATER!!!!!!!!!!
-	uxb(1) = v(i);
-	uxb(2) = w(i);
+          // compute section displacements
+          //theta  = xi * ub(5); // consider linear variation for angle of twist. CHANGE LATER!!!!!!!!!!
+          uxb(0) = xi * ub(0); // consider linear variation for axial displacement. CHANGE LATER!!!!!!!!!!
+          uxb(1) = v(i);
+          uxb(2) = w(i);
 
-	// get section displacements in global system 
-	sectionDispls[i] = crdTransf->getPointGlobalDisplFromBasic(xi, uxb);
-     }	       
-    return;	       
+          // get section displacements in global system 
+          sectionDispls[i] = crdTransf->getPointGlobalDisplFromBasic(xi, uxb);
+      }
+      return;
   }
 
   void
