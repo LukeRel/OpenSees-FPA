@@ -50,7 +50,7 @@
 #include <elementAPI.h>
 
 ID FiberSection3d::code(4);
-static int d_out = 1; // Set to 1 to produce a damage.txt output file
+static int d_out = 0; // Set to 1 to produce a damage.txt output file
 
 void* OPS_FiberSection3d()
 {
@@ -191,6 +191,7 @@ FiberSection3d::FiberSection3d(int tag, int num, Fiber **fibers,
   // Initializing damage output file
   if (d_out == 1) {
       using namespace std;
+      opserr << "Custom debug is active" << endln;
       ofstream outdata;
       outdata.open("out_fibers.txt");
       outdata << "Step y z eps11 gam12 gam13 sig11 tau12 tau13 Dt Dc D" << endln;
@@ -1391,7 +1392,7 @@ FiberSection3d::zeroLoad(void)
 }
 
 int
-FiberSection3d::addLoad(int fibTag, double eps0, double phi_t_t0, int creep) {
+FiberSection3d::addLoad(int fibTag, double eps0, double fcm, double RH, double h) {
     // Adding eps0 and beta to selected fiber
     matData[5 * (fibTag - 1) + 3] = eps0;
 

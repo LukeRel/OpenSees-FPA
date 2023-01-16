@@ -685,7 +685,7 @@ ForceBeamColumnCons3d::initializeSectionHistoryVariables(void)
    */
 int ForceBeamColumnCons3d::update()
 {
-    opserr << "Update() started" << endln;
+    //opserr << "start ele cycle" << endln;
     // if have completed a recvSelf() - do a revertToLastCommit
     // to get Ssr, etc. set correctly
     if (initialFlag == 2)
@@ -1351,12 +1351,15 @@ ForceBeamColumnCons3d::computeSectionForces(Vector &sp, int isec)
     int iFib = data(2);
     int jFib = data(3);
     double eps0 = data(4) * loadFactor;
-    double phi_t_t0 = data(5);
-    int creep = data(6);
+    double fcm = data(5);
+    double RH = data(6);
+    double h = data(7);
+    double t0 = data(8);
 
     // Apply to fiber section
-    for (int i = 0; i < numSections; i++)
-        sections[i]->addLoad(iFib, jFib, eps0, phi_t_t0, creep);
+    for (int i = iSec - 1; i < jSec; i++)
+        sections[i]->addLoad(iFib, jFib, eps0, fcm, RH, h, t0);
+
     }
   }
   

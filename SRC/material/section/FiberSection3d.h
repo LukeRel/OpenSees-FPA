@@ -82,7 +82,7 @@ class FiberSection3d : public SectionForceDeformation
 
     // Adding fiber loads (L. Parente)
     void zeroLoad(void);
-    int addLoad(int _fibTag, double _eps0, double _phi_t_t0, int _creep);
+    int addLoad(int _fibTag, double _eps0, double _fcm, double _RH, double _h);
 
     int addFiber(Fiber &theFiber);
 

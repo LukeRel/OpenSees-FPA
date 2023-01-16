@@ -34,16 +34,17 @@
 
 Vector Beam3dSectionLoad::data(4);
 
-Beam3dSectionLoad::Beam3dSectionLoad(int tag, int _eleTag, int _iSec, int _jSec, int _iFib, int _jFib, double _eps0, double _phi_t_t0, int _creep)
+Beam3dSectionLoad::Beam3dSectionLoad(int tag, int _eleTag, int _iSec, int _jSec, int _iFib, int _jFib,
+    double _eps0, double _fcm, double _RH, double _h, double _t0)
   :ElementalLoad(tag, LOAD_TAG_Beam3dSectionLoad, _eleTag),
-   iSec(_iSec), jSec(_jSec), iFib(_iFib), jFib(_jFib), eps0(_eps0), phi_t_t0(_phi_t_t0), creep(_creep)
+   iSec(_iSec), jSec(_jSec), iFib(_iFib), jFib(_jFib), eps0(_eps0), fcm(_fcm), RH(_RH), h(_h), t0(_t0)
 {
 
 }
 
 Beam3dSectionLoad::Beam3dSectionLoad()
   :ElementalLoad(LOAD_TAG_Beam3dSectionLoad),
-    iSec(0), jSec(0), iFib(0), jFib(0), eps0(0.0), phi_t_t0(0.0), creep(0)
+    iSec(0), jSec(0), iFib(0), jFib(0), eps0(0.0), fcm(0.0), RH(0.0), h(0.0), t0(0.0)
 {
 
 }
@@ -62,8 +63,10 @@ Beam3dSectionLoad::getData(int &type, double loadFactor)
   data(2) = iFib;
   data(3) = jFib;
   data(4) = eps0;
-  data(5) = phi_t_t0;
-  data(6) = creep;
+  data(5) = fcm;
+  data(6) = RH;
+  data(7) = h;
+  data(8) = t0;
 
   //opserr << "s = "<< secTag <<" f = " << fibTag << " creep = " << creep << endln;
 
@@ -83,9 +86,11 @@ Beam3dSectionLoad::sendSelf(int commitTag, Channel &theChannel)
   vectData(3) = iFib;
   vectData(4) = jFib;
   vectData(5) = eps0;
-  vectData(6) = phi_t_t0;
-  vectData(7) = creep;
-  vectData(8) = this->getTag();
+  vectData(6) = fcm;
+  vectData(7) = RH;
+  vectData(8) = h;
+  vectData(9) = t0;
+  vectData(10) = this->getTag();
 
   int result = theChannel.sendVector(dbTag, commitTag, vectData);
   if (result < 0) {
@@ -116,9 +121,11 @@ Beam3dSectionLoad::recvSelf(int commitTag, Channel &theChannel,
   iFib = (int)vectData(3);
   jFib = (int)vectData(4);
   eps0   = vectData(5);
-  phi_t_t0 = vectData(6);
-  creep = vectData(7);
-  this->setTag(vectData(8));
+  fcm = vectData(6);
+  RH = vectData(7);
+  h = vectData(8);
+  t0 = vectData(9);
+  this->setTag(vectData(10));
 
   return 0;
 }
@@ -133,6 +140,8 @@ Beam3dSectionLoad::Print(OPS_Stream &s, int flag)
   s << "  Fiber i  : " << iFib << endln;
   s << "  Fiber j  : " << jFib << endln;
   s << "  eps0: "       << eps0     << endln;
-  s << "  phi_t_t0: "   << phi_t_t0 << endln;
-  s << "  creep: "      << creep    << endln;
+  s << "  fcm: " << fcm << endln;
+  s << "  RH: " << RH << endln;
+  s << "  h: " << h << endln;
+  s << "  t0: " << t0 << endln;
 }
