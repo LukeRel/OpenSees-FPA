@@ -46,7 +46,7 @@ Matrix BeamFiberMaterial::tangent(3,3);
 // ND: 11 22 33 12 23 31
 // BF: 11 12 31 22 33 23
 
-static int d_out = 0; // Set to 1 to produce a out_J2damage.txt output file
+static int d_out = 1; // Set to 1 to produce a out_DPDamage.txt output file
 static double step = 0.0;
 
 void* OPS_BeamFiberMaterial()
@@ -107,7 +107,7 @@ damage(0.0)
   if (d_out == 1) {
       using namespace std;
       ofstream outdata;
-      outdata.open("out_J2Damage.txt");
+      outdata.open("out_DPDamage.txt");
       outdata << "Step eps11 eps22 eps33 gam12 gam23 gam31 sig11 sig22 sig33 tau12 tau23 tau31 Dt Dc D" << endln;
       outdata.close();
   }
@@ -291,7 +291,7 @@ BeamFiberMaterial::setTrialStrain(const Vector &strainFromElement)
       dam = this->getDamage();
       using namespace std;
       ofstream outdata;
-      outdata.open("out_J2Damage.txt", ios::app);
+      outdata.open("out_DPDamage.txt", ios::app);
       outdata << step << " ";
       outdata << strain3D(0) << " " << strain3D(1) << " " << strain3D(2) << " " << strain3D(3) << " " << strain3D(4) << " " << strain3D(5) << " ";
       outdata << stress3D(0) << " " << stress3D(1) << " " << stress3D(2) << " " << stress3D(3) << " " << stress3D(4) << " " << stress3D(5) << " ";
