@@ -36,8 +36,9 @@
 class Beam3dSectionLoad : public ElementalLoad
 {
   public:
-    Beam3dSectionLoad(int tag, int eleTag, int iSec, int jSec, int iFib, int jFib, double eps0, double phi_t_t0, int creep);
-		      
+    Beam3dSectionLoad(int tag, int _eleTag, int _iSec, int _jSec, int _iFib, int _jFib,
+        double _eps0, double _fcm, double _RH, double _h, double _t0);
+
     Beam3dSectionLoad();    
     ~Beam3dSectionLoad();
 
@@ -55,8 +56,10 @@ class Beam3dSectionLoad : public ElementalLoad
       int iFib;
       int jFib;
       double eps0;
-      double phi_t_t0;
-      int creep;
+      double fcm;
+      double RH;
+      double h;
+      double t0;
 
       static Vector data;
 };

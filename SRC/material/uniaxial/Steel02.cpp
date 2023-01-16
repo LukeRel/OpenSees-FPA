@@ -252,118 +252,122 @@ Steel02::getInitialTangent(void)
 int
 Steel02::setTrialStrain(double trialStrain, double strainRate)
 {
-  double Esh = b * E0;
-  double epsy = Fy / E0;
+    double Esh = b * E0;
+    double epsy = Fy / E0;
 
-  // modified C-P. Lamarche 2006
-  if (sigini != 0.0) {
-    double epsini = sigini/E0;
-    eps = trialStrain+epsini;
-  } else
-    eps = trialStrain;
-  // modified C-P. Lamarche 2006
-
-  double deps = eps - epsP;
-  
-  epsmax = epsmaxP;
-  epsmin = epsminP;
-  epspl  = epsplP;
-  epss0  = epss0P;  
-  sigs0  = sigs0P; 
-  epsr   = epssrP;  
-  sigr   = sigsrP;  
-  kon = konP;
-
-  if (kon == 0 || kon == 3) { // modified C-P. Lamarche 2006
-
-
-    if (fabs(deps) < 10.0*DBL_EPSILON) {
-
-      e = E0;
-      sig = sigini;                // modified C-P. Lamarche 2006
-      kon = 3;                     // modified C-P. Lamarche 2006 flag to impose initial stess/strain
-      return 0;
-
-    } else {
-
-      epsmax = epsy;
-      epsmin = -epsy;
-      if (deps < 0.0) {
-	kon = 2;
-	epss0 = epsmin;
-	sigs0 = -Fy;
-	epspl = epsmin;
-      } else {
-	kon = 1;
-	epss0 = epsmax;
-	sigs0 = Fy;
-	epspl = epsmax;
-      }
+    // modified C-P. Lamarche 2006
+    if (sigini != 0.0) {
+        double epsini = sigini / E0;
+        eps = trialStrain + epsini;
     }
-  }
-  
-  // in case of load reversal from negative to positive strain increment, 
-  // update the minimum previous strain, store the last load reversal 
-  // point and calculate the stress and strain (sigs0 and epss0) at the 
-  // new intersection between elastic and strain hardening asymptote 
-  // To include isotropic strain hardening shift the strain hardening 
-  // asymptote by sigsft before calculating the intersection point 
-  // Constants a3 and a4 control this stress shift on the tension side 
-  
-  if (kon == 2 && deps > 0.0) {
+    else
+        eps = trialStrain;
+    // modified C-P. Lamarche 2006
+
+    double deps = eps - epsP;
+
+    epsmax = epsmaxP;
+    epsmin = epsminP;
+    epspl = epsplP;
+    epss0 = epss0P;
+    sigs0 = sigs0P;
+    epsr = epssrP;
+    sigr = sigsrP;
+    kon = konP;
+
+    if (kon == 0 || kon == 3) { // modified C-P. Lamarche 2006
 
 
-    kon = 1;
-    epsr = epsP;
-    sigr = sigP;
-    //epsmin = min(epsP, epsmin);
-    if (epsP < epsmin)
-      epsmin = epsP;
-    double d1 = (epsmax - epsmin) / (2.0*(a4 * epsy));
-    double shft = 1.0 + a3 * pow(d1, 0.8);
-    epss0 = (Fy * shft - Esh * epsy * shft - sigr + E0 * epsr) / (E0 - Esh);
-    sigs0 = Fy * shft + Esh * (epss0 - epsy * shft);
-    epspl = epsmax;
+        if (fabs(deps) < 10.0 * DBL_EPSILON) {
 
-  } else if (kon == 1 && deps < 0.0) {
-    
-    // update the maximum previous strain, store the last load reversal 
+            e = E0;
+            sig = sigini;                // modified C-P. Lamarche 2006
+            kon = 3;                     // modified C-P. Lamarche 2006 flag to impose initial stess/strain
+            return 0;
+
+        }
+        else {
+
+            epsmax = epsy;
+            epsmin = -epsy;
+            if (deps < 0.0) {
+                kon = 2;
+                epss0 = epsmin;
+                sigs0 = -Fy;
+                epspl = epsmin;
+            }
+            else {
+                kon = 1;
+                epss0 = epsmax;
+                sigs0 = Fy;
+                epspl = epsmax;
+            }
+        }
+    }
+
+    // in case of load reversal from negative to positive strain increment, 
+    // update the minimum previous strain, store the last load reversal 
     // point and calculate the stress and strain (sigs0 and epss0) at the 
     // new intersection between elastic and strain hardening asymptote 
     // To include isotropic strain hardening shift the strain hardening 
     // asymptote by sigsft before calculating the intersection point 
-    // Constants a1 and a2 control this stress shift on compression side 
+    // Constants a3 and a4 control this stress shift on the tension side 
 
-    kon = 2;
-    epsr = epsP;
-    sigr = sigP;
-    //      epsmax = max(epsP, epsmax);
-    if (epsP > epsmax)
-      epsmax = epsP;
-    
-    double d1 = (epsmax - epsmin) / (2.0*(a2 * epsy));
-    double shft = 1.0 + a1 * pow(d1, 0.8);
-    epss0 = (-Fy * shft + Esh * epsy * shft - sigr + E0 * epsr) / (E0 - Esh);
-    sigs0 = -Fy * shft + Esh * (epss0 + epsy * shft);
-    epspl = epsmin;
-  }
+    if (kon == 2 && deps > 0.0) {
 
-  
-  // calculate current stress sig and tangent modulus E 
 
-  double xi     = fabs((epspl-epss0)/epsy);
-  double R      = R0*(1.0 - (cR1*xi)/(cR2+xi));
-  double epsrat = (eps-epsr)/(epss0-epsr);
-  double dum1  = 1.0 + pow(fabs(epsrat),R);
-  double dum2  = pow(dum1,(1/R));
+        kon = 1;
+        epsr = epsP;
+        sigr = sigP;
+        //epsmin = min(epsP, epsmin);
+        if (epsP < epsmin)
+            epsmin = epsP;
+        double d1 = (epsmax - epsmin) / (2.0 * (a4 * epsy));
+        double shft = 1.0 + a3 * pow(d1, 0.8);
+        epss0 = (Fy * shft - Esh * epsy * shft - sigr + E0 * epsr) / (E0 - Esh);
+        sigs0 = Fy * shft + Esh * (epss0 - epsy * shft);
+        epspl = epsmax;
 
-  sig   = b*epsrat +(1.0-b)*epsrat/dum2;
-  sig   = sig*(sigs0-sigr)+sigr;
+    }
+    else if (kon == 1 && deps < 0.0) {
 
-  e = b + (1.0-b)/(dum1*dum2);
-  e = e*(sigs0-sigr)/(epss0-epsr);
+        // update the maximum previous strain, store the last load reversal 
+        // point and calculate the stress and strain (sigs0 and epss0) at the 
+        // new intersection between elastic and strain hardening asymptote 
+        // To include isotropic strain hardening shift the strain hardening 
+        // asymptote by sigsft before calculating the intersection point 
+        // Constants a1 and a2 control this stress shift on compression side 
 
-  return 0;
+        kon = 2;
+        epsr = epsP;
+        sigr = sigP;
+        //      epsmax = max(epsP, epsmax);
+        if (epsP > epsmax)
+            epsmax = epsP;
+
+        double d1 = (epsmax - epsmin) / (2.0 * (a2 * epsy));
+        double shft = 1.0 + a1 * pow(d1, 0.8);
+        epss0 = (-Fy * shft + Esh * epsy * shft - sigr + E0 * epsr) / (E0 - Esh);
+        sigs0 = -Fy * shft + Esh * (epss0 + epsy * shft);
+        epspl = epsmin;
+    }
+
+
+    // calculate current stress sig and tangent modulus E 
+
+    double xi = fabs((epspl - epss0) / epsy);
+    double R = R0 * (1.0 - (cR1 * xi) / (cR2 + xi));
+    double epsrat = (eps - epsr) / (epss0 - epsr);
+    double dum1 = 1.0 + pow(fabs(epsrat), R);
+    double dum2 = pow(dum1, (1 / R));
+
+    sig = b * epsrat + (1.0 - b) * epsrat / dum2;
+    sig = sig * (sigs0 - sigr) + sigr;
+
+    e = b + (1.0 - b) / (dum1 * dum2);
+    e = e * (sigs0 - sigr) / (epss0 - epsr);
+
+    return 0;
 }
 
 

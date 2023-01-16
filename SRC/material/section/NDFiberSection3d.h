@@ -82,7 +82,7 @@ class NDFiberSection3d : public SectionForceDeformation
 
     // Adding fiber loads (L. Parente)
     void zeroLoad(void);
-    void addLoad(int iFib, int jFib, double eps0, double phi_t_t0, int creep);
+    void addLoad(int iFib, int jFib, double eps0, double fcm, double RH, double h, double t0);
 
     int addFiber(Fiber &theFiber);
 
@@ -126,6 +126,9 @@ class NDFiberSection3d : public SectionForceDeformation
     Vector *s;         // section resisting forces  (axial force, bending moment)
     Matrix *ks;        // section stiffness
 
+    // Creep method
+    double getPhi(double t, double t0, double fcm, double RH, double h);
+
 // AddingSensitivity:BEGIN //////////////////////////////////////////
     int parameterID;
     Vector dedh; // MHS hack
@@ -133,15 +136,21 @@ class NDFiberSection3d : public SectionForceDeformation
 
     // For damage output
     Domain* theDomain;
-    double step;
+    double time;
+    int step;
 
     // For creep deformations
     double phi_k = 0.0;     // Previous phi if higher
+    double e0_check;
+
+    // Fiber arrays
     double *eps0_creep;     // eps0 saved at t0
     double *eps0_creep_k;   // eps0 saved at previous t0
-    double *deps0_creep;    // Delta eps0
 
-    double *t0;     // Save time at which creep is applied
+    // Time arrays
+    double *time_steps;     // Save each time step
+    double *stress_steps;   // Save stress at each time step
+
 };
 
 #endif
