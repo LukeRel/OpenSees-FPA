@@ -540,7 +540,8 @@ void
   }
 }
 
-  /********* NEWTON , SUBDIVIDE AND INITIAL ITERATIONS *********************/
+  /********* NEWTON , SUBDIVIDE AND INITIAL ITERATIONS ********************
+   */
   int
       ForceBeamColumn3d::update()
   {
@@ -559,7 +560,7 @@ void
       dv = crdTransf->getBasicIncrDeltaDisp();
 
       // Tolerance
-      double tol = 1e-10;
+      double tol = 1e-7;
 
       if (initialFlag != 0 && dv.Norm() <= tol && numEleLoads == 0)
           return 0;
@@ -649,7 +650,6 @@ void
                       numIters = 10 * maxIters; // allow 10 times more iterations for initial tangent
 
                   for (j = 0; j < numIters; j++) {
-                      //opserr << "start ele cycle" << endln;
 
                       // initialize f and vr for integration
                       f.Zero();
@@ -1013,7 +1013,7 @@ void
           //opserr << "WARNING - ForceBeamColumn3d::update - failed to get compatible ";
           //opserr << "element forces & deformations for element: ";
           double dW_norm = dW / dW0;
-          opserr << "Failed to converge after " << maxSubdivisions << " step reductions in element ";
+          opserr << "Failed to converge at all Newton schemes after " << maxSubdivisions << " step reductions in element";
           opserr << this->getTag() << ". Norm of residual energy dW/dW0 = " << dW_norm << endln;
 
           /*
@@ -1482,15 +1482,16 @@ ForceBeamColumn3d::computeSectionForces(Vector &sp, int isec)
         int iFib = data(2);
         int jFib = data(3);
         double eps0 = data(4) * loadFactor;
-        double fcm = data(5);
-        double RH = data(6);
-        double h = data(7);
-        double t0 = data(8);
+        double phi_t_t0 = data(5);
+        int creep = data(6);
+
+        //opserr << data(0) << " " << data(1) << " " << data(2) << " " << data(3) << " " << data(4) << " " << data(5) << " " << data(6) << endln;
 
         // Apply to fiber section
         for (int i = iSec-1; i < jSec; i++)
-            sections[i]->addLoad(iFib, jFib, eps0, fcm, RH, h, t0);
+            sections[i]->addLoad(iFib, jFib, eps0, phi_t_t0, creep);
 
+        //creep_switch = 0;
     }
     /*else {
       opserr << "ForceBeamColumn3d::addLoad -- load type unknown for element with tag: " <<

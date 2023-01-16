@@ -94,7 +94,7 @@ class SectionForceDeformation : public Material
   
   // methods for applying loads
   virtual void zeroLoad(void) {};
-  virtual void addLoad(int _iFib, int _jFib, double _eps0, double _fcm, double _RH, double _h, double _t0) {};
+  virtual void addLoad(int _iFib, int _jFib, double _eps0, double _phi_t_t0, int _creep) {};
 
   // AddingSensitivity:BEGIN //////////////////////////////////////////
   virtual const Vector &getStressResultantSensitivity(int gradIndex,

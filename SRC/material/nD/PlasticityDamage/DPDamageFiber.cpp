@@ -305,8 +305,6 @@ int DPDamageFiber::setTrialStrain(const Vector& fiberStrain)
 	//
 	// ----------------------------------------------------------------------------------
 
-	//this->commitState();
-
 	// Debug
 	if (dFlag2 == 1) {
 		opserr << "Condensation complete\n" << endln;
@@ -464,8 +462,6 @@ void DPDamageFiber::condensate_consistent(void)
 void DPDamageFiber::condensate_iterative(void)
 {
 	// Picking up all the others from the previous steps
-	int m[3] = { 0, 3, 5 };
-	int c[3] = { 1, 2, 4 };
 	strain_c = strain_c_k;
 	stress_c = stress_c_k;
 	C = C_k;
@@ -479,15 +475,21 @@ void DPDamageFiber::condensate_iterative(void)
 	double norm_sig = 1.0;
 	double norm0;
 
-	dstress_c = stress_c - stress_c_k - C_cm * (strain_m - strain_m_k);
-	C_cc.Solve(dstress_c, dstrain_c);
-	strain_c = strain_c_k + dstrain_c;
-
 	while ((norm_sig > tol) && (count < maxcount)) {
 
 		count += 1;
 
+		// set norm
+		norm_sig = stress_c.Norm();
+		if (count == 0)	norm0 = norm_sig;
+
+		// Condensed out strains
+		C_cc.Solve(stress_c, dstrain_c);
+		strain_c -= dstrain_c;
+
 		// Forming necessary 3D strain vector
+		int m[3] = { 0, 3, 5 };
+		int c[3] = { 1, 2, 4 };
 		for (int i = 0; i < 3; i++) {
 			strain(m[i]) = strain_m(i);
 			strain(c[i]) = strain_c(i);
@@ -515,14 +517,6 @@ void DPDamageFiber::condensate_iterative(void)
 
 		//NDmaterial strain order        = 11, 22, 33, 12, 23, 31  
 		//BeamFiberMaterial strain order = 11, 12, 31, 22, 33, 23
-
-		// set norm
-		norm_sig = stress_c.Norm();
-		if (count == 0)	norm0 = norm_sig;
-
-		// Condensed out strains
-		C_cc.Solve(stress_c, dstrain_c);
-		strain_c -= dstrain_c;
 
 		C = tangent;
 		for (int i = 0; i < 3; i++) {
