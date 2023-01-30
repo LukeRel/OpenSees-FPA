@@ -60,6 +60,7 @@ void* OPS_BeamFiberMaterial();
 void* OPS_BeamFiberMaterialEB();
 void* OPS_BeamFiberMaterial2d();
 void* OPS_BeamFiberMaterial2dPS();
+void* OPS_Condensation();
 void* OPS_PM4SandMaterial();
 void* OPS_PM4SiltMaterial();
 void* OPS_UVCplanestress();
@@ -158,6 +159,7 @@ namespace {
 	nDMaterialsMap.insert(std::make_pair("BeamFiberEB", &OPS_BeamFiberMaterialEB));
 	nDMaterialsMap.insert(std::make_pair("BeamFiber2d", &OPS_BeamFiberMaterial2d));
 	nDMaterialsMap.insert(std::make_pair("BeamFiber2dPS", &OPS_BeamFiberMaterial2dPS));
+	nDMaterialsMap.insert(std::make_pair("Condensation", &OPS_Condensation));
 	nDMaterialsMap.insert(std::make_pair("PM4Sand", &OPS_PM4SandMaterial));
 	nDMaterialsMap.insert(std::make_pair("PM4Silt", &OPS_PM4SiltMaterial));	
 	nDMaterialsMap.insert(std::make_pair("UVCplanestress", &OPS_UVCplanestress));

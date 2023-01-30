@@ -61,6 +61,7 @@
 #include <PlaneStressSimplifiedJ2.h>// Quan Gu & ZhiJian Qiu 2013-6-26 
 
 #include <BeamFiberMaterial.h>
+#include <Condensation.h>
 #include <ConcreteMcftNonLinear5.h>
 #include <ConcreteMcftNonLinear7.h>
 
@@ -122,6 +123,7 @@ extern  void *OPS_BeamFiberMaterial(void);
 extern  void *OPS_BeamFiberMaterialEB(void);
 extern  void *OPS_BeamFiberMaterial2d(void);
 extern  void *OPS_BeamFiberMaterial2dPS(void);
+extern  void* OPS_Condensation(void);
 extern void *OPS_LinearCap(void);
 extern void *OPS_AcousticMedium(void);
 extern void* OPS_UVCmultiaxial(void);
@@ -1877,7 +1879,7 @@ TclModelBuilderNDMaterialCommand (ClientData clientData, Tcl_Interp *interp, int
 
 	 else if (strcmp(argv[1], "BeamFiberMaterialEB") == 0 ||
 	 strcmp(argv[1], "BeamFiberEB") == 0 ||
-	 strcmp(argv[1], "EuleroBernoulliFiber") == 0 ||
+	 strcmp(argv[1], "EulerBernoulliFiber") == 0 ||
 	 strcmp(argv[1], "BeamFiber1") == 0) {
 
 	 void* theMat = OPS_BeamFiberMaterialEB();
@@ -1906,6 +1908,15 @@ TclModelBuilderNDMaterialCommand (ClientData clientData, Tcl_Interp *interp, int
        else 
 	 return TCL_ERROR;
      }    
+
+	 else if (strcmp(argv[1], "Condensation") == 0) {
+
+	 void* theMat = OPS_Condensation();
+	 if (theMat != 0)
+		 theMaterial = (NDMaterial*)theMat;
+	 else
+		 return TCL_ERROR;
+	 }
 
      else if (strcmp(argv[1],"ConcreteMcftNonLinear7") == 0 || strcmp(argv[1],"ConcreteMcftNonLinear5") == 0) {
        if (argc < 11) {
