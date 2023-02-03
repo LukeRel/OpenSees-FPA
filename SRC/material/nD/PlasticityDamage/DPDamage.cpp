@@ -292,7 +292,11 @@ int DPDamage::setTrialStrain(const Vector& pStrain)
 	this->damage();
 
 	// SCI -> ENG strains (x2.0)         eps_ij --> gamma_ij
-	for (int i = 3; i < 6; i++) { strain[i] *= 2.0; strain_p[i] *= 2.0; strain_e[i] *= 2.0; }
+	for (int i = 3; i < 6; i++) {
+		strain[i] *= 2.0;
+		strain_p[i] *= 2.0;
+		strain_e[i] *= 2.0;
+		}
 	// ------------------------------------------------------------------------------------------------- //
 
 	// Incremental quantities
