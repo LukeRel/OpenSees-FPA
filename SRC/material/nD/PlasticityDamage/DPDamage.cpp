@@ -265,7 +265,7 @@ int DPDamage::setTrialStrain(const Vector& pStrain)
 	this->plasticity();
 
 	// Tangent
-	tangent_ep = tangent;
+	//tangent_ep = tangent;
 
 	// Total plastic strains
 	strain_p = strain_p_dev; // + strain_vol; no volumetric plastic strains exist in J2.
@@ -313,7 +313,7 @@ int DPDamage::setTrialStrain(const Vector& pStrain)
 
 	// Constitutive matrix and stress
 	Dm1sq = pow(1.0 - D, 2.0);	// [1-D]^2
-	tangent = fmax(1.0e-3,Dm1sq) * tangent_ep;
+	tangent = fmax(1.0e-3,Dm1sq) * tangent_e;
 	stress.addMatrixVector(0, tangent_e, strain_e, Dm1sq);
 
 	// Debug 3

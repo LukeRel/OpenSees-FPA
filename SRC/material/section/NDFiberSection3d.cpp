@@ -1040,9 +1040,20 @@ NDFiberSection3d::commitState(void)
             outdata << time << " " << y << " " << z << " ";
             outdata << eps(0) << " " << eps(1) << " " << eps(2) << " ";
             outdata << sig(0) << " " << sig(1) << " " << sig(2) << " ";
-            outdata << dam(0) << " " << dam(1) << " " << dam(2) << endln;
-            outdata.close();
+            outdata << dam(0) << " " << dam(1) << " " << dam(2);
 
+            // Plastic strains
+            int plast = 1;
+            if (plast == 1) {
+                const Matrix& tan = theMaterials[i]->getInitialTangent();
+
+                Vector eps_p(3);
+                tan.Solve(sig, eps_p);
+                eps_p = eps - eps_p/pow((1-dam(2)),2);
+                outdata << " " << eps_p(0) << " " << eps_p(1) << " " << eps_p(2);
+            }
+            outdata << endln;
+            outdata.close();
             //opserr << "At fiber " << i + 1 << " eps_creep = " << deps0_creep[i] << endln;
         }
 
