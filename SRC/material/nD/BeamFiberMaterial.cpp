@@ -281,7 +281,7 @@ BeamFiberMaterial::setTrialStrain(const Vector &strainFromElement)
 
   } while (count++ < maxCount && norm > tolerance);
 
-  theMaterial->commitState();
+  //theMaterial->commitState();
 
   if (d_out == 1) {
       step++;

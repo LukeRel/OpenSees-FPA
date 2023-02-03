@@ -93,6 +93,8 @@ Matrix ForceBeamColumn3d::fsSubdivide[maxNumSections];
 Vector ForceBeamColumn3d::SsrSubdivide[maxNumSections];
 
 int dFlag = 0; // Debug flag to print out the number of element cycles
+int iFlag = 1; // Debug flag to print out the number of iterations
+int iter_count = 0;
 int creep_switch = 1; // Creep switch
 
 void* OPS_ForceBeamColumn3d()
@@ -240,6 +242,15 @@ ForceBeamColumn3d::ForceBeamColumn3d (int tag, int nodeI, int nodeJ,
   }
 
   this->setSectionPointers(numSec, sec);
+
+  // Initializing damage output file
+  if (iFlag == 1) {
+      using namespace std;
+      ofstream outdata;
+      outdata.open("out_eleiter.txt");
+      outdata << "iter" << endln;
+      outdata.close();
+  }
 }
 
 // ~ForceBeamColumn3d():
@@ -401,6 +412,15 @@ ForceBeamColumn3d::commitState()
   //   initialFlag = 0;  fmk - commented out, see what happens to Example3.1.tcl if uncommented
   //                         - i have not a clue why, ask remo if he ever gets in contact with us again!
   
+  if (iFlag == 1) {
+      using namespace std;
+      ofstream outdata;
+      outdata.open("out_eleiter.txt", ios::app);
+      outdata << iter_count << endln;
+      outdata.close();
+      iter_count = 0;
+  }
+
   return err;
 }
 
@@ -559,7 +579,7 @@ void
       dv = crdTransf->getBasicIncrDeltaDisp();
 
       // Tolerance
-      double tol = 1e-10;
+      //double tol = 1e-10;
 
       if (initialFlag != 0 && dv.Norm() <= tol && numEleLoads == 0)
           return 0;
@@ -921,6 +941,9 @@ void
                           }
                       }
                       // --- Section i iterations over ----------------------------------------------------------
+
+                      // General iterations counter
+                      iter_count += 1;
 
                       if (!isTorsion) {
                           f(5, 5) = DefaultLoverGJ;
