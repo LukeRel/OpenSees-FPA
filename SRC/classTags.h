@@ -448,8 +448,9 @@
 #define ND_TAG_BeamFiberMaterial		2002
 #define ND_TAG_BeamFiberMaterial2d		2004
 #define ND_TAG_BeamFiberMaterial2dPS	2005
-#define ND_TAG_BeamFiberMaterialEB		2006
+#define ND_TAG_Condensation1D			2006
 #define ND_TAG_Condensation				2007
+#define ND_TAG_CondConf					2008
 #define ND_TAG_CompressibleFluid		3001
 #define ND_TAG_GeneralizedPlasticity 3002
 #define ND_TAG_J2Plasticity02  3003

@@ -56,12 +56,16 @@
 #include <PlaneStressUserMaterial.h>
 //end Yuli Huang & Xinzheng Lu 
 
+// Condensation by Luca Parente
+#include <Condensation.h>
+#include <Condensation1D.h>
+#include <CondConf.h>
+
 #include <CapPlasticity.h>          // Quan Gu & ZhiJian Qiu  2013
 #include <SimplifiedJ2.h>           // Quan Gu & ZhiJian Qiu 2013-6-26
 #include <PlaneStressSimplifiedJ2.h>// Quan Gu & ZhiJian Qiu 2013-6-26 
 
 #include <BeamFiberMaterial.h>
-#include <Condensation.h>
 #include <ConcreteMcftNonLinear5.h>
 #include <ConcreteMcftNonLinear7.h>
 
@@ -120,10 +124,11 @@ extern  void *OPS_PlaneStressLayeredMaterial(void);
 extern  void *OPS_PlaneStressRebarMaterial(void);
 extern  void *OPS_PlateFiberMaterial(void);
 extern  void *OPS_BeamFiberMaterial(void);
-extern  void *OPS_BeamFiberMaterialEB(void);
 extern  void *OPS_BeamFiberMaterial2d(void);
 extern  void *OPS_BeamFiberMaterial2dPS(void);
 extern  void* OPS_Condensation(void);
+extern  void* OPS_Condensation1D(void);
+extern  void* OPS_CondConf(void);
 extern void *OPS_LinearCap(void);
 extern void *OPS_AcousticMedium(void);
 extern void* OPS_UVCmultiaxial(void);
@@ -1687,46 +1692,45 @@ TclModelBuilderNDMaterialCommand (ClientData clientData, Tcl_Interp *interp, int
 				 H_iso);
     }
 
+	else if (strcmp(argv[1], "PlateRebarMaterial") == 0 ||
+	strcmp(argv[1], "PlateRebar") == 0) {
+		if (argc < 5) {
+			opserr << "WARNING insufficient arguments\n";
+			printCommand(argc, argv);
+			opserr << "Want: nDMaterial PlateRebar tag? matTag? angle?" << endln;
+			return TCL_ERROR;
+		}
 
-     else if (strcmp(argv[1],"PlateRebarMaterial") == 0 ||
-	      strcmp(argv[1],"PlateRebar") == 0) {
- 	if (argc < 5) {
- 	    opserr << "WARNING insufficient arguments\n";
- 	    printCommand(argc,argv);
- 	    opserr << "Want: nDMaterial PlateRebar tag? matTag? angle?" << endln;
- 	    return TCL_ERROR;
- 	}
+		int tag, matTag;
+		double angle;
 
- 	int tag, matTag;
- 	double angle;
+		if (Tcl_GetInt(interp, argv[2], &tag) != TCL_OK) {
+			opserr << "WARNING invalid nDMaterial PlateRebar tag" << endln;
+			return TCL_ERROR;
+		}
 
- 	if (Tcl_GetInt(interp, argv[2], &tag) != TCL_OK) {
- 	    opserr << "WARNING invalid nDMaterial PlateRebar tag" << endln;
- 	    return TCL_ERROR;
- 	}
+		if (Tcl_GetInt(interp, argv[3], &matTag) != TCL_OK) {
+			opserr << "WARNING invalid matTag" << endln;
+			opserr << "PlateRebar: " << tag << endln;
+			return TCL_ERROR;
+		}
 
- 	if (Tcl_GetInt (interp, argv[3], &matTag) != TCL_OK) {
- 	    opserr << "WARNING invalid matTag" << endln;
- 	    opserr << "PlateRebar: " << tag << endln;
- 	    return TCL_ERROR;
- 	}
+		UniaxialMaterial* theMat = OPS_getUniaxialMaterial(matTag);
+		if (theMat == 0) {
+			opserr << "WARNING uniaxialmaterial does not exist\n";
+			opserr << "UniaxialMaterial: " << matTag;
+			opserr << "\nPlateRebar nDMaterial: " << tag << endln;
+			return TCL_ERROR;
+		}
 
- 	UniaxialMaterial *theMat = OPS_getUniaxialMaterial(matTag);
- 	if (theMat == 0) {
- 	    opserr << "WARNING uniaxialmaterial does not exist\n";
- 	    opserr << "UniaxialMaterial: " << matTag;
- 	    opserr << "\nPlateRebar nDMaterial: " << tag << endln;
- 	    return TCL_ERROR;
- 	}
+		if (Tcl_GetDouble(interp, argv[4], &angle) != TCL_OK) {
+			opserr << "WARNING invalid angle" << endln;
+			opserr << "PlateRebar: " << tag << endln;
+			return TCL_ERROR;
+		}
 
- 	if (Tcl_GetDouble (interp, argv[4], &angle) != TCL_OK) {
- 	    opserr << "WARNING invalid angle" << endln;
- 	    opserr << "PlateRebar: " << tag << endln;
- 	    return TCL_ERROR;
- 	}
-
- 	theMaterial = new PlateRebarMaterial( tag, *theMat, angle );
-     }
+		theMaterial = new PlateRebarMaterial(tag, *theMat, angle);
+	}
 
     //start Yuli Huang & Xinzheng Lu PlateFromPlaneStressMaterial
      else if (strcmp(argv[1],"PlateFromPlaneStressMaterial") == 0 ||
@@ -1877,17 +1881,6 @@ TclModelBuilderNDMaterialCommand (ClientData clientData, Tcl_Interp *interp, int
 	 return TCL_ERROR;
      }
 
-	 else if (strcmp(argv[1], "BeamFiberMaterialEB") == 0 ||
-	 strcmp(argv[1], "BeamFiberEB") == 0 ||
-	 strcmp(argv[1], "EulerBernoulliFiber") == 0 ||
-	 strcmp(argv[1], "BeamFiber1") == 0) {
-
-	 void* theMat = OPS_BeamFiberMaterialEB();
-	 if (theMat != 0)
-		 theMaterial = (NDMaterial*)theMat;
-	 else
-		 return TCL_ERROR;
-	 }
 
      else if (strcmp(argv[1],"BeamFiberMaterial2d") == 0 ||
  	     strcmp(argv[1],"BeamFiber2d") == 0) {
@@ -1912,6 +1905,47 @@ TclModelBuilderNDMaterialCommand (ClientData clientData, Tcl_Interp *interp, int
 	 else if (strcmp(argv[1], "Condensation") == 0) {
 
 	 void* theMat = OPS_Condensation();
+	 if (theMat != 0)
+		 theMaterial = (NDMaterial*)theMat;
+	 else
+		 return TCL_ERROR;
+	 }
+
+	 else if (strcmp(argv[1], "Condensation1D") == 0) {
+	 if (argc < 4) {
+		 opserr << "WARNING insufficient arguments\n";
+		 printCommand(argc, argv);
+		 opserr << "Want: nDMaterial Condensation1D tag? matTag?" << endln;
+		 return TCL_ERROR;
+	 }
+
+	 int tag, matTag;
+
+	 if (Tcl_GetInt(interp, argv[2], &tag) != TCL_OK) {
+		 opserr << "WARNING invalid nDMaterial Condensation1D tag" << endln;
+		 return TCL_ERROR;
+	 }
+
+	 if (Tcl_GetInt(interp, argv[3], &matTag) != TCL_OK) {
+		 opserr << "WARNING invalid matTag" << endln;
+		 opserr << "Condensation1D: " << tag << endln;
+		 return TCL_ERROR;
+	 }
+
+	 UniaxialMaterial* theMat = OPS_getUniaxialMaterial(matTag);
+	 if (theMat == 0) {
+		 opserr << "WARNING uniaxialmaterial does not exist\n";
+		 opserr << "UniaxialMaterial: " << matTag;
+		 opserr << "\nCondensation nDMaterial: " << tag << endln;
+		 return TCL_ERROR;
+	 }
+
+	 theMaterial = new Condensation1D(tag, *theMat);
+	}
+
+	 else if (strcmp(argv[1], "CondConf") == 0) {
+
+	 void* theMat = OPS_CondConf();
 	 if (theMat != 0)
 		 theMaterial = (NDMaterial*)theMat;
 	 else
@@ -2234,62 +2268,62 @@ TclModelBuilderNDMaterialCommand (ClientData clientData, Tcl_Interp *interp, int
     // check to see if element is a procedure
     //   the proc may already have been loaded from a package or may exist in a package yet to be loaded
     //
-    if (theMaterial == 0) {
+	if (theMaterial == 0) {
 
-      // maybe material in a routine
-      //
+		// maybe material in a routine
+		//
 
-      char *matType = new char[strlen(argv[1])+1];
-      strcpy(matType, argv[1]);
-      matObj *matObject = OPS_GetMaterialType(matType, strlen(matType));
-      
-      delete [] matType;
+		char* matType = new char[strlen(argv[1]) + 1];
+		strcpy(matType, argv[1]);
+		matObj* matObject = OPS_GetMaterialType(matType, strlen(matType));
 
-      if (matObject != 0) {
-	
-	theMaterial = Tcl_addWrapperNDMaterial(matObject, clientData, interp,
-						     argc, argv, theTclBuilder);
-	
-	if (theMaterial == 0)
-	  delete matObject;
-      }
-    }
+		delete[] matType;
+
+		if (matObject != 0) {
+
+			theMaterial = Tcl_addWrapperNDMaterial(matObject, clientData, interp,
+				argc, argv, theTclBuilder);
+
+			if (theMaterial == 0)
+				delete matObject;
+		}
+	}
 
 
     //
     // maybe material class exists in a package yet to be loaded
     //
 
-    if (theMaterial == 0) {
-	
-      void *libHandle;
-      void * (*funcPtr)();
-      
-      int matNameLength = strlen(argv[1]);
-      char *tclFuncName = new char[matNameLength+12];
-      strcpy(tclFuncName, "OPS_");
-      strcpy(&tclFuncName[4], argv[1]);    
-      int res = getLibraryFunction(argv[1], tclFuncName, &libHandle, (void **)&funcPtr);
-      
-      delete [] tclFuncName;
-      
-      if (res == 0) {
-	
-	//
-	// add loaded function to list of functions
-	//
-	
-	char *matName = new char[matNameLength+1];
-	strcpy(matName, argv[1]);
-	NDMaterialPackageCommand *theMatCommand = new NDMaterialPackageCommand;
-	theMatCommand->funcPtr = funcPtr;
-	theMatCommand->funcName = matName;	
-	theMatCommand->next = theNDMaterialPackageCommands;
-	theNDMaterialPackageCommands = theMatCommand;
-	
-	theMaterial = (NDMaterial *)(*funcPtr)();
-      }
-    }
+	if (theMaterial == 0) {
+
+		void* libHandle;
+		void* (*funcPtr)();
+
+		int matNameLength = strlen(argv[1]);
+		char* tclFuncName = new char[matNameLength + 12];
+		strcpy(tclFuncName, "OPS_");
+		strcpy(&tclFuncName[4], argv[1]);
+		int res = getLibraryFunction(argv[1], tclFuncName, &libHandle, (void**)&funcPtr);
+
+		delete[] tclFuncName;
+
+		if (res == 0) {
+
+			//
+			// add loaded function to list of functions
+			//
+
+			char* matName = new char[matNameLength + 1];
+			strcpy(matName, argv[1]);
+			NDMaterialPackageCommand* theMatCommand = new NDMaterialPackageCommand;
+			theMatCommand->funcPtr = funcPtr;
+			theMatCommand->funcName = matName;
+			theMatCommand->next = theNDMaterialPackageCommands;
+			theNDMaterialPackageCommands = theMatCommand;
+
+			theMaterial = (NDMaterial*)(*funcPtr)();
+		}
+	}
 
 
     if (theMaterial == 0) {

@@ -316,8 +316,8 @@ int DPDamage::setTrialStrain(const Vector& pStrain)
 	//D = fmin(D, 0.999);
 
 	// Constitutive matrix and stress
-	Dm1sq = pow(1.0 - D, 2.0);	// [1-D]^2
-	tangent = fmax(1.0e-3,Dm1sq) * tangent_e;
+	Dm1sq = fmax(1e-5,pow(1.0 - D, 2.0));	// [1-D]^2
+	tangent = Dm1sq * tangent_e;
 	stress.addMatrixVector(0, tangent_e, strain_e, Dm1sq);
 
 	// Debug 3

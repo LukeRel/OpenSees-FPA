@@ -639,15 +639,17 @@ void
           // initial tangent iterations (if l==1), or
           // initial tangent on first iteration then regular newton (if l==2)
 
+          // Start Newton loops ----------------------------------------------------------------------------
           for (int l = 0; l < 3; l++) {
 
-              //      if (l == 1) l = 2;
-                    /*
-                    if (l == 1) opserr << "Regular Newton failed. Starting initial tangent iterations for element " << this->getTag() << "." << endln;
-                    if (l == 2) {
-                        opserr << "Initial tangent iteration failed. ";
-                        opserr << "Starting initial tangent on first iteration and then regular Newton for element " << this->getTag() << "." << endln;
-                    }*/
+                    if (l == 1) l = 2;
+              if (dFlag == 1) {
+                  if (l == 1) opserr << "Regular Newton failed. Starting initial tangent iterations for element " << this->getTag() << "." << endln;
+                  if (l == 2) {
+                      opserr << "Initial tangent iteration failed. ";
+                      opserr << "Starting initial tangent on first iteration and then regular Newton for element " << this->getTag() << "." << endln;
+                  }
+              }
 
               SeTrial = Se;
               kvTrial = kv;
@@ -668,8 +670,8 @@ void
                   if (l == 1)
                       numIters = 10 * maxIters; // allow 10 times more iterations for initial tangent
 
+                  // Start element cycle -------------------------------------------------------------------
                   for (j = 0; j < numIters; j++) {
-                      //opserr << "start ele cycle" << endln;
 
                       // initialize f and vr for integration
                       f.Zero();
@@ -968,13 +970,19 @@ void
                       dSe.addMatrixVector(0.0, kvTrial, dv, 1.0);
 
                       dW = dv ^ dSe;
-                      if (dW0 == 0.0)
-                          dW0 = dW;
-
+                      
                       SeTrial += dSe;
 
                       // check for convergence of this interval
-                      if (fabs(dW) < tol) {
+                      double dW_norm;
+                      if (dW == 0.0) dW_norm = 0.0;
+                      else if (dW0 == 0.0) {
+                          dW0 = dW;
+                          dW_norm = 1.0;
+                      }
+                      else dW_norm = fabs(dW / dW0);
+
+                      if (dW_norm < tol) {
 
                           // set the target displacement
                           dvToDo -= dvTrial;
@@ -982,7 +990,9 @@ void
 
                           if (dFlag == 1) opserr << "Step converged at j = " << j + 1 << ". ";
                           if (dFlag == 1) opserr << "Newton scheme l = " << l << "." << endln;
-                          //opserr << "Remaining increments norm: " << dvToDo.Norm() << "." << endln;
+                          if (dFlag == 1) opserr << "Remaining increments norm: " << dvToDo.Norm() << "." << endln;
+
+                          converged = true;
 
                           // check if we have got to where we wanted
                           if (dvToDo.Norm() <= DBL_EPSILON) {
@@ -1012,7 +1022,7 @@ void
                           l = 4;
 
                       }
-                      else {   //  if (fabs(dW) < tol) { 
+                      else {   //  if (fabs(dW) > tol) { 
 
                           if ((j == numIters - 1) && (dFlag == 1))
                               opserr << "Failed to converge for Newton scheme l = " << l << endln;
@@ -1026,8 +1036,13 @@ void
                       }
 
                   } // for (j=0; j<numIters; j++)
+                  // Finish element cycle ------------------------------------------------------------------
+
               } // if (initialFlag != 2)
+
           } // for (int l=0; l<2; l++)
+          // Finish Newton loops ---------------------------------------------------------------------------
+
       } // while (converged == false)
 
       // if fail to converge we return an error flag & print an error message
@@ -1037,7 +1052,7 @@ void
           //opserr << "element forces & deformations for element: ";
           double dW_norm = dW / dW0;
           opserr << "Failed to converge after " << maxSubdivisions << " step reductions in element ";
-          opserr << this->getTag() << ". Norm of residual energy dW/dW0 = " << dW_norm << endln;
+          opserr << this->getTag() << ". |dW|/tol = " << dW_norm/tol << endln;
 
           /*
           opserr << "Section Tangent Condition Numbers: ";

@@ -171,6 +171,9 @@
 #include "CycLiqCPSP3D.h"
 #include "CycLiqCPSPPlaneStrain.h"
 
+// Condensation by Luca Parente
+#include "PlasticityDamage/Condensation1D.h"
+#include "PlasticityDamage/CondConf.h"
 
 #include "soil/FluidSolidPorousMaterial.h"
 #include "soil/PressureDependMultiYield.h"
@@ -1584,7 +1587,13 @@ FEM_ObjectBrokerAllClasses::getNewNDMaterial(int classTag)
 
   case ND_TAG_InitStressNDMaterial:
       return new InitStressNDMaterial();
-    
+
+  case ND_TAG_Condensation1D:
+	  return new Condensation1D();
+
+  case ND_TAG_CondConf:
+	  return new CondConf();
+
   default:
     opserr << "FEM_ObjectBrokerAllClasses::getNewNDMaterial - ";
     opserr << " - no NDMaterial type exists for class tag ";
