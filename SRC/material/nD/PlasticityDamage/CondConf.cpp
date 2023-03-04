@@ -65,13 +65,10 @@ void* OPS_CondConf()
 	return 0;
     }
 
-
-    opserr << "Want: tag, matTag, rho_y, rho_z, fy" << endln;
-
     double data[3];
     numdata = 3;
     if (OPS_GetDoubleInput(&numdata, data) < 0) {
-        opserr << "WARNING invalid nDMaterial CondConf rho_y, rho_z, fy" << endln;
+        opserr << "WARNING invalid nDMaterial. Want: CondConf tag, matTag, rho_y, rho_z, fy" << endln;
         return 0;
     }
 
@@ -96,39 +93,44 @@ CondConf::CondConf(void)
 : NDMaterial(0, ND_TAG_CondConf),
 Tstrain22(0.0), Tstrain33(0.0), Tgamma23(0.0),
 Cstrain22(0.0), Cstrain33(0.0), Cgamma23(0.0),
-theMaterial(0), strain(3), strain_k(3), stress_k(3), strain3D(6), stress3D(6),
-strain_c_k(3),
+theMaterial(0), strain(3), strain_c(3), stress_c(3),
+strain_k(3), stress_k(3), strain_c_k(3), stress_c_k(3),
 damage(0.0), rho_y(0.0), rho_z(0.0), fy(0.0)
 {
 	// Nothing to do
 }
 
-CondConf::CondConf(int tag, NDMaterial &theMat, double _rho_y, double _rho_z, double _fy)
-: NDMaterial(tag, ND_TAG_CondConf),
-Tstrain22(0.0), Tstrain33(0.0), Tgamma23(0.0),
-Cstrain22(0.0), Cstrain33(0.0), Cgamma23(0.0),
-theMaterial(0), strain(3), strain_k(3), stress_k(3),
-strain_c_k(3),
-damage(0.0), rho_y(_rho_y), rho_z(_rho_z), fy(_fy)
+CondConf::CondConf(int tag, NDMaterial& theMat, double _rho_y, double _rho_z, double _fy)
+    : NDMaterial(tag, ND_TAG_CondConf),
+    Tstrain22(0.0), Tstrain33(0.0), Tgamma23(0.0),
+    Cstrain22(0.0), Cstrain33(0.0), Cgamma23(0.0),
+    theMaterial(0), strain(3), strain_c(3), stress_c(3),
+    strain_k(3), stress_k(3), strain_c_k(3), stress_c_k(3),
+    damage(0.0), rho_y(_rho_y), rho_z(_rho_z), fy(_fy)
 {
-  // Get a copy of the material
-  theMaterial = theMat.getCopy("ThreeDimensional");
-  
-  if (theMaterial == 0) {
-    opserr << "CondConf::CondConf -- failed to get copy of material\n";
-    exit(-1);
-  }
+    // Get a copy of the material
+    theMaterial = theMat.getCopy("ThreeDimensional");
 
-  strain_c_k.Zero();
+    if (theMaterial == 0) {
+        opserr << "CondConf::CondConf -- failed to get copy of material\n";
+        exit(-1);
+    }
 
-  // Initializing damage output file
-  if (d_out == 1) {
-      using namespace std;
-      ofstream outdata;
-      outdata.open("out_cond.txt");
-      outdata << "Step eps11 eps22 eps33 gam12 gam23 gam31 sig11 sig22 sig33 tau12 tau23 tau31 Dt Dc D count" << endln;
-      outdata.close();
-  }
+    strain_c.Zero();
+    stress_c.Zero();
+    strain_k.Zero();
+    stress_k.Zero();
+    strain_c_k.Zero();
+    stress_c_k.Zero();
+
+    // Initializing damage output file
+    if (d_out == 1) {
+        using namespace std;
+        ofstream outdata;
+        outdata.open("out_cond.txt");
+        outdata << "Step eps11 eps22 eps33 gam12 gam23 gam31 sig11 sig22 sig33 tau12 tau23 tau31 Dt Dc D count" << endln;
+        outdata.close();
+    }
 }
 
 CondConf::~CondConf(void) 
@@ -224,153 +226,147 @@ CondConf::getRho(void)
 
 //receive the strain
 int 
-CondConf::setTrialStrain(const Vector &strainFromElement)
+CondConf::setTrialStrain(const Vector& strainFromElement)
 {
-  static const double tolerance = 1.0e-6;
+    static const double tol = 1.0e-7;
 
-  strain(0) = strainFromElement(0);
-  strain(1) = strainFromElement(1);
-  strain(2) = strainFromElement(2);
+    strain(0) = strainFromElement(0);
+    strain(1) = strainFromElement(1);
+    strain(2) = strainFromElement(2);
 
-  //newton loop to solve for out-of-plane strains
+    //newton loop to solve for out-of-plane strains
 
-  double norm;
-  static Vector strain_c(3);
-  static Vector dstrain_m(3);
-  static Vector dstrain_c(3);
-  static Vector stress_c(3);
-  static Vector dstress_c(3);
-  static Vector threeDstrain(6);
-  static Matrix C_cc(3,3);
-  static Matrix C_mc(3, 3);
+    double norm = 1.0;
+    static Vector dstrain_m(3);
+    static Vector dstrain_c(3);
+    static Vector dstress_c(3);
+    static Vector threeDstrain(6);
+    static Matrix C_cc(3, 3);
+    static Matrix C_mc(3, 3);
 
-  // Full strains vector = (eps_11 eps_22 eps_33 gamma_12 gamma_23 gamma_31)
-  // Mantained     = 1 4 6 (eps_11 gamma_12 gamma_13) = received
-  // Condensed out = 2 3 5 (eps_22 eps_33 eps_23) = must be determined and eventually condensed
-  int m[3] = { 0, 3, 5 };
-  int c[3] = { 1, 2, 4 };
-  int perm[6] = { 0, 3, 5, 1, 2, 4 };
+    // Full strains vector = (eps_11 eps_22 eps_33 gamma_12 gamma_23 gamma_31)
+    // Mantained     = 1 4 6 (eps_11 gamma_12 gamma_13) = received
+    // Condensed out = 2 3 5 (eps_22 eps_33 eps_23) = must be determined and eventually condensed
+    int m[3] = { 0, 3, 5 };
+    int c[3] = { 1, 2, 4 };
+    int perm[6] = { 0, 3, 5, 1, 2, 4 };
 
-  // Confinement
-  double sig_ty; double sig_tz;
-  if (strain(0) < 0.0) {
-      sig_ty = -fy;
-      sig_tz = -fy;
-  } else {
-      sig_ty = 0.0;
-      sig_tz = 0.0;
-  }
-  stress_c(0) = sig_ty;
-  stress_c(1) = sig_tz;
-  stress_c(2) = 0;
+    // Confinement
+    double sig_ty; double sig_tz;
+    if (strain(0) < 0.0) {
+        sig_ty = -rho_y * fy;
+        sig_tz = -rho_z * fy;
+    }
+    else {
+        sig_ty = 0.0;
+        sig_tz = 0.0;
+    }
+    stress_c(0) = sig_ty;
+    stress_c(1) = sig_tz;
+    stress_c(2) = 0.0;
 
-  // Get tangent
-  const Matrix& C = theMaterial->getTangent();
+    // Get tangent
+    const Matrix& C = theMaterial->getTangent();
 
-  // Other matrices initialization
-  C_mc.Zero(); C_cc.Zero();
-  int k; int l;
-  for (int i = 0; i < 3; i++) for (int j = 0; j < 3; j++) {
-      k = m[i]; l = c[j]; C_mc(i, j) = C(k, l);
-      k = c[i]; l = c[j]; C_cc(i, j) = C(k, l);
-  }
-
-  // Trial strain
-  dstrain_m = strain - strain_k;
-  dstress_c = stress_c - stress_c_k;
-  C_cc.Solve(dstress_c - C_mc * dstrain_m, dstrain_c);
-  strain_c = strain_c + dstrain_c;
-
-  // Elastic predictor
-  strain_c = strain_c_k - dstrain_c;
-
-  int count = 0;
-  const int maxCount = 10;
-  double norm0;
-
-  do {
-      //opserr << "Sub iteration n. " << count << endln;
-    //set three dimensional strain
-    threeDstrain(0) = this->strain(0);
-    threeDstrain(1) = this->Tstrain22;
-    threeDstrain(2) = this->Tstrain33;
-    threeDstrain(3) = this->strain(1); 
-    threeDstrain(4) = this->Tgamma23;
-    threeDstrain(5) = this->strain(2);
-
-    if (theMaterial->setTrialStrain(threeDstrain) < 0) {
-      opserr << "CondConf::setTrialStrain - setStrain failed in material with strain " << threeDstrain;
-      return -1;   
+    // Other matrices initialization
+    C_mc.Zero(); C_cc.Zero();
+    int k; int l;
+    for (int i = 0; i < 3; i++) for (int j = 0; j < 3; j++) {
+        k = m[i]; l = c[j]; C_mc(i, j) = C(k, l);
+        k = c[i]; l = c[j]; C_cc(i, j) = C(k, l);
     }
 
-    //three dimensional stress
-    const Vector &threeDstress = theMaterial->getStress();
+    //opserr << "strain_m = " << strain(0) << " " << strain(1) << " " << strain(2) << endln;
+    //opserr << "strain_m_k = " << strain_k(0) << " " << strain_k(1) << " " << strain_k(2) << endln;
+    //opserr << "stress_c = " << stress_c(0) << " " << stress_c(1) << " " << stress_c(2) << endln;
+    //opserr << "stress_c_k = " << stress_c_k(0) << " " << stress_c_k(1) << " " << stress_c_k(2) << endln;
 
-    //delete
-    //strain3D = threeDstrain;
-    //stress3D = threeDstress;
+    // Trial strain
+    dstrain_m = strain - strain_k;
+    dstress_c = stress_c - stress_c_k;
+    C_cc.Solve(dstress_c - C_mc * dstrain_m, dstrain_c);
 
-    //three dimensional tangent 
-    const Matrix &threeDtangent = theMaterial->getTangent();
+    // Elastic predictor
+    strain_c = strain_c_k - dstrain_c;
 
-    //NDmaterial strain order        = 11, 22, 33, 12, 23, 31  
-    //CondConf strain order = 11, 12, 31, 22, 33, 23
+    int count = 0;
+    const int maxCount = 100;
 
-    //stress_c(0) = threeDstress(1);
-    //stress_c(1) = threeDstress(2);
-    //stress_c(2) = threeDstress(4);
+    do {
+        //opserr << "Sub iteration n. " << count << endln;
+      //set three dimensional strain
+        threeDstrain(0) = this->strain(0);
+        threeDstrain(1) = this->Tstrain22;
+        threeDstrain(2) = this->Tstrain33;
+        threeDstrain(3) = this->strain(1);
+        threeDstrain(4) = this->Tgamma23;
+        threeDstrain(5) = this->strain(2);
 
-    C_cc(0,0) = threeDtangent(1,1);
-    C_cc(1,0) = threeDtangent(2,1);
-    C_cc(2,0) = threeDtangent(4,1);
+        if (theMaterial->setTrialStrain(threeDstrain) < 0) {
+            opserr << "CondConf::setTrialStrain - setStrain failed in material with strain " << threeDstrain;
+            return -1;
+        }
 
-    C_cc(0,1) = threeDtangent(1,2);
-    C_cc(1,1) = threeDtangent(2,2);
-    C_cc(2,1) = threeDtangent(4,2);
+        //three dimensional stress
+        const Vector& threeDstress = theMaterial->getStress();
 
-    C_cc(0,2) = threeDtangent(1,4);
-    C_cc(1,2) = threeDtangent(2,4);
-    C_cc(2,2) = threeDtangent(4,4);
+        //three dimensional tangent 
+        const Matrix& threeDtangent = theMaterial->getTangent();
 
-    // Update dstress_c
-    dstress_c(0) = threeDstress(1)-stress_c(0);
-    dstress_c(1) = threeDstress(2)-stress_c(1);
-    dstress_c(2) = threeDstress(4)-stress_c(2);
+        //NDmaterial strain order = 11, 22, 33, 12, 23, 31  
+        //CondConf strain order   = 11, 12, 31, 22, 33, 23
 
-    //set norm
-    norm = dstress_c.Norm();
-    if (count == 0)
-      norm0 = norm;
+        C_cc(0, 0) = threeDtangent(1, 1);
+        C_cc(1, 0) = threeDtangent(2, 1);
+        C_cc(2, 0) = threeDtangent(4, 1);
 
-    //CondConf 
-    C_cc.Solve(strain_c, dstrain_c);
+        C_cc(0, 1) = threeDtangent(1, 2);
+        C_cc(1, 1) = threeDtangent(2, 2);
+        C_cc(2, 1) = threeDtangent(4, 2);
 
-    //update out of plane strains
-    this->Tstrain22 -= dstrain_c(0);
-    this->Tstrain33 -= dstrain_c(1);
-    this->Tgamma23  -= dstrain_c(2);
+        C_cc(0, 2) = threeDtangent(1, 4);
+        C_cc(1, 2) = threeDtangent(2, 4);
+        C_cc(2, 2) = threeDtangent(4, 4);
 
-  } while (count++ < maxCount && norm > tolerance);
+        // Update dstress_c
+        dstress_c(0) = threeDstress(1) - stress_c(0);
+        dstress_c(1) = threeDstress(2) - stress_c(1);
+        dstress_c(2) = threeDstress(4) - stress_c(2);
 
-  //theMaterial->commitState();
+        //set norm
+        norm = dstress_c.Norm();
 
-  if (d_out == 1) {
-      step++;
+        // Solve c-out strains
+        if (norm > tol)
+            C_cc.Solve(dstress_c, dstrain_c);
 
-      // Damage output
-      Vector dam(6);
-      dam = this->getDamage();
-      using namespace std;
-      ofstream outdata;
-      outdata.open("out_cond.txt", ios::app);
-      outdata << step << " ";
-      outdata << strain3D(0) << " " << strain3D(1) << " " << strain3D(2) << " " << strain3D(3) << " " << strain3D(4) << " " << strain3D(5) << " ";
-      outdata << stress3D(0) << " " << stress3D(1) << " " << stress3D(2) << " " << stress3D(3) << " " << stress3D(4) << " " << stress3D(5) << " ";
-      outdata << dam(0) << " " << dam(1) << " " << dam(2) << " " << count << endln;
-      outdata.close();
-  }
+        //update out of plane strains
+        this->Tstrain22 -= dstrain_c(0);
+        this->Tstrain33 -= dstrain_c(1);
+        this->Tgamma23 -= dstrain_c(2);
 
-  return 0;
+    } while (count++ < maxCount && norm > tol);
+
+    //opserr << "norm = " << norm << endln;
+    //opserr << "count = " << count << endln;
+    //opserr << "strain = " << strain(0) << " " << strain(1) << " " << strain(2) << " " << strain_c(0) << " " << strain_c(1) << " " << strain_c(2) << endln;
+    //opserr << "stress = " << stress(0) << " " << stress(1) << " " << stress(2) << " " << stress_c(0) << " " << stress_c(1) << " " << stress_c(2) << endln;
+
+    if (d_out == 1) {
+        step++;
+
+        // Damage output
+        Vector dam(6);
+        dam = this->getDamage();
+        using namespace std;
+        ofstream outdata;
+        outdata.open("out_cond.txt", ios::app);
+        outdata << step << " ";
+        outdata << dam(0) << " " << dam(1) << " " << dam(2) << " " << count << endln;
+        outdata.close();
+    }
+
+    return 0;
 }
 
 const Vector& 

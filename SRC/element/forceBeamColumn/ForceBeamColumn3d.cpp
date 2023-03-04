@@ -970,7 +970,6 @@ void
                       dSe.addMatrixVector(0.0, kvTrial, dv, 1.0);
 
                       dW = dv ^ dSe;
-                      
                       SeTrial += dSe;
 
                       // check for convergence of this interval
@@ -979,8 +978,7 @@ void
                       else if (dW0 == 0.0) {
                           dW0 = dW;
                           dW_norm = 1.0;
-                      }
-                      else dW_norm = fabs(dW / dW0);
+                      } else dW_norm = fmin(dW,fabs(dW / dW0));
 
                       if (dW_norm < tol) {
 

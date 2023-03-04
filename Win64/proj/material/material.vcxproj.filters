@@ -1418,10 +1418,13 @@
     <ClCompile Include="..\..\..\SRC\material\nD\PlasticityDamage\DPDamageFiber.cpp">
       <Filter>nD\PlasticityDamage</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\SRC\material\nD\BeamFiberMaterialEB.cpp">
-      <Filter>nD\wrappers</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\SRC\material\nD\PlasticityDamage\Condensation.cpp">
+      <Filter>nD\PlasticityDamage</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\SRC\material\nD\PlasticityDamage\Condensation1D.cpp">
+      <Filter>nD\PlasticityDamage</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\SRC\material\nD\PlasticityDamage\CondConf.cpp">
       <Filter>nD\PlasticityDamage</Filter>
     </ClCompile>
   </ItemGroup>
@@ -2636,10 +2639,13 @@
     <ClInclude Include="..\..\..\SRC\material\nD\PlasticityDamage\DPDamageFiber.h">
       <Filter>nD\PlasticityDamage</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\SRC\material\nD\BeamFiberMaterialEB.h">
-      <Filter>nD\wrappers</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\SRC\material\nD\PlasticityDamage\Condensation.h">
+      <Filter>nD\PlasticityDamage</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\SRC\material\nD\PlasticityDamage\Condensation1D.h">
+      <Filter>nD\PlasticityDamage</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\SRC\material\nD\PlasticityDamage\CondConf.h">
       <Filter>nD\PlasticityDamage</Filter>
     </ClInclude>
   </ItemGroup>

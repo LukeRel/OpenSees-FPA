@@ -192,7 +192,6 @@
   <ItemGroup>
     <ClCompile Include="..\..\..\SRC\material\nD\AcousticMedium.cpp" />
     <ClCompile Include="..\..\..\SRC\material\nD\BeamFiberMaterial2dPS.cpp" />
-    <ClCompile Include="..\..\..\SRC\material\nD\BeamFiberMaterialEB.cpp" />
     <ClCompile Include="..\..\..\SRC\material\nD\ConcreteMcftNonLinear5.cpp" />
     <ClCompile Include="..\..\..\SRC\material\nD\ConcreteMcftNonLinear7.cpp" />
     <ClCompile Include="..\..\..\SRC\material\nD\DruckerPrager3DThermal.cpp" />
@@ -215,7 +214,9 @@
     <ClCompile Include="..\..\..\SRC\material\nD\PlaneStressUserMaterial.cpp" />
     <ClCompile Include="..\..\..\SRC\material\nD\PlasticDamageConcrete3d.cpp" />
     <ClCompile Include="..\..\..\SRC\material\nD\PlasticDamageConcretePlaneStress.cpp" />
+    <ClCompile Include="..\..\..\SRC\material\nD\PlasticityDamage\CondConf.cpp" />
     <ClCompile Include="..\..\..\SRC\material\nD\PlasticityDamage\Condensation.cpp" />
+    <ClCompile Include="..\..\..\SRC\material\nD\PlasticityDamage\Condensation1D.cpp" />
     <ClCompile Include="..\..\..\SRC\material\nD\PlasticityDamage\DPDamageFiber.cpp" />
     <ClCompile Include="..\..\..\SRC\material\nD\PlasticityDamage\GDamage.cpp" />
     <ClCompile Include="..\..\..\SRC\material\nD\PlasticityDamage\J2Damage.cpp" />
@@ -630,7 +631,6 @@
   <ItemGroup>
     <ClInclude Include="..\..\..\SRC\material\nD\AcousticMedium.h" />
     <ClInclude Include="..\..\..\SRC\material\nD\BeamFiberMaterial2dPS.h" />
-    <ClInclude Include="..\..\..\SRC\material\nD\BeamFiberMaterialEB.h" />
     <ClInclude Include="..\..\..\SRC\material\nD\ConcreteMcftNonLinear5.h" />
     <ClInclude Include="..\..\..\SRC\material\nD\ConcreteMcftNonLinear7.h" />
     <ClInclude Include="..\..\..\SRC\material\nD\DruckerPrager3DThermal.h" />
@@ -653,7 +653,9 @@
     <ClInclude Include="..\..\..\SRC\material\nD\PlaneStressUserMaterial.h" />
     <ClInclude Include="..\..\..\SRC\material\nD\PlasticDamageConcrete3d.h" />
     <ClInclude Include="..\..\..\SRC\material\nD\PlasticDamageConcretePlaneStress.h" />
+    <ClInclude Include="..\..\..\SRC\material\nD\PlasticityDamage\CondConf.h" />
     <ClInclude Include="..\..\..\SRC\material\nD\PlasticityDamage\Condensation.h" />
+    <ClInclude Include="..\..\..\SRC\material\nD\PlasticityDamage\Condensation1D.h" />
     <ClInclude Include="..\..\..\SRC\material\nD\PlasticityDamage\DPDamageFiber.h" />
     <ClInclude Include="..\..\..\SRC\material\nD\PlasticityDamage\GDamage.h" />
     <ClInclude Include="..\..\..\SRC\material\nD\PlasticityDamage\J2Damage.h" />

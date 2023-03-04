@@ -6251,7 +6251,7 @@ int MPCORecorder::recordResultsOnElements()
 							current_response.response->getResponse();
 							const Vector &current_data = current_response.response->getInformation().getData();
 							if (current_data.Size() != header.num_columns) {
-								opserr << "MPCORecorder Error: invalid response data size\n";
+								//opserr << "MPCORecorder Error: invalid response data size\n";
 								continue;
 							}
 							size_t offset = i * header.num_columns;
