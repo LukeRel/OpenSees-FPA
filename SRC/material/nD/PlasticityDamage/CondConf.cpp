@@ -254,12 +254,9 @@ CondConf::setTrialStrain(const Vector& strainFromElement)
     // Confinement
     double sig_ty; double sig_tz;
     if (strain(0) < 0.0) {
-        sig_ty = -rho_y * fy;
-        sig_tz = -rho_z * fy;
-    }
-    else {
-        sig_ty = 0.0;
-        sig_tz = 0.0;
+        sig_ty = -rho_y * fy; sig_tz = -rho_z * fy;
+    } else {
+        sig_ty = 0.0; sig_tz = 0.0;
     }
     stress_c(0) = sig_ty;
     stress_c(1) = sig_tz;
@@ -276,6 +273,7 @@ CondConf::setTrialStrain(const Vector& strainFromElement)
         k = c[i]; l = c[j]; C_cc(i, j) = C(k, l);
     }
 
+    //opserr << "strain_c_k = " << strain_k(1) << " " << strain_k(2) << " " << strain_k(4) << endln;
     //opserr << "strain_m = " << strain(0) << " " << strain(1) << " " << strain(2) << endln;
     //opserr << "strain_m_k = " << strain_k(0) << " " << strain_k(1) << " " << strain_k(2) << endln;
     //opserr << "stress_c = " << stress_c(0) << " " << stress_c(1) << " " << stress_c(2) << endln;
@@ -290,17 +288,17 @@ CondConf::setTrialStrain(const Vector& strainFromElement)
     strain_c = strain_c_k - dstrain_c;
 
     int count = 0;
-    const int maxCount = 100;
+    const int maxCount = 200;
 
     do {
         //opserr << "Sub iteration n. " << count << endln;
       //set three dimensional strain
-        threeDstrain(0) = this->strain(0);
-        threeDstrain(1) = this->Tstrain22;
-        threeDstrain(2) = this->Tstrain33;
-        threeDstrain(3) = this->strain(1);
-        threeDstrain(4) = this->Tgamma23;
-        threeDstrain(5) = this->strain(2);
+        threeDstrain(0) = strain(0);
+        threeDstrain(1) = strain_c(0);
+        threeDstrain(2) = strain_c(1);
+        threeDstrain(3) = strain(1);
+        threeDstrain(4) = strain_c(2);
+        threeDstrain(5) = strain(2);
 
         if (theMaterial->setTrialStrain(threeDstrain) < 0) {
             opserr << "CondConf::setTrialStrain - setStrain failed in material with strain " << threeDstrain;
@@ -316,6 +314,7 @@ CondConf::setTrialStrain(const Vector& strainFromElement)
         //NDmaterial strain order = 11, 22, 33, 12, 23, 31  
         //CondConf strain order   = 11, 12, 31, 22, 33, 23
 
+        /*
         C_cc(0, 0) = threeDtangent(1, 1);
         C_cc(1, 0) = threeDtangent(2, 1);
         C_cc(2, 0) = threeDtangent(4, 1);
@@ -327,6 +326,14 @@ CondConf::setTrialStrain(const Vector& strainFromElement)
         C_cc(0, 2) = threeDtangent(1, 4);
         C_cc(1, 2) = threeDtangent(2, 4);
         C_cc(2, 2) = threeDtangent(4, 4);
+        */
+
+        C_cc.Zero();
+        int k; int l;
+        for (int i = 0; i < 3; i++) for (int j = 0; j < 3; j++) {
+            k = c[i]; l = c[j]; C_cc(i, j) = C(k, l);
+        }
+
 
         // Update dstress_c
         dstress_c(0) = threeDstress(1) - stress_c(0);
@@ -341,16 +348,24 @@ CondConf::setTrialStrain(const Vector& strainFromElement)
             C_cc.Solve(dstress_c, dstrain_c);
 
         //update out of plane strains
-        this->Tstrain22 -= dstrain_c(0);
-        this->Tstrain33 -= dstrain_c(1);
-        this->Tgamma23 -= dstrain_c(2);
+        strain_c -= dstrain_c;
 
     } while (count++ < maxCount && norm > tol);
 
-    //opserr << "norm = " << norm << endln;
-    //opserr << "count = " << count << endln;
-    //opserr << "strain = " << strain(0) << " " << strain(1) << " " << strain(2) << " " << strain_c(0) << " " << strain_c(1) << " " << strain_c(2) << endln;
-    //opserr << "stress = " << stress(0) << " " << stress(1) << " " << stress(2) << " " << stress_c(0) << " " << stress_c(1) << " " << stress_c(2) << endln;
+    if (count > maxCount - 10) {
+        opserr << "norm = " << norm << endln;
+        opserr << "count = " << count << endln;
+        opserr << "strain = [" << strain(0) << " " << strain(1) << " " << strain(2) << " " << strain_c(0) << " " << strain_c(1) << " " << strain_c(2) << "];" << endln;
+        opserr << "stress = [" << stress(0) << " " << stress(1) << " " << stress(2) << " " << stress_c(0) << " " << stress_c(1) << " " << stress_c(2) << "];" << endln;
+
+        opserr << "strain_c = [" << strain_c(0) << " " << strain_c(1) << " " << strain_c(2) << "];" << endln;
+        opserr << "stress_c = [" << stress_c(0) << " " << stress_c(1) << " " << stress_c(2) << "];" << endln;
+
+        opserr << "C_cc = [" << C_cc(0,0) << " " << C_cc(1,0) << " " << C_cc(2,0) << ";" << endln;
+        opserr << "        " << C_cc(0,1) << " " << C_cc(1,1) << " " << C_cc(2,1) << ";" << endln;
+        opserr << "        " << C_cc(0,2) << " " << C_cc(1,2) << " " << C_cc(2,2) << "];" << endln;
+
+    }
 
     if (d_out == 1) {
         step++;
