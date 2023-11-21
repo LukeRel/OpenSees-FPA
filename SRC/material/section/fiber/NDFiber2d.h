@@ -51,7 +51,8 @@ class NDFiber2d : public Fiber
 {
   public:
     NDFiber2d ();   
-    NDFiber2d (int tag, NDMaterial &theMat, double Area, double position, double Eps0, double Beta);
+    NDFiber2d (int tag, NDMaterial &theMat, double Area, double position,
+        double Eps0, double Beta, double Shear_y);
     ~NDFiber2d();
 
     
@@ -81,6 +82,9 @@ class NDFiber2d : public Fiber
 
     double getEps0(void) { return eps0; };
     double getBeta(void) { return beta; };
+    double getPsi(void) { return 0.0; };
+    double getShear_y(void) { return shear_y; };
+    double getShear_z(void) { return 0.0; };
  
     int setParameter(const char **argv, int argc, Parameter &param);
     int updateParameter(int parameterID, Information &info);
@@ -97,7 +101,8 @@ class NDFiber2d : public Fiber
     double area;                          // area of the fiber 
     double y;		// fiber location
     double eps0;    // initial fiber strain
-    double beta;    // incidence angle
+    double beta;    // tendon angle about y
+    double shear_y;    // shear scale factor y
 
     static Matrix ks;       // static class wide matrix object for returns
     static Vector fs;	    // static class wide vector object for returns

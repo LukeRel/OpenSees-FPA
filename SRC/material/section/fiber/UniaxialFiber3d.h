@@ -51,8 +51,8 @@ class UniaxialFiber3d: public Fiber
 {
   public:
     UniaxialFiber3d ();    
-    UniaxialFiber3d (int tag, UniaxialMaterial &theMat, double Area, 
-                     const Vector &position, double Eps0, double Beta);
+    UniaxialFiber3d (int tag, UniaxialMaterial &theMat, double Area, const Vector &position,
+        double Eps0, double Beta, double Psi, double Shear_y, double Shear_z);
  
     ~UniaxialFiber3d();
 
@@ -82,7 +82,10 @@ class UniaxialFiber3d: public Fiber
 	
 	// Initial strains (LP)
     double getEps0(void) {return eps0;};
-    double getBeta(void) { return beta; };
+    double getBeta(void) {return beta;};
+    double getPsi(void) { return psi; };
+    double getShear_y(void) { return shear_y; };
+    double getShear_z(void) { return shear_z; };
 
   protected:
     
@@ -92,6 +95,10 @@ class UniaxialFiber3d: public Fiber
     double dValue;
     double eps0;            // initial fiber strains (LP)
     double beta;            // incidence angle
+    double psi;     // tendon angle about z
+    double shear_y;    // shear scale factor y
+    double shear_z;    // shear scale factor z
+
     double as[2];                            // matrix that transforms
 	                            // section deformations into fiber strain	
     static Matrix ks;       // static class wide matrix object for returns

@@ -76,8 +76,15 @@ class Fiber : public TaggedObject, public MovableObject
     virtual double getArea(void) =0;
     virtual double getd(void) =0;
 
+    // Initial fiber strains, rotations and shear factors
+    // Added by Luca Parente 09/22
     virtual double getEps0(void) = 0;
     virtual double getBeta(void) = 0;
+    virtual double getPsi(void) = 0;
+    
+    // Added by Luca Parente 04/23
+    virtual double getShear_y(void) = 0;
+    virtual double getShear_z(void) = 0;
 
     virtual UniaxialMaterial *getMaterial(void) {return 0;}
     virtual NDMaterial *getNDMaterial(void) {return 0;}

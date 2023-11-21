@@ -61,10 +61,11 @@ void* OPS_NDFiber3d()
     }
 
     // get data
-    int numData = 5;
-    double data[5];
+    int numData = 8;
+    double data[8];
     if(OPS_GetDoubleInput(&numData,&data[0]) < 0) return 0;
-    //opserr << data[0] << " " << data[1] << " " << data[2] << " " << data[3] << "\n";
+
+    opserr << data[0] << " " << data[1] << " " << data[2] << " " << data[3] << " " << data[4] << " " << data[5] << " " << data[6] << " " << data[7] << endln;
 
     // get mat tag
     int tag;
@@ -78,15 +79,16 @@ void* OPS_NDFiber3d()
 	return 0;
     }
 
-    return new NDFiber3d(numNDFiber3d++,*theMat,data[2],data[0],data[1],data[3], data[4]);
+    return new NDFiber3d(numNDFiber3d++,*theMat,data[2],data[0],data[1],data[3], data[4], data[5], data[6], data[7]);
 }
 
 
 // constructor:
 NDFiber3d::NDFiber3d(int tag, NDMaterial &theMat,
-		     double Area, double yy, double zz, double Eps0, double Beta):
+                double Area, double yy, double zz,
+                double Eps0, double Beta, double Psi, double Shear_y, double Shear_z):
   Fiber(tag, FIBER_TAG_ND3d),
-  theMaterial(0), area(Area), y(yy), z(zz), eps0(Eps0), dValue(0.0), beta(Beta)
+  theMaterial(0), area(Area), y(yy), z(zz), eps0(Eps0), dValue(0.0), beta(Beta), psi(Psi), shear_y(Shear_y), shear_z(Shear_z)
 {
   theMaterial = theMat.getCopy("BeamFiber");
   
@@ -108,7 +110,7 @@ NDFiber3d::NDFiber3d(int tag, NDMaterial &theMat,
 // constructor for blank object that recvSelf needs to be invoked upon
 NDFiber3d::NDFiber3d(): 
   Fiber(0, FIBER_TAG_ND3d),
-  theMaterial(0), area(0), y(0.0), z(0.0), eps0(0.0), dValue(0.0), beta(0.0)
+  theMaterial(0), area(0), y(0.0), z(0.0), eps0(0.0), dValue(0.0), beta(0.0), psi(0.0), shear_y(0.0), shear_z(0.0)
 {
   if (code(0) != SECTION_RESPONSE_P) {
     code(0) = SECTION_RESPONSE_P;
@@ -173,7 +175,7 @@ NDFiber3d::getCopy (void)
 {
    // make a copy of the fiber 
   NDFiber3d *theCopy = new NDFiber3d (this->getTag(), 
-				      *theMaterial, area, y, z, eps0, beta);
+				      *theMaterial, area, y, z, eps0, beta, psi, shear_y, shear_z);
 
   return theCopy;
 }  

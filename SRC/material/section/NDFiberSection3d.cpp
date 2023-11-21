@@ -144,7 +144,7 @@ NDFiberSection3d::NDFiberSection3d(int tag, int num, Fiber** fibers, double a, b
             exit(-1);
         }
 
-        double yLoc, zLoc, Area, eps0, beta;
+        double yLoc, zLoc, Area, eps0, beta, psi, shear_y{}, shear_z;
 
         // Top and bottom coords determination
         double y1, y2, z1, z2;
@@ -155,6 +155,11 @@ NDFiberSection3d::NDFiberSection3d(int tag, int num, Fiber** fibers, double a, b
             Area = theFiber->getArea();
             eps0 = theFiber->getEps0();   // LP
             beta = theFiber->getBeta();   // LP
+            psi = theFiber->getPsi();     // LP
+
+            //opserr << "eps0 = " << eps0 << endln;
+            //opserr << "beta = " << beta << endln;
+            //opserr << "psi = " << psi << endln;
 
             //if (eps0 > 0) opserr << "Received eps0 = " << eps0 << " on fiber " << i+1;
 
@@ -190,14 +195,27 @@ NDFiberSection3d::NDFiberSection3d(int tag, int num, Fiber** fibers, double a, b
 
         }
 
-        // Scale factors
+        // Shear scale factors
         for (int i = 0; i < numFibers; i++) {
             Fiber* theFiber = fibers[i];
             theFiber->getFiberLocation(yLoc, zLoc);
-            if (set_shear_y == 1) gammaData[2 * i] = 6 / pow(y1 - y2, 2) * (-yLoc * yLoc + yLoc * (y1 + y2) - y1 * y2);
-            else                  gammaData[2 * i] = 1;
-            if (set_shear_z == 1) gammaData[2 * i + 1] = 6 / pow(z1 - z2, 2) * (-zLoc * zLoc + zLoc * (z1 + z2) - z1 * z2);
-            else                  gammaData[2 * i + 1] = 1;
+
+            // Shear strain factors
+            shear_y = theFiber->getShear_y();     // LP
+            shear_z = theFiber->getShear_z();     // LP
+
+            opserr << "shear_y = " << shear_y << endln;
+            opserr << "shear_z = " << shear_z << endln;
+
+            // Across y
+            if (shear_y != 1.0)         gammaData[2 * i] = shear_y;
+            else if (set_shear_y == 1)  gammaData[2 * i] = 6 / pow(y1 - y2, 2) * (-yLoc * yLoc + yLoc * (y1 + y2) - y1 * y2);
+            else                        gammaData[2 * i] = 1;
+
+            // Across z
+            if (shear_z != 1.0)         gammaData[2 * i + 1] = shear_z;
+            else if (set_shear_z == 1)  gammaData[2 * i + 1] = 6 / pow(z1 - z2, 2) * (-zLoc * zLoc + zLoc * (z1 + z2) - z1 * z2);
+            else                        gammaData[2 * i + 1] = 1;
         }
 
         if (computeCentroid) {
