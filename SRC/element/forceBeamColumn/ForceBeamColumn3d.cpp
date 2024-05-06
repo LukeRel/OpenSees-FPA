@@ -1324,218 +1324,218 @@ ForceBeamColumn3d::computeReactionSensitivity(double* dp0dh, int gradNumber)
 }
 
 void
-ForceBeamColumn3d::computeSectionForces(Vector &sp, int isec)
+ForceBeamColumn3d::computeSectionForces(Vector& sp, int isec)
 {
-  int type;
+    int type;
 
-  double L = crdTransf->getInitialLength();
+    double L = crdTransf->getInitialLength();
 
-  double xi[maxNumSections];
-  beamIntegr->getSectionLocations(numSections, L, xi);
-  double x = xi[isec]*L;
+    double xi[maxNumSections];
+    beamIntegr->getSectionLocations(numSections, L, xi);
+    double x = xi[isec] * L;
 
-  int order = sections[isec]->getOrder();
-  const ID &code = sections[isec]->getType();
+    int order = sections[isec]->getOrder();
+    const ID& code = sections[isec]->getType();
 
-  for (int i = 0; i < numEleLoads; i++) {
+    for (int i = 0; i < numEleLoads; i++) {
 
-    double loadFactor = eleLoadFactors[i];
-    const Vector &data = eleLoads[i]->getData(type, loadFactor);
+        double loadFactor = eleLoadFactors[i];
+        const Vector& data = eleLoads[i]->getData(type, loadFactor);
 
-    if (type == LOAD_TAG_Beam3dUniformLoad) {
-      double wy = data(0)*loadFactor;  // Transverse
-      double wz = data(1)*loadFactor;  // Transverse
-      double wa = data(2)*loadFactor;  // Axial
+        if (type == LOAD_TAG_Beam3dUniformLoad) {
+            double wy = data(0) * loadFactor;  // Transverse
+            double wz = data(1) * loadFactor;  // Transverse
+            double wa = data(2) * loadFactor;  // Axial
 
-      for (int ii = 0; ii < order; ii++) {
-	
-	switch(code(ii)) {
-	case SECTION_RESPONSE_P:
-	  sp(ii) += wa*(L-x);
-	  break;
-	case SECTION_RESPONSE_MZ:
-	  sp(ii) += wy*0.5*x*(x-L);
-	  break;
-	case SECTION_RESPONSE_VY:
-	  sp(ii) += wy*(x-0.5*L);
-	  break;
-	case SECTION_RESPONSE_MY:
-	  sp(ii) += wz*0.5*x*(L-x);
-	  break;
-	case SECTION_RESPONSE_VZ:
-	  sp(ii) += wz*(0.5*L-x);
-	  break;
-	default:
-	  break;
-	}
-      }
+            for (int ii = 0; ii < order; ii++) {
+
+                switch (code(ii)) {
+                case SECTION_RESPONSE_P:
+                    sp(ii) += wa * (L - x);
+                    break;
+                case SECTION_RESPONSE_MZ:
+                    sp(ii) += wy * 0.5 * x * (x - L);
+                    break;
+                case SECTION_RESPONSE_VY:
+                    sp(ii) += wy * (x - 0.5 * L);
+                    break;
+                case SECTION_RESPONSE_MY:
+                    sp(ii) += wz * 0.5 * x * (L - x);
+                    break;
+                case SECTION_RESPONSE_VZ:
+                    sp(ii) += wz * (0.5 * L - x);
+                    break;
+                default:
+                    break;
+                }
+            }
+        }
+        else if (type == LOAD_TAG_Beam3dPartialUniformLoad) {
+            double wa = data(2) * loadFactor;  // Axial
+            double wy = data(0) * loadFactor;  // Transverse
+            double wz = data(1) * loadFactor;  // Transverse
+            double a = data(3) * L;
+            double b = data(4) * L;
+
+            double Fa = wa * (b - a); // resultant axial load
+            double Fy = wy * (b - a); // resultant transverse load
+            double Fz = wz * (b - a); // resultant transverse load
+            double c = a + 0.5 * (b - a);
+            double VyI = Fy * (1 - c / L);
+            double VyJ = Fy * c / L;
+            double VzI = Fz * (1 - c / L);
+            double VzJ = Fz * c / L;
+
+            for (int ii = 0; ii < order; ii++) {
+
+                if (x <= a) {
+                    switch (code(ii)) {
+                    case SECTION_RESPONSE_P:
+                        sp(ii) += Fa;
+                        break;
+                    case SECTION_RESPONSE_MZ:
+                        sp(ii) -= VyI * x;
+                        break;
+                    case SECTION_RESPONSE_MY:
+                        sp(ii) += VzI * x;
+                        break;
+                    case SECTION_RESPONSE_VY:
+                        sp(ii) -= VyI;
+                        break;
+                    case SECTION_RESPONSE_VZ:
+                        sp(ii) -= VzI;
+                        break;
+                    default:
+                        break;
+                    }
+                }
+                else if (x >= b) {
+                    switch (code(ii)) {
+                    case SECTION_RESPONSE_MZ:
+                        sp(ii) += VyJ * (x - L);
+                        break;
+                    case SECTION_RESPONSE_MY:
+                        sp(ii) -= VzJ * (x - L);
+                        break;
+                    case SECTION_RESPONSE_VY:
+                        sp(ii) += VyJ;
+                        break;
+                    case SECTION_RESPONSE_VZ:
+                        sp(ii) += VzJ;
+                        break;
+                    default:
+                        break;
+                    }
+                }
+                else {
+                    switch (code(ii)) {
+                    case SECTION_RESPONSE_P:
+                        sp(ii) += Fa - wa * (x - a);
+                        break;
+                    case SECTION_RESPONSE_MZ:
+                        sp(ii) += -VyI * x + 0.5 * wy * x * x + wy * a * (0.5 * a - x);
+                        break;
+                    case SECTION_RESPONSE_MY:
+                        sp(ii) += VzI * x - 0.5 * wz * x * x - wz * a * (0.5 * a - x);
+                        break;
+                    case SECTION_RESPONSE_VY:
+                        sp(ii) += -VyI + wy * (x - a);
+                        break;
+                    case SECTION_RESPONSE_VZ:
+                        sp(ii) += -VzI + wz * (x - a);
+                        break;
+                    default:
+                        break;
+                    }
+                }
+            }
+        }
+        else if (type == LOAD_TAG_Beam3dPointLoad) {
+            double Py = data(0) * loadFactor;
+            double Pz = data(1) * loadFactor;
+            double N = data(2) * loadFactor;
+            double aOverL = data(3);
+
+            if (aOverL < 0.0 || aOverL > 1.0)
+                continue;
+
+            double a = aOverL * L;
+
+            double Vy1 = Py * (1.0 - aOverL);
+            double Vy2 = Py * aOverL;
+
+            double Vz1 = Pz * (1.0 - aOverL);
+            double Vz2 = Pz * aOverL;
+
+            for (int ii = 0; ii < order; ii++) {
+
+                if (x <= a) {
+                    switch (code(ii)) {
+                    case SECTION_RESPONSE_P:
+                        sp(ii) += N;
+                        break;
+                    case SECTION_RESPONSE_MZ:
+                        sp(ii) -= x * Vy1;
+                        break;
+                    case SECTION_RESPONSE_VY:
+                        sp(ii) -= Vy1;
+                        break;
+                    case SECTION_RESPONSE_MY:
+                        sp(ii) += x * Vz1;
+                        break;
+                    case SECTION_RESPONSE_VZ:
+                        sp(ii) -= Vz1;
+                        break;
+                    default:
+                        break;
+                    }
+                }
+                else {
+                    switch (code(ii)) {
+                    case SECTION_RESPONSE_MZ:
+                        sp(ii) -= (L - x) * Vy2;
+                        break;
+                    case SECTION_RESPONSE_VY:
+                        sp(ii) += Vy2;
+                        break;
+                    case SECTION_RESPONSE_MY:
+                        sp(ii) += (L - x) * Vz2;
+                        break;
+                    case SECTION_RESPONSE_VZ:
+                        sp(ii) += Vz2;
+                        break;
+                    default:
+                        break;
+                    }
+                }
+            }
+        }
+        // Section fiber load
+        else if (type == LOAD_TAG_Beam3dSectionLoad && creep_switch == 1) {
+            // Get data from the load command and apply load factor scale
+            int iSec = data(0);
+            int jSec = data(1);
+            int iFib = data(2);
+            int jFib = data(3);
+            double eps0 = data(4) * loadFactor;
+            double fcm = data(5);
+            double RH = data(6);
+            double h = data(7);
+            double t0 = data(8);
+
+            // Apply to fiber section
+            for (int i = iSec - 1; i < jSec; i++)
+                sections[i]->addLoad(iFib, jFib, eps0, fcm, RH, h, t0);
+
+        }
+        /*else {
+          opserr << "ForceBeamColumn3d::addLoad -- load type unknown for element with tag: " <<
+        this->getTag() << endln;
+        }*/
     }
-    else if (type == LOAD_TAG_Beam3dPartialUniformLoad) {
-      double wa = data(2)*loadFactor;  // Axial
-      double wy = data(0)*loadFactor;  // Transverse
-      double wz = data(1)*loadFactor;  // Transverse
-      double a = data(3)*L;
-      double b = data(4)*L;
 
-      double Fa = wa*(b-a); // resultant axial load
-      double Fy = wy*(b-a); // resultant transverse load
-      double Fz = wz*(b-a); // resultant transverse load
-      double c = a + 0.5*(b-a);
-      double VyI = Fy*(1-c/L);
-      double VyJ = Fy*c/L;
-      double VzI = Fz*(1-c/L);
-      double VzJ = Fz*c/L;      
-
-      for (int ii = 0; ii < order; ii++) {
-	
-	if (x <= a) {
-	  switch(code(ii)) {
-	  case SECTION_RESPONSE_P:
-	    sp(ii) += Fa;
-	    break;
-	  case SECTION_RESPONSE_MZ:
-	    sp(ii) -= VyI*x;
-	    break;
-	  case SECTION_RESPONSE_MY:
-	    sp(ii) += VzI*x;
-	    break;	    
-	  case SECTION_RESPONSE_VY:
-	    sp(ii) -= VyI;
-	    break;
-	  case SECTION_RESPONSE_VZ:
-	    sp(ii) -= VzI;
-	    break;	    
-	  default:
-	    break;
-	  }
-	}
-	else if (x >= b) {
-	  switch(code(ii)) {
-	  case SECTION_RESPONSE_MZ:
-	    sp(ii) += VyJ*(x-L);
-	    break;
-	  case SECTION_RESPONSE_MY:
-	    sp(ii) -= VzJ*(x-L);
-	    break;	    
-	  case SECTION_RESPONSE_VY:
-	    sp(ii) += VyJ;
-	    break;
-	  case SECTION_RESPONSE_VZ:
-	    sp(ii) += VzJ;	    
-	    break;
-	  default:
-	    break;
-	  }
-	}
-	else {
-	  switch(code(ii)) {
-	  case SECTION_RESPONSE_P:
-	    sp(ii) += Fa-wa*(x-a);
-	    break;
-	  case SECTION_RESPONSE_MZ:
-	    sp(ii) += -VyI*x + 0.5*wy*x*x + wy*a*(0.5*a-x);
-	    break;
-	  case SECTION_RESPONSE_MY:
-	    sp(ii) += VzI*x - 0.5*wz*x*x - wz*a*(0.5*a-x);
-	    break;	    
-	  case SECTION_RESPONSE_VY:
-	    sp(ii) += -VyI + wy*(x-a);
-	    break;
-	  case SECTION_RESPONSE_VZ:
-	    sp(ii) += -VzI + wz*(x-a);	    
-	    break;
-	  default:
-	    break;
-	  }
-	}
-      }
-    }
-    else if (type == LOAD_TAG_Beam3dPointLoad) {
-      double Py = data(0)*loadFactor;
-      double Pz = data(1)*loadFactor;
-      double N  = data(2)*loadFactor;
-      double aOverL = data(3);
-      
-      if (aOverL < 0.0 || aOverL > 1.0)
-	continue;
-      
-      double a = aOverL*L;
-      
-      double Vy1 = Py*(1.0-aOverL);
-      double Vy2 = Py*aOverL;
-      
-      double Vz1 = Pz*(1.0-aOverL);
-      double Vz2 = Pz*aOverL;
-
-      for (int ii = 0; ii < order; ii++) {
-	
-	if (x <= a) {
-	  switch(code(ii)) {
-	  case SECTION_RESPONSE_P:
-	    sp(ii) += N;
-	    break;
-	  case SECTION_RESPONSE_MZ:
-	    sp(ii) -= x*Vy1;
-	    break;
-	  case SECTION_RESPONSE_VY:
-	    sp(ii) -= Vy1;
-	    break;
-	  case SECTION_RESPONSE_MY:
-	    sp(ii) += x*Vz1;
-	    break;
-	  case SECTION_RESPONSE_VZ:
-	    sp(ii) -= Vz1;
-	    break;
-	  default:
-	    break;
-	  }
-	}
-	else {
-	  switch(code(ii)) {
-	  case SECTION_RESPONSE_MZ:
-	    sp(ii) -= (L-x)*Vy2;
-	    break;
-	  case SECTION_RESPONSE_VY:
-	    sp(ii) += Vy2;
-	    break;
-	  case SECTION_RESPONSE_MY:
-	    sp(ii) += (L-x)*Vz2;
-	    break;
-	  case SECTION_RESPONSE_VZ:
-	    sp(ii) += Vz2;
-	    break;
-	  default:
-	    break;
-	  }
-	}
-      }
-    }
-    // Section fiber load
-    else if (type == LOAD_TAG_Beam3dSectionLoad && creep_switch == 1) {
-        // Get data from the load command and apply load factor scale
-        int iSec = data(0);
-        int jSec = data(1);
-        int iFib = data(2);
-        int jFib = data(3);
-        double eps0 = data(4) * loadFactor;
-        double fcm = data(5);
-        double RH = data(6);
-        double h = data(7);
-        double t0 = data(8);
-
-        // Apply to fiber section
-        for (int i = iSec-1; i < jSec; i++)
-            sections[i]->addLoad(iFib, jFib, eps0, fcm, RH, h, t0);
-
-    }
-    /*else {
-      opserr << "ForceBeamColumn3d::addLoad -- load type unknown for element with tag: " <<
-	this->getTag() << endln;
-    }*/
-  }
-  
-  // Don't think we need to do this anymore -- MHS
-  //this->update(); // quick fix -- MHS
+    // Don't think we need to do this anymore -- MHS
+    //this->update(); // quick fix -- MHS
 }
 
 void

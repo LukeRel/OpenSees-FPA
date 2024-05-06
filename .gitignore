@@ -87,3 +87,5 @@ Win64/lib/debug/tcl.lib
 Win64/lib/debug/utility.lib
 Win64/proj/material/material.vcxproj
 Win64/proj/material/material.vcxproj.filters
+*.lib
+/Win64

@@ -3689,6 +3689,8 @@ namespace mpco {
 					// ./dispBeamColumn
 					elem_class_tag == ELE_TAG_DispBeamColumn2d || /*warning: no integrationPoints*/
 					elem_class_tag == ELE_TAG_DispBeamColumn3d || /*warning: no integrationPoints*/
+					elem_class_tag == ELE_TAG_DispBeamColumnBond2d || /*warning: no integrationPoints*/
+					// elem_class_tag == ELE_TAG_DispBeamColumnBond3d || /*warning: no integrationPoints*/
 					elem_class_tag == ELE_TAG_DispBeamColumn2dWithSensitivity || /*warning: no integrationPoints, no resp for all sections*/
 					elem_class_tag == ELE_TAG_DispBeamColumn3dWithSensitivity || /*warning: no integrationPoints, no resp for all sections*/
 																				 // ./dispBeamColumnInt

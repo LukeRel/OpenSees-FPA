@@ -658,6 +658,7 @@
 #define ELE_TAG_NineNodeMixedQuad          61
 #define ELE_TAG_DispBeamColumn2d        62
 #define ELE_TAG_DispBeamColumnNL2d        621
+#define ELE_TAG_DispBeamColumnBond2d    622 // Luca Parente 2024
 #define ELE_TAG_TimoshenkoBeamColumn2d  63
 #define ELE_TAG_DispBeamColumn3d        64
 #define ELE_TAG_DispBeamColumnNL3d        640

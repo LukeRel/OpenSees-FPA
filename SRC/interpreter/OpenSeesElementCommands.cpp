@@ -148,6 +148,7 @@ void* OPS_ForceBeamColumn3d();
 void* OPS_ForceBeamColumn2dThermal();
 //void* OPS_ForceBeamColumn3dThermal();
 void* OPS_DispBeamColumn2d(const ID& info);
+void* OPS_DispBeamColumnBond2d(const ID& info); // Luca Parente
 void* OPS_DispBeamColumnNL2d(const ID& info);
 void* OPS_DispBeamColumn3d();
 void* OPS_DispBeamColumnNL3d();
@@ -326,16 +327,30 @@ namespace {
 	}
     }
 
-    static void* OPS_DispBeamColumn()
-    {
-	int ndm = OPS_GetNDM();
-	if(ndm == 2) {
-	    ID info;
-	    return OPS_DispBeamColumn2d(info);
-	} else {
-	    return OPS_DispBeamColumn3d();
+	static void* OPS_DispBeamColumn()
+	{
+		int ndm = OPS_GetNDM();
+		if (ndm == 2) {
+			ID info;
+			return OPS_DispBeamColumn2d(info);
+		}
+		else {
+			return OPS_DispBeamColumn3d();
+		}
 	}
-    }
+
+	// Luca Parente
+	static void* OPS_DispBeamColumnBond()
+	{
+		int ndm = OPS_GetNDM();
+		if (ndm == 2) {
+			ID info;
+			return OPS_DispBeamColumnBond2d(info);
+		}
+		//else {
+		//	return OPS_DispBeamColumnBond3d();
+		//}
+	}
 
   static void* OPS_MixedBeamColumn()
     {

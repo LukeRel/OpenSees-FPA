@@ -1318,6 +1318,7 @@ GmshRecorder::setGMSHType()
     gmshtypes[ELE_TAG_NineNodeQuad] = GMSH_POLY_VERTEX;
     gmshtypes[ELE_TAG_EightNodeQuad] = GMSH_POLY_VERTEX;
     gmshtypes[ELE_TAG_DispBeamColumn2d] = GMSH_LINE;
+    gmshtypes[ELE_TAG_DispBeamColumnBond2d] = GMSH_LINE; // Luca Parente
     gmshtypes[ELE_TAG_TimoshenkoBeamColumn2d] = GMSH_LINE;
     gmshtypes[ELE_TAG_DispBeamColumn3d] = GMSH_LINE;
     gmshtypes[ELE_TAG_DispBeamColumnWarping3d] = GMSH_LINE;
