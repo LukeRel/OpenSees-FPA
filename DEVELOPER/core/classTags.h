@@ -725,6 +725,8 @@
 
 #define ELE_TAG_ASDEmbeddedNodeElement             217  // Massimo Petracca (ASDEA)
 
+#define ELE_TAG_Inno3DPnPJoint			  263
+
 #define FRN_TAG_Coulomb            1
 #define FRN_TAG_VelDependent       2
 #define FRN_TAG_VelPressureDep     3
@@ -910,6 +912,9 @@
 #define INTEGRATOR_TAGS_ExplicitDifference              55
 #define INTEGRATOR_TAGS_EQPath                          56
 #define INTEGRATOR_TAGS_GimmeMCK                        57
+#define INTEGRATOR_TAGS_StagedLoadControl               58
+#define INTEGRATOR_TAGS_StagedNewmark                   59
+#define INTEGRATOR_TAGS_HarmonicSteadyState             60
 
 #define LinSOE_TAGS_FullGenLinSOE		1
 #define LinSOE_TAGS_BandGenLinSOE		2

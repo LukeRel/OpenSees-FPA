@@ -4,9 +4,10 @@
 #                Pacific Earthquake Engineering Research Center
 #
 #==============================================================================
-add_library(OPS_Element_PFEMElement)
+#add_library(OPS_Element_PFEMElement)
 
-target_sources(OPS_Element_PFEMElement
+#target_sources(OPS_Element_PFEMElement
+target_sources(OPS_PFEM
     PRIVATE
         BackgroundDef.cpp
         BackgroundFixData.cpp
@@ -23,6 +24,7 @@ target_sources(OPS_Element_PFEMElement
         Particle.cpp
         ParticleGroup.cpp
         PFEMContact2D.cpp
+        PFEMContact3D.cpp
         PFEMElement2DBubble.cpp
         PFEMElement2DCompressible.cpp
         PFEMElement2D.cpp
@@ -44,6 +46,9 @@ target_sources(OPS_Element_PFEMElement
         TriangleMeshGenerator.cpp
         TriGaussPoints.cpp
         TriMesh.cpp
+        Flume.cpp
+        BeamBrick.cpp
+        BeamDisk.cpp
     PUBLIC
         BackgroundDef.h
         BackgroundFixData.h
@@ -60,6 +65,7 @@ target_sources(OPS_Element_PFEMElement
         ParticleGroup.h
         Particle.h
         PFEMContact2D.h
+        PFEMContact3D.h
         PFEMElement2DBubble.h
         PFEMElement2DCompressible.h
         PFEMElement2DFIC.h
@@ -80,7 +86,10 @@ target_sources(OPS_Element_PFEMElement
         TriangleMeshGenerator.h
         TriGaussPoints.h
         TriMesh.h
+        Flume.h
+        BeamBrick.h
+        BeamDisk.h
 )
 
-target_include_directories(OPS_Element_PFEMElement PUBLIC ${CMAKE_CURRENT_LIST_DIR})
+target_include_directories(OPS_PFEM PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 

@@ -44,7 +44,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
+#include <cmath>
 #include <ElementResponse.h>
 #include <elementAPI.h>
 #include <map>
@@ -438,7 +438,7 @@ const Matrix& ZeroLengthContactASDimplex::getInitialStiff()
 
 const Matrix& ZeroLengthContactASDimplex::getDamp()
 {
-    // get global storage for gloabl DOFset
+    // get global storage for global DOFset
     auto& gs = getGlobalStorage(numDOF[0] + numDOF[1]);
     gs.D.Zero();
     return gs.D;
@@ -843,7 +843,7 @@ int ZeroLengthContactASDimplex::getResponse(int responseID, Information& eleInfo
     }
     else if (responseID == 7) {
         // tangential contanct force norm
-        scalar(0) = std::sqrt(sv.sig(1)*sv.sig(1) + sv.sig(2)*sv.sig(2));
+        scalar(0) = sqrt(sv.sig(1)*sv.sig(1) + sv.sig(2)*sv.sig(2));
         return eleInfo.setVector(scalar);
     }
     else if (responseID == 8) {
@@ -1001,7 +1001,7 @@ void ZeroLengthContactASDimplex::updateInternal(bool do_implex, bool do_tangent)
     double T2 = sv.shear(1) + Kfriction * (sv.eps(2) - sv.eps_commit(2));
 
     // tangential stress norm
-    double SS = std::sqrt(T1 * T1 + T2 * T2);
+    double SS = sqrt(T1 * T1 + T2 * T2);
 
     // compute residual stress in shear
     if (do_implex && use_implex) {
@@ -1045,7 +1045,7 @@ void ZeroLengthContactASDimplex::updateInternal(bool do_implex, bool do_tangent)
 
     // extract compressive normal stress
     if (do_implex && use_implex) {
-        // explicit extrapolation (actually keep the commited one... since it's either 0 or 1)
+        // explicit extrapolation (actually keep the committed one... since it's either 0 or 1)
         sv.PC = sv.PC_commit;
     }
     else {

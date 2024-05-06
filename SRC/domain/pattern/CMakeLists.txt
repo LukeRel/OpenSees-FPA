@@ -22,6 +22,8 @@ target_sources(OPS_Domain
         TrapezoidalTimeSeriesIntegrator.cpp
         TriangleSeries.cpp
         TrigSeries.cpp
+        RampSeries.cpp
+	MPAccSeries.cpp
         UniformExcitation.cpp
     PUBLIC
         ConstantSeries.h
@@ -40,6 +42,8 @@ target_sources(OPS_Domain
         TrapezoidalTimeSeriesIntegrator.h
         TriangleSeries.h
         TrigSeries.h
+        RampSeries.h
+	MPAccSeries.h
         UniformExcitation.h
 )
 
@@ -65,6 +69,17 @@ target_sources(OPS_Domain
 #        TclSeriesIntegratorCommand.cpp
 #        TclPatternCommand.cpp
 #)
+
+
+
+target_sources(OPS_Reliability
+    PRIVATE
+    SimulatedRandomProcessSeries.cpp
+    DiscretizedRandomProcessSeries.cpp    
+    PUBLIC
+    SimulatedRandomProcessSeries.h
+    DiscretizedRandomProcessSeries.h    
+)
 
 target_include_directories(OPS_Domain PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 

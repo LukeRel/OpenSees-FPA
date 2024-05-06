@@ -33,6 +33,7 @@
 #include <FEM_ObjectBroker.h>
 #include <Information.h>
 #include <Parameter.h>
+#include <MaterialResponse.h>
 
 #include <OPS_Globals.h>
 
@@ -149,10 +150,7 @@ InitStrainMaterial::getDampTangent(void)
 double 
 InitStrainMaterial::getStrain(void)
 {
-  if (theMaterial)
-    return theMaterial->getStrain();
-  else
-    return 0.0;
+  return localStrain;
 }
 
 double 
@@ -290,6 +288,15 @@ InitStrainMaterial::recvSelf(int cTag, Channel &theChannel,
 void 
 InitStrainMaterial::Print(OPS_Stream &s, int flag)
 {
+    if (flag == OPS_PRINT_PRINTMODEL_MATERIAL) {
+        s << "InitStrainMaterial tag: " << this->getTag() << endln;
+        if (theMaterial)
+            s << "\tMaterial: " << theMaterial->getTag() << endln;
+        else
+            s << "\tMaterial is NULL" << endln;
+        s << "\tInitial strain: " << epsInit << endln;
+    }
+
 	if (flag == OPS_PRINT_PRINTMODEL_JSON) {
 		s << "\t\t\t{";
 		s << "\"name\": \"" << this->getTag() << "\", ";
@@ -299,14 +306,39 @@ InitStrainMaterial::Print(OPS_Stream &s, int flag)
 		else
 		  s << "\"Material\": " << "NULL" << ", ";
 		s << "\"initialStrain\": " << epsInit <<  "}";
-	} else {
-		s << "InitStrainMaterial tag: " << this->getTag() << endln;
-		if (theMaterial)
-		  s << "\tMaterial: " << theMaterial->getTag() << endln;
-		else
-		  s << "\tMaterial is NULL" << endln;
-		s << "\tinitital strain: " << epsInit << endln;
 	}
+}
+
+Response*
+InitStrainMaterial::setResponse(const char **argv, int argc, OPS_Stream &theOutput)
+{
+  Response *theResponse = 0;
+
+  if (strcmp(argv[0],"strain") == 0) {
+    theResponse = new MaterialResponse(this, 100, 0.0);
+    return theResponse;
+  }
+
+  if (strcmp(argv[0],"material") == 0) {
+    theResponse = theMaterial->setResponse(&argv[1], argc-1, theOutput);
+  }
+
+  if (theResponse == 0)
+    theResponse = UniaxialMaterial::setResponse(argv, argc, theOutput);
+
+  return theResponse;
+}
+
+int
+InitStrainMaterial::getResponse(int responseID, Information &info)
+{
+  if (responseID == 100)
+    return info.setDouble(localStrain+epsInit);
+
+  if (theMaterial != 0)
+    return theMaterial->getResponse(responseID, info);
+
+  return UniaxialMaterial::getResponse(responseID, info);
 }
 
 int 

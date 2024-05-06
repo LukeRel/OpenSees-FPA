@@ -76,6 +76,10 @@ class LayeredShellFiberSectionThermal : public SectionForceDeformation{
     Response *setResponse(const char **argv, int argc, OPS_Stream &s);
     int getResponse(int responseID, Information &info);
 
+    // parameters
+    int setParameter(const char** argv, int argc, Parameter& param);
+    int updateParameter(int parameterID, Information& info);
+
     //send back order of strain in vector form
     const ID& getType( ) ;
 
@@ -134,7 +138,7 @@ class LayeredShellFiberSectionThermal : public SectionForceDeformation{
 
     static ID array ;  
 
-	Vector  *sT;  //  Pointer to sTData
+	Vector  sT;  //  Pointer to sTData
 	double  *ThermalElongation; // thermal elongation
 	int countnGauss;
 	double AverageThermalForceP ;

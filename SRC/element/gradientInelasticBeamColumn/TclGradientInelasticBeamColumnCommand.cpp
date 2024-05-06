@@ -281,7 +281,7 @@ TclModelBuilder_addGradientInelasticBeamColumn(ClientData clientData, Tcl_Interp
 				constH = true;
 
 		// now create the NonlocalBeamColumn
-		theElement = new GradientInelasticBeamColumn2d(tag, iNode, jNode, numIntegrPts, &endSection1, &intSection, &endSection2, secLR1, secLR2, *beamIntegr, *theTransf2d, lc, minTol, maxTol, maxIter, constH, correctionControl, maxEpsInc, maxPhiInc);
+		theElement = new GradientInelasticBeamColumn2d(tag, iNode, jNode, numIntegrPts, *endSection1, *intSection, *endSection2, secLR1, secLR2, *beamIntegr, *theTransf2d, lc, minTol, maxTol, maxIter, constH, correctionControl, maxEpsInc, maxPhiInc);
 
 		if (!theElement) {
 			opserr << "WARNING ran out of memory creating element";
@@ -519,7 +519,7 @@ TclModelBuilder_addGradientInelasticBeamColumn(ClientData clientData, Tcl_Interp
 				constH = true;
 
 		// now create the NonlocalBeamColumn
-		theElement = new GradientInelasticBeamColumn3d(tag, iNode, jNode, numIntegrPts, &endSection1, &intSection, &endSection2, secLR1, secLR2, *beamIntegr, *theTransf3d, lc, minTol, maxTol, maxIter, constH, correctionControl, maxEpsInc, maxPhiInc);
+		theElement = new GradientInelasticBeamColumn3d(tag, iNode, jNode, numIntegrPts, *endSection1, *intSection, *endSection2, secLR1, secLR2, *beamIntegr, *theTransf3d, lc, minTol, maxTol, maxIter, constH, correctionControl, maxEpsInc, maxPhiInc);
 
 		if (!theElement) {
 			opserr << "WARNING ran out of memory creating element";
@@ -541,7 +541,7 @@ TclModelBuilder_addGradientInelasticBeamColumn(ClientData clientData, Tcl_Interp
 		return TCL_ERROR;
 	}
 
-	// if get here we have sucessfully created the NonlocalBeamColumn and added it to the domain
+	// if get here we have successfully created the NonlocalBeamColumn and added it to the domain
 	return TCL_OK;
 }
 

@@ -133,7 +133,7 @@ int
 modalProperties(ClientData clientData, Tcl_Interp* interp, int argc, TCL_Char** argv);
 
 int
-responseSpectrum(ClientData clientData, Tcl_Interp* interp, int argc, TCL_Char** argv);
+responseSpectrumAnalysis(ClientData clientData, Tcl_Interp* interp, int argc, TCL_Char** argv);
 
 int 
 videoPlayer(ClientData clientData, Tcl_Interp *interp, int argc, TCL_Char **argv);
@@ -210,6 +210,9 @@ calculateNodalReactions(ClientData clientData, Tcl_Interp *interp, int argc, TCL
 
 int 
 getNodeTags(ClientData clientData, Tcl_Interp *interp, int argc, TCL_Char **argv);
+
+int 
+getCrdTransfTags(ClientData clientData, Tcl_Interp *interp, int argc, TCL_Char **argv);
 
 int 
 getEleTags(ClientData clientData, Tcl_Interp *interp, int argc, TCL_Char **argv);

@@ -1505,7 +1505,7 @@ DispBeamColumnNL2d::setResponse(const char **argv, int argc,
   }
 
   // section response -
-  else if (strstr(argv[0],"sectionX") != 0) {
+  else if (strcmp(argv[0],"sectionX") == 0) {
     if (argc > 2) {
       float sectionLoc = atof(argv[1]);
 
@@ -1531,7 +1531,7 @@ DispBeamColumnNL2d::setResponse(const char **argv, int argc,
       theResponse = theSections[sectionNum]->setResponse(&argv[2], argc-2, output);
     }
   }
-  else if (strstr(argv[0],"section") != 0) {
+  else if (strcmp(argv[0],"section") == 0) {
 
     if (argc > 1) {
       
@@ -1604,6 +1604,9 @@ DispBeamColumnNL2d::setResponse(const char **argv, int argc,
 
   else if (strcmp(argv[0],"sectionTags") == 0)
     theResponse = new ElementResponse(this, 110, ID(numSections));
+
+  if (theResponse == 0)
+    theResponse = crdTransf->setResponse(argv, argc, output);
   
   output.endTag();
   return theResponse;

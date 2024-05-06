@@ -183,6 +183,7 @@ extern "C" int         OPS_ResetInputNoBuilder(ClientData clientData, Tcl_Interp
 #include <DOF_Numberer.h>
 
 // integrators
+// #include <HarmonicSteadyState.h>
 #include <LoadControl.h>
 #include <StagedLoadControl.h>
 #include <ArcLength.h>
@@ -199,6 +200,9 @@ extern "C" int         OPS_ResetInputNoBuilder(ClientData clientData, Tcl_Interp
 //  recorders
 #include <Recorder.h> //SAJalali
 
+// transformations
+#include <CrdTransf.h>
+
 extern void *OPS_NewtonRaphsonAlgorithm(void);
 extern void *OPS_ExpressNewton(void);
 extern void *OPS_ModifiedNewton(void);
@@ -207,6 +211,7 @@ extern void *OPS_NewtonHallM(void);
 extern void *OPS_Newmark(void);
 extern void *OPS_StagedNewmark(void);
 extern void *OPS_GimmeMCK(void);
+//extern void *OPS_HarmonicSteadyState(void);
 extern void *OPS_AlphaOS(void);
 extern void *OPS_AlphaOS_TP(void);
 extern void *OPS_AlphaOSGeneralized(void);
@@ -243,8 +248,9 @@ extern void *OPS_NewmarkHSIncrReduct(void);
 extern void *OPS_WilsonTheta(void);
 
 // for response spectrum analysis
-extern void OPS_DomainModalProperties(void);
-extern void OPS_ResponseSpectrumAnalysis(void);
+extern int OPS_DomainModalProperties(void);
+extern int OPS_ResponseSpectrumAnalysis(void);
+extern int OPS_sdfResponse(void);
 
 #include <Newmark.h>
 #include <StagedNewmark.h>
@@ -254,6 +260,7 @@ extern void OPS_ResponseSpectrumAnalysis(void);
 #include <Houbolt.h>
 #include <ParkLMS3.h>
 #include <BackwardEuler.h>
+#include <ExplicitDifference.h>
 
 // analysis
 #include <StaticAnalysis.h>
@@ -418,7 +425,7 @@ ModelBuilder *theBuilder =0;
 
 #include <DistributedDisplacementControl.h>
 #include <ShadowSubdomain.h>
-#include <Metis.h>
+#include <MetisWrapper.h>
 #include <ShedHeaviest.h>
 #include <DomainPartitioner.h>
 #include <GraphPartitioner.h>
@@ -542,6 +549,7 @@ static TclReliabilityBuilder *theReliabilityBuilder = 0;
 
 Integrator *theSensitivityAlgorithm = 0;
 Integrator *theSensitivityIntegrator = 0;
+
 //FMK RELIABILITY ReliabilityStaticAnalysis *theReliabilityStaticAnalysis = 0;
 //FMK RELIABILITY ReliabilityDirectIntegrationAnalysis *theReliabilityTransientAnalysis = 0;
 
@@ -552,11 +560,12 @@ Integrator *theSensitivityIntegrator = 0;
 //static SensitivityIntegrator *theSensitivityIntegrator = 0;
 //static NewmarkSensitivityIntegrator *theNSI = 0;
 
+#endif
+
+#ifdef _OPTIMIZATION
 #include <TclOptimizationBuilder.h>
 static TclOptimizationBuilder *theOptimizationBuilder = 0;   // Quan March 2010 (3)
-
 #endif
-// AddingSensitivity:END ///////////////////////////////////////////////
 
 
 StaticIntegrator *theStaticIntegrator =0;
@@ -681,7 +690,7 @@ static Tcl_ObjCmdProc *Tcl_putsCommand = 0;
 
 int OpenSees_putsCommand(ClientData dummy,  Tcl_Interp *interp, int objc, Tcl_Obj *const objv[])
 {
-    Tcl_Channel chan;           /* The channel to puts on. */
+    //Tcl_Channel chan;         /* The channel to puts on. */
     Tcl_Obj *string;            /* String to write. */
     Tcl_Obj *chanObjPtr = NULL; /* channel object. */
     int newline;                /* Add a newline at end? */
@@ -802,7 +811,7 @@ int OpenSeesAppInit(Tcl_Interp *interp) {
     Tcl_CmdInfo putsCommandInfo;
     Tcl_GetCommandInfo(interp, "puts", &putsCommandInfo);
     Tcl_putsCommand = putsCommandInfo.objProc;
-    // if handle, use ouur procedure as opposed to theirs
+    // if handle, use our procedure as opposed to theirs
     if (Tcl_putsCommand != 0) {
       Tcl_CreateObjCommand(interp, "oldputs", Tcl_putsCommand, NULL, NULL);
       Tcl_CreateObjCommand(interp, "puts", OpenSees_putsCommand, NULL, NULL);
@@ -882,8 +891,10 @@ int OpenSeesAppInit(Tcl_Interp *interp) {
 		      (ClientData)NULL, (Tcl_CmdDeleteProc *)NULL);
     Tcl_CreateCommand(interp, "test", &specifyCTest, 
 		      (ClientData)NULL, (Tcl_CmdDeleteProc *)NULL);    
+    Tcl_CreateCommand(interp, "testNorm", &getCTestNorms, 
+		      (ClientData)NULL, (Tcl_CmdDeleteProc *)NULL);
     Tcl_CreateCommand(interp, "testNorms", &getCTestNorms, 
-		      (ClientData)NULL, (Tcl_CmdDeleteProc *)NULL);    
+		      (ClientData)NULL, (Tcl_CmdDeleteProc *)NULL);	
     Tcl_CreateCommand(interp, "testIter", &getCTestIter, 
 		      (ClientData)NULL, (Tcl_CmdDeleteProc *)NULL);    
 
@@ -899,7 +910,7 @@ int OpenSeesAppInit(Tcl_Interp *interp) {
 		      (ClientData)NULL, (Tcl_CmdDeleteProc *)NULL);       
     Tcl_CreateCommand(interp, "modalProperties", &modalProperties,
         (ClientData)NULL, (Tcl_CmdDeleteProc*)NULL);
-    Tcl_CreateCommand(interp, "responseSpectrum", &responseSpectrum,
+    Tcl_CreateCommand(interp, "responseSpectrumAnalysis", &responseSpectrumAnalysis,
         (ClientData)NULL, (Tcl_CmdDeleteProc*)NULL);
     Tcl_CreateCommand(interp, "video", &videoPlayer, 
 		      (ClientData)NULL, (Tcl_CmdDeleteProc *)NULL);       
@@ -1008,22 +1019,24 @@ int OpenSeesAppInit(Tcl_Interp *interp) {
 		      (ClientData)NULL, (Tcl_CmdDeleteProc *)NULL);  
     Tcl_CreateCommand(interp, "getNodeTags", &getNodeTags, 
 		      (ClientData)NULL, (Tcl_CmdDeleteProc *)NULL);  
+    Tcl_CreateCommand(interp, "getCrdTransfTags", &getCrdTransfTags, 
+          (ClientData)NULL, (Tcl_CmdDeleteProc *)NULL); 
     Tcl_CreateCommand(interp, "getParamTags", &getParamTags, 
 		      (ClientData)NULL, (Tcl_CmdDeleteProc *)NULL);  
     Tcl_CreateCommand(interp, "getParamValue", &getParamValue, 
 		      (ClientData)NULL, (Tcl_CmdDeleteProc *)NULL);  
               
-    Tcl_CreateCommand(interp, "fixedNodes", &fixedNodes,
+    Tcl_CreateCommand(interp, "getFixedNodes", &fixedNodes,
         (ClientData)NULL, (Tcl_CmdDeleteProc*)NULL);
-    Tcl_CreateCommand(interp, "fixedDOFs", &fixedDOFs,
+    Tcl_CreateCommand(interp, "getFixedDOFs", &fixedDOFs,
         (ClientData)NULL, (Tcl_CmdDeleteProc*)NULL);
-    Tcl_CreateCommand(interp, "constrainedNodes", &constrainedNodes,
+    Tcl_CreateCommand(interp, "getConstrainedNodes", &constrainedNodes,
         (ClientData)NULL, (Tcl_CmdDeleteProc*)NULL);
-    Tcl_CreateCommand(interp, "constrainedDOFs", &constrainedDOFs,
+    Tcl_CreateCommand(interp, "getConstrainedDOFs", &constrainedDOFs,
         (ClientData)NULL, (Tcl_CmdDeleteProc*)NULL);
-    Tcl_CreateCommand(interp, "retainedNodes", &retainedNodes,
+    Tcl_CreateCommand(interp, "getRetainedNodes", &retainedNodes,
         (ClientData)NULL, (Tcl_CmdDeleteProc*)NULL);
-    Tcl_CreateCommand(interp, "retainedDOFs", &retainedDOFs,
+    Tcl_CreateCommand(interp, "getRetainedDOFs", &retainedDOFs,
         (ClientData)NULL, (Tcl_CmdDeleteProc*)NULL);
 
     Tcl_CreateCommand(interp, "getNumElements", &getNumElements,
@@ -1122,13 +1135,17 @@ int OpenSeesAppInit(Tcl_Interp *interp) {
     //FMK RELIABILITY theReliabilityTransientAnalysis =0;    
     // AddingSensitivity:END //////////////////////////////////
 
+#endif
+
+#ifdef _OPTIMIZATION    
     theOptimizationBuilder = 0;
     
     // --- Quan March 2010  (4)
     Tcl_CreateCommand(interp, "optimization", &optimization, 
 		      (ClientData)NULL, (Tcl_CmdDeleteProc *)NULL); 
-#endif
 
+#endif
+    
     theAlgorithm =0;
     theHandler =0;
     theNumberer =0;
@@ -1229,7 +1246,7 @@ OPS_SourceCmd(
 #endif
 }
 
-#ifdef _RELIABILITY   
+#ifdef _OPTIMIZATION
 
 // -- optimization Quan March 2010  (5)
 int 
@@ -1247,6 +1264,9 @@ optimization(ClientData clientData, Tcl_Interp *interp, int argc, TCL_Char **arg
     return TCL_ERROR;
 }
 
+#endif
+
+#ifdef _RELIABILITY
 
 int 
 reliability(ClientData clientData, Tcl_Interp *interp, int argc, TCL_Char **argv)
@@ -1259,8 +1279,6 @@ reliability(ClientData clientData, Tcl_Interp *interp, int argc, TCL_Char **argv
   else
     return TCL_ERROR;
 }
-
-
 
 
 int 
@@ -1407,7 +1425,7 @@ wipeModel(ClientData clientData, Tcl_Interp *interp, int argc, TCL_Char **argv)
   */
 
   // NOTE : DON'T do the above on theVariableTimeStepAnalysis
-  // as it and theTansientAnalysis are one in the same
+  // as it and theTransientAnalysis are one in the same
   if (theDatabase != 0)
     delete theDatabase;
 
@@ -1489,7 +1507,7 @@ wipeAnalysis(ClientData clientData, Tcl_Interp *interp, int argc, TCL_Char **arg
   }
 
   // NOTE : DON'T do the above on theVariableTimeStepAnalysis
-  // as it and theTansientAnalysis are one in the same
+  // as it and theTransientAnalysis are one in the same
 
   theAlgorithm =0;
   theHandler =0;
@@ -1904,7 +1922,7 @@ analyzeModel(ClientData clientData, Tcl_Interp *interp, int argc, TCL_Char **arg
 
   if (theStaticAnalysis != 0) {
     if (argc < 2) {
-      opserr << "WARNING static analysis: analysis numIncr?\n";
+      opserr << "WARNING static analysis: analysis numIncr? <-noFlush>\n";
       return TCL_ERROR;
     }
     int numIncr;
@@ -1912,12 +1930,25 @@ analyzeModel(ClientData clientData, Tcl_Interp *interp, int argc, TCL_Char **arg
     if (Tcl_GetInt(interp, argv[1], &numIncr) != TCL_OK)	
       return TCL_ERROR;	      
 
-    result = theStaticAnalysis->analyze(numIncr);
+    bool flush = true;
+    if (argc > 2) {
+      if (strcmp(argv[2], "-noFlush") == 0) {
+        flush = false;
+      }
+    }
+
+    result = theStaticAnalysis->analyze(numIncr, flush);
   } else if(thePFEMAnalysis != 0) {
-      result = thePFEMAnalysis->analyze();
+    bool flush = true;
+    if (argc > 1) {
+      if (strcmp(argv[1], "-noFlush") == 0) {
+        flush = false;
+      }
+    }
+    result = thePFEMAnalysis->analyze(flush);
   } else if (theTransientAnalysis != 0) {
     if (argc < 3) {
-      opserr << "WARNING transient analysis: analysis numIncr? deltaT?\n";
+      opserr << "WARNING transient analysis: analysis numIncr? deltaT? <-noFlush>\n";
       return TCL_ERROR;
     }
     int numIncr;
@@ -1930,7 +1961,14 @@ analyzeModel(ClientData clientData, Tcl_Interp *interp, int argc, TCL_Char **arg
     // Set global timestep variable
     ops_Dt = dT;
 
-    if (argc == 6) {
+    bool flush = true;
+    if (argc == 4) {
+      if (strcmp(argv[3], "-noFlush") == 0) {
+        flush = false;
+      }
+    }
+
+    if (argc >= 6) {
       int Jd;
       double dtMin, dtMax;
       if (Tcl_GetDouble(interp, argv[3], &dtMin) != TCL_OK)	
@@ -1939,16 +1977,21 @@ analyzeModel(ClientData clientData, Tcl_Interp *interp, int argc, TCL_Char **arg
 	return TCL_ERROR;
       if (Tcl_GetInt(interp, argv[5], &Jd) != TCL_OK)	
 	return TCL_ERROR;
+      if (argc > 6) {
+        if (strcmp(argv[6], "-noFlush") == 0) {
+        flush = false;
+      }
+      }
 
       if (theVariableTimeStepTransientAnalysis != 0)
-	result =  theVariableTimeStepTransientAnalysis->analyze(numIncr, dT, dtMin, dtMax, Jd);
+	result =  theVariableTimeStepTransientAnalysis->analyze(numIncr, dT, dtMin, dtMax, Jd, flush);
       else {
 	opserr << "WARNING analyze - no variable time step transient analysis object constructed\n";
 	return TCL_ERROR;
       }
 
     } else {
-      result = theTransientAnalysis->analyze(numIncr, dT);
+      result = theTransientAnalysis->analyze(numIncr, dT, flush);
     }
 
   } else {
@@ -2078,7 +2121,7 @@ printModel(ClientData clientData, Tcl_Interp *interp, int argc, TCL_Char **argv)
 								   
 
 // printNode():
-// function to print out the nodal information conatined in line
+// function to print out the nodal information contained in line
 //     print <filename> node <flag int> <int int int>
 // input: nodeArg: integer equal to arg count to node plus 1
 //        output: output stream to which the results are sent
@@ -2638,7 +2681,7 @@ specifyAnalysis(ClientData clientData, Tcl_Interp *interp, int argc,
 
 	  /* This if-statement cannot possibly stay in the code -- MHS
 	  if(theSensitivityAlgorithm->newAlgorithm()){
-	    opserr << "WARNING original sensitivity algorothm needs to be specified \n";
+	    opserr << "WARNING original sensitivity algorithm needs to be specified \n";
 	    opserr << "for static analysis \n";
 	    return TCL_ERROR;
 	  }
@@ -2707,7 +2750,7 @@ specifyAnalysis(ClientData clientData, Tcl_Interp *interp, int argc,
 	   *theTransientIntegrator,
 	   theTest);
 
-	// set the pointer for variabble time step analysis
+	// set the pointer for variable time step analysis
 	theTransientAnalysis = theVariableTimeStepTransientAnalysis;
 
 	#ifdef _RELIABILITY
@@ -2762,7 +2805,7 @@ specifyAnalysis(ClientData clientData, Tcl_Interp *interp, int argc,
 
 		  //This if-statement cannot stay -- MHS
 		  //if(!theSensitivityAlgorithm->newAlgorithm()){
-		  //  opserr << "WARNING new sensitivity algorothm needs to be specified \n";
+		  //  opserr << "WARNING new sensitivity algorithm needs to be specified \n";
 		   // opserr << "for reliability static analysis \n";
 		   // return TCL_ERROR;
 		  //}
@@ -2824,7 +2867,7 @@ specifyAnalysis(ClientData clientData, Tcl_Interp *interp, int argc,
 
 		  //This if-statement must go -- MHS
 		  //if(!theSensitivityAlgorithm->newAlgorithm()){
-		   // opserr << "WARNING new sensitivity algorothm needs to be specified \n";
+		   // opserr << "WARNING new sensitivity algorithm needs to be specified \n";
 		   // opserr << "for reliability static analysis \n";
 		   // return TCL_ERROR;
 		  //}
@@ -3545,7 +3588,7 @@ specifySOE(ClientData clientData, Tcl_Interp *interp, int argc, TCL_Char **argv)
 
       void *libHandle;
       void *(*funcPtr)();
-      int solverNameLength = strlen(argv[1]);
+      int solverNameLength = int(strlen(argv[1]));
       char *tclFuncName = new char[solverNameLength+5];
       strcpy(tclFuncName, "OPS_");
       strcpy(&tclFuncName[4], argv[1]);    
@@ -3920,6 +3963,9 @@ specifyAlgorithm(ClientData clientData, Tcl_Interp *interp, int argc,
     int incrementTangent = CURRENT_TANGENT;
     int iterateTangent = CURRENT_TANGENT;
     int maxDim = 3;
+    int numTerms = 2;
+    bool cutOut = false;
+    double R[2];
     for (int i = 2; i < argc; i++) {
       if (strcmp(argv[i],"-iterate") == 0 && i+1 < argc) {
 	i++;
@@ -3943,6 +3989,17 @@ specifyAlgorithm(ClientData clientData, Tcl_Interp *interp, int argc,
 	i++;
 	maxDim = atoi(argv[i]);
       }
+      else if (strcmp(argv[i],"-numTerms") == 0 && i+1 < argc) {
+	i++;
+	numTerms = atoi(argv[i]);
+      }
+      else if ((strcmp(argv[i],"-cutOut") ==0 || strcmp(argv[i],"-cutout") == 0) && i+2 < argc) {
+	i++;
+	R[0] = atof(argv[i]);
+	i++;
+	R[1] = atof(argv[i]);
+	cutOut = true;
+      }         
     }
 
     if (theTest == 0) {
@@ -3950,8 +4007,22 @@ specifyAlgorithm(ClientData clientData, Tcl_Interp *interp, int argc,
       return TCL_ERROR;	  
     }
 
-    Accelerator *theAccel;
-    theAccel = new SecantAccelerator2(maxDim, iterateTangent); 
+    Accelerator *theAccel = 0;
+    if (numTerms <= 1)
+      if (cutOut)
+	theAccel = new SecantAccelerator1(maxDim, iterateTangent, R[0], R[1]);
+      else
+	theAccel = new SecantAccelerator1(maxDim, iterateTangent);
+    if (numTerms >= 3)
+      if (cutOut)
+	theAccel = new SecantAccelerator3(maxDim, iterateTangent, R[0], R[1]);
+      else
+	theAccel = new SecantAccelerator3(maxDim, iterateTangent);
+    if (numTerms == 2)
+      if (cutOut)
+	theAccel = new SecantAccelerator2(maxDim, iterateTangent, R[0], R[1]);
+      else
+	theAccel = new SecantAccelerator2(maxDim, iterateTangent);            
 
     theNewAlgo = new AcceleratedNewton(*theTest, theAccel, incrementTangent);
   }
@@ -4170,7 +4241,7 @@ specifyCTest(ClientData clientData, Tcl_Interp *interp, int argc,
       return TCL_ERROR;
   }    
 
-  // get the tolerence first
+  // get the tolerance first
   double tol = 0.0;
   double tol2 = 0.0;
   double tolp = 0.0;
@@ -4464,7 +4535,11 @@ specifyIntegrator(ClientData clientData, Tcl_Interp *interp, int argc,
       if (theStaticAnalysis != 0)
         theStaticAnalysis->setIntegrator(*theStaticIntegrator);
       }
-  
+
+  //else if (strcmp(argv[1],"HarmonicSteadyState") == 0 || strcmp(argv[1],"HarmonicSS") == 0) {
+  //  theStaticIntegrator = (StaticIntegrator*)OPS_HarmonicSteadyState();
+  // }
+
   else if (strcmp(argv[1],"ArcLength") == 0) {
       double arcLength;
       double alpha;
@@ -4577,7 +4652,6 @@ specifyIntegrator(ClientData clientData, Tcl_Interp *interp, int argc,
   else if (strcmp(argv[1], "EQPath") == 0) {
 		double arcLength;
 		int type;
-		int numIter;
 		if (argc != 4) {
 			opserr << "WARNING integrator EQPath $arc_length $type \n";
 			opserr << "REFS : \n";
@@ -5260,6 +5334,13 @@ specifyIntegrator(ClientData clientData, Tcl_Interp *interp, int argc,
       theTransientAnalysis->setIntegrator(*theTransientIntegrator);
   }  
   
+  else if (strcmp(argv[1], "Explicitdifference") == 0) {
+  theTransientIntegrator = new ExplicitDifference();
+
+  if (theTransientAnalysis != 0)
+      theTransientAnalysis->setIntegrator(*theTransientIntegrator);
+  }
+
   else if (strcmp(argv[1],"CentralDifferenceAlternative") == 0) {
     theTransientIntegrator = (TransientIntegrator *)OPS_CentralDifferenceAlternative();
     
@@ -5304,7 +5385,7 @@ specifyIntegrator(ClientData clientData, Tcl_Interp *interp, int argc,
 
       void *libHandle;
       void *(*funcPtr)();
-      int integratorNameLength = strlen(argv[2]);
+      int integratorNameLength = int(strlen(argv[2]));
       char *tclFuncName = new char[integratorNameLength+5];
       strcpy(tclFuncName, "OPS_");
       strcpy(&tclFuncName[4], argv[2]);    
@@ -5372,7 +5453,7 @@ specifyIntegrator(ClientData clientData, Tcl_Interp *interp, int argc,
 
       void *libHandle;
       void *(*funcPtr)();
-      int integratorNameLength = strlen(argv[2]);
+      int integratorNameLength = int(strlen(argv[2]));
       char *tclFuncName = new char[integratorNameLength+5];
       strcpy(tclFuncName, "OPS_");
       strcpy(&tclFuncName[4], argv[2]);    
@@ -5737,15 +5818,17 @@ int
 modalProperties(ClientData clientData, Tcl_Interp* interp, int argc, TCL_Char** argv)
 {
     OPS_ResetInputNoBuilder(clientData, interp, 1, argc, argv, &theDomain);
-    OPS_DomainModalProperties();
+    if (OPS_DomainModalProperties() < 0)
+	    return TCL_ERROR;
     return TCL_OK;
 }
 
 int
-responseSpectrum(ClientData clientData, Tcl_Interp* interp, int argc, TCL_Char** argv)
+responseSpectrumAnalysis(ClientData clientData, Tcl_Interp* interp, int argc, TCL_Char** argv)
 {
     OPS_ResetInputNoBuilder(clientData, interp, 1, argc, argv, &theDomain);
-    OPS_ResponseSpectrumAnalysis();
+    if (OPS_ResponseSpectrumAnalysis() < 0)
+	    return TCL_ERROR;
     return TCL_OK;
 }
 
@@ -5861,7 +5944,7 @@ removeObject(ClientData clientData, Tcl_Interp *interp, int argc,
     }
   }
   
-  else if (strcmp(argv[1],"loadPattern") == 0) {
+  else if (strcmp(argv[1],"loadPattern") == 0 || strcmp(argv[1],"pattern") == 0) {
     if (argc < 3) {
       opserr << "WARNING want - remove loadPattern patternTag?\n";
       return TCL_ERROR;
@@ -6595,7 +6678,7 @@ eleResponse(ClientData clientData, Tcl_Interp *interp, int argc, TCL_Char **argv
       int size = data->Size();
       char buffer[40];
       for (int i=0; i<size; i++) {
-	sprintf(buffer,"%f ",(*data)(i));
+	sprintf(buffer,"%35.20f",(*data)(i));
 	Tcl_AppendResult(interp, buffer, NULL);
       }
     }
@@ -7929,7 +8012,9 @@ sensSectionForce(ClientData clientData, Tcl_Interp *interp, int argc, TCL_Char *
 
   Response *theResponse = theElement->setResponse(argvv, argcc, dummy);
   if (theResponse == 0) {
-    Tcl_SetResult(interp, "0.0", TCL_VOLATILE);
+    char buffer [10];
+    sprintf(buffer,"%.2f", 0.0);	    
+    Tcl_SetResult(interp, buffer, TCL_VOLATILE);
     return TCL_OK;
   }
 
@@ -8670,47 +8755,49 @@ modalDamping(ClientData clientData, Tcl_Interp *interp, int argc, TCL_Char **arg
   }
 
   if (numEigen == 0 || theEigenSOE == 0) {
-    opserr << "WARNING - modalDmping - eigen command needs to be called first - NO MODAL DAMPING APPLIED\n ";
+    opserr << "WARNING - modalDamping - eigen command needs to be called first - NO MODAL DAMPING APPLIED\n ";
   }
 
   int numModes = argc - 1;
   double factor;
   Vector modalDampingValues(numEigen);
 
-  if (numModes != 1 && numModes != numEigen) {
-    opserr << "WARNING modalDmping - same #damping factors as modes must be specified\n";
-    opserr << "                    - same damping ratio will be applied to all\n";
+  if (numModes != 1 && numModes < numEigen) {
+    opserr << "WARNING modalDamping - fewer damping factors than modes were specified\n";
+    opserr << "                     - zero damping will be applied to un-specified modes" << endln;
   }
+  if (numModes > numEigen) {
+    opserr << "WARNING modalDamping - more damping factors than modes were specifed\n";
+    opserr << "                     - ignoring additional damping factors" << endln;
+  }    
 
   // 
   // read in values and set factors
   //
 
-  if (numModes == numEigen) {
-
-    for (int i=0; i<numEigen; i++) {
+  if (numModes == 1) {
+    if (Tcl_GetDouble(interp, argv[1], &factor) != TCL_OK) {
+      opserr << "WARNING modalDamping - could not read factor for all modes \n";
+      return TCL_ERROR;	        
+    }        
+    
+    for (int i=0; i<numEigen; i++)
+      modalDampingValues[i] = factor;
+  }
+  else {
+    for (int i=0; i<numModes; i++) {
       if (Tcl_GetDouble(interp, argv[1+i], &factor) != TCL_OK) {
 	opserr << "WARNING modalDamping - could not read factor for model " << i+1 << endln;
 	return TCL_ERROR;	        
       }        
       modalDampingValues[i] = factor;    
     } 
-
-  } else {
-
-    if (Tcl_GetDouble(interp, argv[1], &factor) != TCL_OK) {
-      opserr << "WARNING modalDamping - could not read factor for all modes \n";
-      return TCL_ERROR;	        
-    }        
-
-    for (int i=0; i<numEigen; i++)
-      modalDampingValues[i] = factor;
+    for (int i = numModes; i < numEigen; i++)
+      modalDampingValues[i] = 0.0;
   }
-
+  
   // set factors in domain
   theDomain.setModalDampingFactors(&modalDampingValues, true);
-
-  //opserr << "modalDamping Factors: " << modalDampingValues;
 
   return TCL_OK;
 }
@@ -8719,12 +8806,12 @@ int
 modalDampingQ(ClientData clientData, Tcl_Interp *interp, int argc, TCL_Char **argv)
 {
   if (argc < 2) { 
-    opserr << "WARNING modalDamping ?factor - not enough arguments to command\n";
+    opserr << "WARNING modalDampingQ ?factor - not enough arguments to command\n";
     return TCL_ERROR;
   }
 
   if (numEigen == 0 || theEigenSOE == 0) {
-    opserr << "WARINING - modalDmping - eigen command needs to be called first - NO MODAL DAMPING APPLIED\n ";
+    opserr << "WARNING - modalDampingQ - eigen command needs to be called first - NO MODAL DAMPING APPLIED\n ";
   }
 
 
@@ -8732,40 +8819,43 @@ modalDampingQ(ClientData clientData, Tcl_Interp *interp, int argc, TCL_Char **ar
   double factor = 0;
   Vector modalDampingValues(numEigen);
 
-  if (numModes != 1 && numModes != numEigen) {
-    opserr << "WARNING modalDmping - same #damping factors as modes must be specified\n";
-    opserr << "                    - same damping ratio will be applied to all";
+  if (numModes != 1 && numModes < numEigen) {
+    opserr << "WARNING modalDampingQ - fewer damping factors than modes were specified\n";
+    opserr << "                      - zero damping will be applied to un-specified modes" << endln;
   }
+  if (numModes > numEigen) {
+    opserr << "WARNING modalDampingQ - more damping factors than modes were specifed\n";
+    opserr << "                      - ignoring additional damping factors" << endln;
+  }    
 
   // 
   // read in values and set factors
   //
 
-  if (numModes == numEigen) {
-
-    // read in all factors one at a time
-    for (int i=0; i<numEigen; i++) {
+  if (numModes == 1) {
+    if (Tcl_GetDouble(interp, argv[1], &factor) != TCL_OK) {
+      opserr << "WARNING modalDampingQ - could not read factor for all modes \n";
+      return TCL_ERROR;	        
+    }        
+    
+    for (int i=0; i<numEigen; i++)
+      modalDampingValues[i] = factor;
+  }
+  else {
+    for (int i=0; i<numModes; i++) {
       if (Tcl_GetDouble(interp, argv[1+i], &factor) != TCL_OK) {
-	opserr << "WARNING rayleigh alphaM? betaK? betaK0? betaKc? - could not read betaK? \n";
+	opserr << "WARNING modalDampingQ - could not read factor for model " << i+1 << endln;
 	return TCL_ERROR;	        
       }        
       modalDampingValues[i] = factor;    
     } 
-
-  } else {
-
-    //  read in one & set all factors to that value
-    if (Tcl_GetDouble(interp, argv[1], &factor) != TCL_OK) {
-      opserr << "WARNING rayleigh alphaM? betaK? betaK0? betaKc? - could not read betaK? \n";
-      return TCL_ERROR;	        
-    } 
-
-    for (int i=0; i<numEigen; i++)
-      modalDampingValues[i] = factor;
-  } 
+    for (int i = numModes; i < numEigen; i++)
+      modalDampingValues[i] = 0.0;
+  }
 
   // set factors in domain
   theDomain.setModalDampingFactors(&modalDampingValues, false);
+
   return TCL_OK;
 }
 
@@ -9298,6 +9388,22 @@ getNodeTags(ClientData clientData, Tcl_Interp *interp, int argc, TCL_Char **argv
 }
 
 int
+getCrdTransfTags(ClientData clientData, Tcl_Interp *interp, int argc, TCL_Char **argv)
+{
+  ID crdTransfTags = OPS_getAllCrdTransfTags();  // Function defined in CrdTransf.h
+
+  char buffer[20];
+
+  for (int i = 0; i < crdTransfTags.Size(); ++i)
+  {
+    sprintf(buffer, "%d ", crdTransfTags(i));
+    Tcl_AppendResult(interp, buffer, NULL);
+  }
+
+  return TCL_OK;
+}
+
+int
 getParamTags(ClientData clientData, Tcl_Interp *interp, int argc, TCL_Char **argv)
 {
   Parameter *theEle;
@@ -9341,163 +9447,9 @@ getParamValue(ClientData clientData, Tcl_Interp *interp, int argc, TCL_Char **ar
 int
 sdfResponse(ClientData clientData, Tcl_Interp *interp, int argc, TCL_Char **argv)
 {
-  if (argc < 9) {
-    opserr << "Insufficient arguments to sdfResponse" << endln;
+  OPS_ResetInputNoBuilder(clientData, interp, 1, argc, argv, &theDomain);
+  if (OPS_sdfResponse() < 0)
     return TCL_ERROR;
-  }
-
-  double m, zeta, k, Fy, alpha, dtF, dt;
-  if (Tcl_GetDouble(interp, argv[1], &m) != TCL_OK) {
-    opserr << "WARNING sdfResponse -- could not read mass \n";
-    return TCL_ERROR;	        
-  }
-  if (Tcl_GetDouble(interp, argv[2], &zeta) != TCL_OK) {
-    opserr << "WARNING sdfResponse -- could not read zeta \n";
-    return TCL_ERROR;	        
-  }
-  if (Tcl_GetDouble(interp, argv[3], &k) != TCL_OK) {
-    opserr << "WARNING sdfResponse -- could not read k \n";
-    return TCL_ERROR;	        
-  }
-  if (Tcl_GetDouble(interp, argv[4], &Fy) != TCL_OK) {
-    opserr << "WARNING sdfResponse -- could not read Fy \n";
-    return TCL_ERROR;	        
-  }
-  if (Tcl_GetDouble(interp, argv[5], &alpha) != TCL_OK) {
-    opserr << "WARNING sdfResponse -- could not read alpha \n";
-    return TCL_ERROR;	        
-  }
-  if (Tcl_GetDouble(interp, argv[6], &dtF) != TCL_OK) {
-    opserr << "WARNING sdfResponse -- could not read dtF \n";
-    return TCL_ERROR;	        
-  }
-  if (Tcl_GetDouble(interp, argv[8], &dt) != TCL_OK) {
-    opserr << "WARNING sdfResponse -- could not read dt \n";
-    return TCL_ERROR;	        
-  }
-  double uresidual = 0.0;
-  double umaxprev = 0.0;
-  if (argc > 9) {
-    if (Tcl_GetDouble(interp, argv[9], &uresidual) != TCL_OK) {
-      opserr << "WARNING sdfResponse -- could not read uresidual \n";
-      return TCL_ERROR;	        
-    }
-    if (Tcl_GetDouble(interp, argv[10], &umaxprev) != TCL_OK) {
-      opserr << "WARNING sdfResponse -- could not read umaxprev \n";
-      return TCL_ERROR;	        
-    }    
-  }
-
-  double gamma = 0.5;
-  double beta = 0.25;
-  double tol = 1.0e-8;
-  int maxIter = 10;
-
-  std::ifstream infile(argv[7]);
- 
-  double c = zeta*2*sqrt(k*m);
-  double Hkin = alpha/(1.0-alpha)*k;
-
-  double p0 = 0.0;
-  double u0 = uresidual;
-  double v0 = 0.0;
-  double fs0 = 0.0;
-  double a0 = (p0-c*v0-fs0)/m;
-
-  double a1 = m/(beta*dt*dt) + (gamma/(beta*dt))*c;
-  double a2 = m/(beta*dt) + (gamma/beta-1.0)*c;
-  double a3 = (0.5/beta-1.0)*m + dt*(0.5*gamma/beta-1.0)*c;
-
-  double au = 1.0/(beta*dt*dt);
-  double av = 1.0/(beta*dt);
-  double aa = 0.5/beta-1.0;
-
-  double vu = gamma/(beta*dt);
-  double vv = 1.0-gamma/beta;
-  double va = dt*(1-0.5*gamma/beta);
-    
-  double kT0 = k;
-
-  double umax = fabs(umaxprev);
-  double amax = 0.0; double tamax = 0.0;
-  double up = uresidual; double up0 = up;
-  int i = 0;
-  double ft, u, du, v, a, fs, zs, ftrial, kT, kTeff, dg, phat, R, R0, accel;
-  while (infile >> ft) {
-    i++;
-    
-    u = u0;
-      
-    fs = fs0;
-    kT = kT0;
-    up = up0;
-      
-    phat = ft + a1*u0 + a2*v0 + a3*a0;
-      
-    R = phat - fs - a1*u;
-    R0 = R;
-    if (R0 == 0.0) {
-      R0 = 1.0;
-    }
-    
-    int iter = 0;
-
-    while (iter < maxIter && fabs(R/R0) > tol) {
-      iter++;
-
-      kTeff = kT + a1;
-
-      du = R/kTeff;
-
-      u = u + du;
-
-      fs = k*(u-up0);
-      zs = fs-Hkin*up0;
-      ftrial = fabs(zs)-Fy;
-      if (ftrial > 0) {
-	dg = ftrial/(k+Hkin);
-	if (fs < 0) {
-	  fs = fs + dg*k;
-	  up = up0 - dg;
-	} else {
-	  fs = fs - dg*k;
-	  up = up0 + dg;
-	}
-	kT = k*Hkin/(k+Hkin);
-      } else {
-	kT = k;
-      }
-      
-      R = phat - fs - a1*u;
-    }
-
-    v = vu*(u-u0) + vv*v0 + va*a0;
-    a = au*(u-u0) - av*v0 - aa*a0;
-
-    u0 = u;
-    v0 = v;
-    a0 = a;
-    fs0 = fs;
-    kT0 = kT;
-    up0 = up;
-
-    if (fabs(u) > umax) {
-      umax = fabs(u);
-    }
-    if (fabs(a) > amax) {
-      amax = fabs(a);
-      tamax = iter*dt;
-    }
-  }
-  
-  infile.close();
-    
-  
-  char buffer[80];
-  sprintf(buffer, "%f %f %f %f %f", umax, u, up, amax, tamax);
-
-  Tcl_SetResult(interp, buffer, TCL_VOLATILE);
-
   return TCL_OK;
 }
 
@@ -9597,7 +9549,7 @@ opsRecv(ClientData clientData, Tcl_Interp *interp, int argc, TCL_Char **argv)
 		if (myPID != otherPID)
 		MPI_Recv((void *)(&msgLength), 1, MPI_INT, otherPID, 0, MPI_COMM_WORLD, &status);
         else {
-	  opserr << "recv -pid pid? data? - " << otherPID << " cant receive from self!\n";
+	  opserr << "recv -pid pid? data? - " << otherPID << " can't receive from self!\n";
 	  return TCL_ERROR;
 	}
       else {
@@ -9959,14 +9911,14 @@ int stripOpenSeesXML(ClientData clientData, Tcl_Interp *interp, int argc, TCL_Ch
     if (spitData == true) {
       if (strstr(inputLine,"</Data>") != 0) 
 	spitData = false;
-      else 
-	; //	theOutputDataFile << line << endln;
+    // else 
+	// theOutputDataFile << line << endln;
     } else {
       const char *inputLine = line.c_str();
       if (strstr(inputLine,"<Data>") != 0) 
 	spitData = true;
-      else if (outputDescriptiveFile != 0)
-	; // theOutputDescriptiveFile << line << endln;
+    // else if (outputDescriptiveFile != 0)
+	// theOutputDescriptiveFile << line << endln;
     }
   }      
   
@@ -10479,9 +10431,17 @@ setParameter(ClientData clientData, Tcl_Interp *interp, int argc, TCL_Char **arg
       argLoc += 3;
     }
 
-    ElementStateParameter theParameter(newValue, &argv[argLoc], argc-argLoc, flag, &eleIDs);
-
+    int tempParamId = 0;
+    Parameter* tempParam;
+    ParameterIter& tempParamIter = theDomain.getParameters();
+    while ((tempParam = tempParamIter()) != 0) {
+        if (tempParam->getTag() > tempParamId)
+            tempParamId = tempParam->getTag();
+    }
+    ++tempParamId;
+    ElementStateParameter theParameter(tempParamId, newValue, &argv[argLoc], argc-argLoc, flag, &eleIDs);
     theDomain.addParameter(&theParameter);
+    theDomain.removeParameter(tempParamId);
   }
 
   return TCL_OK;

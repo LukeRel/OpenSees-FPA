@@ -30,8 +30,8 @@
 // Revision: A
 //
 // Description: This file contains the class definition for ArcLength.
-// ArcLength is an algorithmic class for perfroming a static analysis
-// using the arc length scheme, that is within a load step the follwing
+// ArcLength is an algorithmic class for performing a static analysis
+// using the arc length scheme, that is within a load step the following
 // constraint is enforced: dU^TdU + alpha^2*dLambda^2 = arcLength^2
 // where dU is change in nodal displacements for step, dLambda is
 // change in applied load and arcLength is a control parameter.
@@ -63,7 +63,6 @@
 void* OPS_ArcLength()
 {
     double arcLength;
-    double alpha;
     if (OPS_GetNumRemainingInputArgs() < 2) {
 	opserr << "WARNING integrator ArcLength arcLength alpha \n";
 	return 0;
@@ -71,14 +70,19 @@ void* OPS_ArcLength()
 
     int numdata = 1;
     if (OPS_GetDoubleInput(&numdata, &arcLength) < 0) {
-	opserr << "WARNING integrator ArcLength failed to read arc lenght\n";
+	opserr << "WARNING integrator ArcLength failed to read arc length\n";
 	return 0;
     }
-    if (OPS_GetDoubleInput(&numdata, &alpha) < 0) {
+    if (OPS_GetNumRemainingInputArgs() > 0) {
+      double alpha;
+      if (OPS_GetDoubleInput(&numdata, &alpha) < 0) {
 	opserr << "WARNING integrator ArcLength failed to read alpha\n";
 	return 0;
+      }
+      return new ArcLength(arcLength,alpha);
+    } else {
+      return new ArcLength(arcLength);
     }
-    return new ArcLength(arcLength,alpha); 
 }
 
 ArcLength::ArcLength(double arcLength, double alpha)
@@ -1012,14 +1016,8 @@ ArcLength::computeSensitivities(void)
 //opserr<<"computeSensitivities : start"<<endln;
    // Zero out the old right-hand side of the SOE
    theSOE->zeroB();
-   if (this == 0) {
-      opserr << "ERROR SensitivityAlgorithm::computeSensitivities() -";
-      opserr << "the SensitivityIntegrator is NULL\n";
-      return -1;
-   }
 
-
-   // Form the part of the RHS which are indepent of parameter
+   // Form the part of the RHS which are independent of parameter
    this->formIndependentSensitivityRHS();
 
    AnalysisModel *theModel = this->getAnalysisModel();   
@@ -1096,7 +1094,7 @@ ArcLength::computeSensitivities(void)
     //  theSOE->zeroB();//reset the SOE to zero ;Abbas
 
    } 
-   // end of if statment to be run only one time during the iteration process.
+   // end of if statement to be run only one time during the iteration process.
 //opserr<<"computeSensitivities : end"<<endln;
    return 0;
 }

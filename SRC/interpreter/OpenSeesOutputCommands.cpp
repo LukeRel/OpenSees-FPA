@@ -54,8 +54,14 @@ UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 #include <ElementalLoadIter.h>
 #include <Element.h>
 #include <ElementIter.h>
+#include <CrdTransf.h>
+#include <SP_Constraint.h>
+#include <SP_ConstraintIter.h>
+#include <MP_Constraint.h>
+#include <MP_ConstraintIter.h>
 #include <map>
 #include <set>
+#include <algorithm>
 #include <Recorder.h>
 #include <Pressure_Constraint.h>
 #include <vector>
@@ -67,6 +73,7 @@ UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 #include <BackgroundMesh.h>
 #include <Parameter.h>
 #include <ParameterIter.h>
+#include <UniaxialMaterial.h>
 
 void* OPS_NodeRecorder();
 void* OPS_EnvelopeNodeRecorder();
@@ -75,11 +82,13 @@ void* OPS_EnvelopeElementRecorder();
 void* OPS_PVDRecorder();
 void* OPS_AlgorithmRecorder();
 void* OPS_RemoveRecorder();
+#ifdef _HDF5
 void* OPS_MPCORecorder();
+#endif
 BackgroundMesh& OPS_getBgMesh();
 
-//void* OPS_DriftRecorder();
-//void* OPS_PatternRecorder();
+void* OPS_DriftRecorder();
+void* OPS_EnvelopeDriftRecorder();
 
 namespace {
 
@@ -105,7 +114,11 @@ namespace {
 	recordersMap.insert(std::make_pair("ElementRemoval", &OPS_RemoveRecorder));
 	recordersMap.insert(std::make_pair("NodeRemoval", &OPS_RemoveRecorder));
 	recordersMap.insert(std::make_pair("Collapse", &OPS_RemoveRecorder));
-    recordersMap.insert(std::make_pair("mpco", &OPS_MPCORecorder));
+	recordersMap.insert(std::make_pair("Drift", &OPS_DriftRecorder));
+	recordersMap.insert(std::make_pair("EnvelopeDrift", &OPS_EnvelopeDriftRecorder));
+#ifdef _HDF5
+	recordersMap.insert(std::make_pair("mpco", &OPS_MPCORecorder));
+#endif
         //recordersMap.insert(std::make_pair("Drift", &OPS_DriftRecorder));
         //recordersMap.insert(std::make_pair("Pattern", &OPS_PatternRecorder));
 
@@ -473,7 +486,7 @@ int OPS_getLoadFactor()
 }
 
 // printNode():
-// function to print out the nodal information conatined in line
+// function to print out the nodal information contained in line
 //     print <filename> node <flag int> <int int int>
 // input: nodeArg: integer equal to arg count to node plus 1
 //        output: output stream to which the results are sent
@@ -1561,6 +1574,346 @@ int OPS_setNodeCoord()
     return 0;
 }
 
+int OPS_getPatterns()
+{
+  Domain* theDomain = OPS_GetDomain();
+  if (theDomain == 0) return -1;
+    
+  LoadPattern *thePattern;
+  LoadPatternIter &thePatterns = theDomain->getLoadPatterns();
+
+  std::vector <int> data;
+  
+  while ((thePattern = thePatterns()) != 0)
+    data.push_back(thePattern->getTag());
+
+  int size = data.size();
+  
+  if (OPS_SetIntOutput(&size, data.data(), false) < 0) {
+    opserr << "WARNING getPatterns - failed to set output\n";
+    return -1;
+  }
+  
+  return 0;
+}
+
+int OPS_getFixedNodes()
+{
+    Domain* theDomain = OPS_GetDomain();
+    if (theDomain == 0) return -1;
+
+    SP_ConstraintIter &spIter = theDomain->getDomainAndLoadPatternSPs();
+    SP_Constraint *theSP;
+
+	std::vector <int> data;
+
+    while ((theSP = spIter()) != 0) {
+        data.push_back(theSP->getNodeTag());
+    }
+
+	// sort and make it unique
+	sort( data.begin(), data.end() );
+	data.erase( unique( data.begin(), data.end() ), data.end() );
+
+	int size = data.size();
+
+	if (OPS_SetIntOutput(&size, data.data(), false) < 0) {
+	  opserr << "WARNING failed to set output\n";
+	  return -1;
+	}
+
+    return 0;
+}
+
+int OPS_getFixedDOFs()
+{
+
+    if (OPS_GetNumRemainingInputArgs() < 1) {
+	opserr << "WARNING want - getFixedDOFs fNodeTag?\n";
+	return -1;
+    }
+
+    int tag;
+    int numdata = 1;
+
+    if (OPS_GetIntInput(&numdata, &tag) < 0) {
+	  opserr << "WARNING getFixedDOFs fNodeTag? \n";
+	  return -1;
+    }
+
+    Domain* theDomain = OPS_GetDomain();
+    if (theDomain == 0) return -1;
+
+    SP_ConstraintIter &spIter = theDomain->getDomainAndLoadPatternSPs();
+    SP_Constraint *theSP;
+
+	std::vector <int> data;
+
+    while ((theSP = spIter()) != 0) {
+        if (theSP->getNodeTag() == tag) {
+		  data.push_back(theSP->getDOF_Number() + 1);
+        }
+    }
+
+	int size = data.size();
+
+	if (OPS_SetIntOutput(&size, data.data(), false) < 0) {
+	  opserr << "WARNING failed to set output\n";
+	  return -1;
+	}
+
+    return 0;
+}
+
+int OPS_getConstrainedNodes()
+{
+
+    bool all = 1;
+    int rNodeTag;
+    int numdata = 1;
+
+    if (OPS_GetNumRemainingInputArgs() > 0) {
+	  if (OPS_GetIntInput(&numdata, &rNodeTag) < 0) {
+		opserr << "WARNING getConstrainedNodes <rNodeTag?> - could not read rNodeTag\n";
+		return -1;
+	  }
+	all = 0;
+    }
+
+    Domain* theDomain = OPS_GetDomain();
+    if (theDomain == 0) return -1;
+
+    MP_ConstraintIter &mpIter = theDomain->getMPs();
+    MP_Constraint *theMP;
+
+	std::vector <int> data;
+
+    while ((theMP = mpIter()) != 0) {
+        if (all || rNodeTag == theMP->getNodeRetained()) {
+			data.push_back(theMP->getNodeConstrained());
+        }
+    }
+
+	// sort and make it unique
+	sort( data.begin(), data.end() );
+	data.erase( unique( data.begin(), data.end() ), data.end() );
+
+	int size = data.size();
+
+	if (OPS_SetIntOutput(&size, data.data(), false) < 0) {
+	  opserr << "WARNING failed to set output\n";
+	  return -1;
+	}
+
+    return 0;
+}
+
+int OPS_getConstrainedDOFs()
+{
+
+    if (OPS_GetNumRemainingInputArgs() < 1) {
+	opserr << "WARNING want - getConstrainedDOFs cNode? <rNode?> <rDOF?>\n";
+	return -1;
+    }
+
+    int cNode;
+    int numdata = 1;
+
+    if (OPS_GetIntInput(&numdata, &cNode) < 0) {
+	  opserr << "WARNING getConstrainedDOFs cNode? <rNode?> <rDOF?> - could not read cNode? \n";
+	  return -1;
+    }
+
+    int rNode;
+	bool allNodes = 1;
+
+    if (OPS_GetNumRemainingInputArgs() > 0) {
+	  if (OPS_GetIntInput(&numdata, &rNode) < 0) {
+		opserr << "WARNING getConstrainedDOFs cNode? <rNode?> <rDOF?> - could not read rNode? \n";
+		return -1;
+	  }
+	  allNodes = 0;
+	}
+
+    int rDOF;
+	bool allDOFs = 1;
+    if (OPS_GetNumRemainingInputArgs() > 0) {
+	  if (OPS_GetIntInput(&numdata, &rDOF) < 0) {
+		opserr << "WARNING getConstrainedDOFs cNode? <rNode?> <rDOF?> - could not read rDOF? \n";
+		return -1;
+	  }
+	  rDOF--;
+	  allDOFs = 0;
+	}
+
+    Domain* theDomain = OPS_GetDomain();
+    if (theDomain == 0) return -1;
+
+    MP_ConstraintIter &mpIter = theDomain->getMPs();
+    MP_Constraint *theMP;
+
+    int tag;
+    int i;
+    int n;
+	std::vector <int> data;
+
+    while ((theMP = mpIter()) != 0) {
+        tag = theMP->getNodeConstrained();
+        if (tag == cNode) {
+            if (allNodes || rNode == theMP->getNodeRetained()) {
+                const ID &cDOFs = theMP->getConstrainedDOFs();
+                n = cDOFs.Size();
+                if (allDOFs) {
+                    for (i = 0; i < n; i++) {
+					  data.push_back(cDOFs(i) + 1);
+                    }
+                }
+                else {
+                    const ID &rDOFs = theMP->getRetainedDOFs();
+                    for (i = 0; i < n; i++) {
+                        if (rDOF == rDOFs(i))
+						    data.push_back(cDOFs(i) + 1);
+                    }
+                }
+            }
+        }
+    }
+
+	int size = data.size();
+
+	if (OPS_SetIntOutput(&size, data.data(), false) < 0) {
+	  opserr << "WARNING failed to set output\n";
+	  return -1;
+	}
+
+    return 0;
+}
+
+
+int OPS_getRetainedNodes()
+{
+    bool all = 1;
+    int cNodeTag;
+    int numdata = 1;
+
+    if (OPS_GetNumRemainingInputArgs() > 0) {
+	  if (OPS_GetIntInput(&numdata, &cNodeTag) < 0) {
+		opserr << "WARNING getRetainedNodes <cNodeTag?> - could not read cNodeTag\n";
+		return -1;
+	  }
+	all = 0;
+    }
+
+    Domain* theDomain = OPS_GetDomain();
+    if (theDomain == 0) return -1;
+
+    MP_ConstraintIter &mpIter = theDomain->getMPs();
+    MP_Constraint *theMP;
+
+	std::vector <int> data;
+
+    while ((theMP = mpIter()) != 0) {
+        if (all || cNodeTag == theMP->getNodeConstrained()) {
+			data.push_back(theMP->getNodeRetained());
+        }
+    }
+
+	// sort and make it unique
+	sort( data.begin(), data.end() );
+	data.erase( unique( data.begin(), data.end() ), data.end() );
+
+	int size = data.size();
+
+	if (OPS_SetIntOutput(&size, data.data(), false) < 0) {
+	  opserr << "WARNING failed to set output\n";
+	  return -1;
+	}
+
+    return 0;
+}
+
+
+int OPS_getRetainedDOFs()
+{
+
+    if (OPS_GetNumRemainingInputArgs() < 1) {
+	opserr << "WARNING want - getRetainedDOFs rNode? <cNode?> <cDOF?>\n";
+	return -1;
+    }
+
+    int rNode;
+    int numdata = 1;
+
+    if (OPS_GetIntInput(&numdata, &rNode) < 0) {
+	  opserr << "WARNING getRetainedDOFs rNode? <cNode?> <cDOF?> - could not read rNode? \n";
+	  return -1;
+    }
+
+    int cNode;
+	bool allNodes = 1;
+
+    if (OPS_GetNumRemainingInputArgs() > 0) {
+	  if (OPS_GetIntInput(&numdata, &cNode) < 0) {
+		opserr << "WARNING getRetainedDOFs rNode? <cNode?> <cDOF?> - could not read cNode? \n";
+		return -1;
+	  }
+	  allNodes = 0;
+	}
+
+    int cDOF;
+	bool allDOFs = 1;
+    if (OPS_GetNumRemainingInputArgs() > 0) {
+	  if (OPS_GetIntInput(&numdata, &cDOF) < 0) {
+		opserr << "WARNING getRetainedDOFs rNode? <cNode?> <cDOF?> - could not read cDOF? \n";
+		return -1;
+	  }
+	  cDOF--;
+	  allDOFs = 0;
+	}
+
+    Domain* theDomain = OPS_GetDomain();
+    if (theDomain == 0) return -1;
+
+    MP_ConstraintIter &mpIter = theDomain->getMPs();
+    MP_Constraint *theMP;
+
+    int tag;
+    int i;
+    int n;
+	std::vector <int> data;	
+    while ((theMP = mpIter()) != 0) {
+        tag = theMP->getNodeRetained();
+        if (tag == rNode) {
+            if (allNodes || cNode == theMP->getNodeConstrained()) {
+                const ID &rDOFs = theMP->getRetainedDOFs();
+                n = rDOFs.Size();
+                if (allDOFs) {
+                    for (i = 0; i < n; i++) {
+					  data.push_back(rDOFs(i) + 1);
+                    }
+                }
+                else {
+                    const ID &cDOFs = theMP->getConstrainedDOFs();
+                    for (i = 0; i < n; i++) {
+                        if (cDOF == cDOFs(i))
+						    data.push_back(rDOFs(i) + 1);
+                    }
+                }
+            }
+        }
+    }
+
+	int size = data.size();
+
+	if (OPS_SetIntOutput(&size, data.data(), false) < 0) {
+	  opserr << "WARNING failed to set output\n";
+	  return -1;
+	}
+
+    return 0;
+}
+
+
 int OPS_updateElementDomain()
 {
     Domain* theDomain = OPS_GetDomain();
@@ -1659,6 +2012,44 @@ int OPS_getNDFF()
 	}
 
     return 0;
+}
+
+int OPS_classType()
+{
+  if (OPS_GetNumRemainingInputArgs() < 2) {
+    opserr << "ERROR want - classType objectType tag?\n";
+    return -1;
+  }
+  
+  std::string type = OPS_GetString();
+  int tag;
+  int numdata = 1;
+  
+  if (OPS_GetIntInput(&numdata, &tag) < 0) {
+    opserr << "ERROR classType objectType tag? - unable to read tag" << endln;
+    return -1;
+  }
+  
+  if (type == "uniaxialMaterial") {
+    UniaxialMaterial *theMaterial = OPS_GetUniaxialMaterial(tag);
+    if (theMaterial == 0) {
+      opserr << "ERROR classType - uniaxialMaterial with tag " << tag << " not found" << endln;
+      return -1;
+    }
+    
+    std::string classType = theMaterial->getClassType();
+    if (OPS_SetString(classType.c_str()) < 0) {
+      opserr << "ERROR failed to set classType" << endln;
+      return -1;
+    }      
+  }
+  
+  else {
+    opserr << "WARNING classType - " << type.c_str() << " not yet supported" << endln;
+    return -1;
+  }
+
+  return 0;
 }
 
 int OPS_eleType()
@@ -2004,6 +2395,25 @@ int OPS_getEleTags()
     return 0;
 }
 
+int OPS_getCrdTransfTags()
+{
+  // Defined in CrdTransf.cpp
+  ID transfTags = OPS_getAllCrdTransfTags();
+
+  int size = transfTags.Size();
+  int *data = 0;
+  if (size > 0) {
+    data = &transfTags[0];
+  }
+  
+  if (OPS_SetIntOutput(&size, data, false) < 0) {
+    opserr << "WARNING failed to set outputs\n";
+    return -1;
+  }
+  
+  return 0;
+}
+
 int OPS_getNodeTags() {
     Domain *theDomain = OPS_GetDomain();
     if (theDomain == 0) return -1;
@@ -2067,8 +2477,8 @@ int OPS_getNodeTags() {
 int OPS_sectionForce()
 {
     // make sure at least one other argument to contain type of system
-    if (OPS_GetNumRemainingInputArgs() < 3) {
-	opserr << "WARNING want - sectionForce eleTag? secNum? dof? \n";
+    if (OPS_GetNumRemainingInputArgs() < 2) {
+	opserr << "WARNING want - sectionForce eleTag? secNum? <dof?> \n";
 	return -1;
     }
 
@@ -2077,18 +2487,18 @@ int OPS_sectionForce()
     //  opserr << argv[i] << ' ' ;
     //opserr << endln;
 
-    int numdata = 3;
+    int numdata = 2;
     int data[3];
 
     if (OPS_GetIntInput(&numdata, data) < 0) {
-	opserr << "WARNING sectionForce eleTag? secNum? dof? - could not read int input? \n";
+	opserr << "WARNING sectionForce eleTag? secNum? <dof?> - could not read int input? \n";
 	return -1;
     }
 
     int tag = data[0];
     int secNum = data[1];
-    int dof = data[2];
-
+    int dof = -1;
+    
     Domain* theDomain = OPS_GetDomain();
     if (theDomain == 0) return -1;
 
@@ -2117,21 +2527,40 @@ int OPS_sectionForce()
 
     theResponse->getResponse();
     Information &info = theResponse->getInformation();
-
     const Vector &theVec = *(info.theVector);
-    if (dof <= 0 || dof > theVec.Size()) {
-	opserr << "WARNING invalid dof "<<dof<<"\n";
+
+    if (OPS_GetNumRemainingInputArgs() > 0) {
+      numdata = 1;
+      if (OPS_GetIntInput(&numdata, &dof) < 0) {
+	opserr << "WARNING sectionForce eleTag? secNum? dof? - could not read int input? \n";
 	delete theResponse;
 	return -1;
+      }      
     }
 
-    double value = theVec(dof-1);
-    numdata = 1;
-
-    if (OPS_SetDoubleOutput(&numdata, &value, true) < 0) {
+    int ndof = theVec.Size();
+    if (dof > 0 && dof <= ndof) {
+    
+      double value = theVec(dof-1);
+      numdata = 1;
+      
+      if (OPS_SetDoubleOutput(&numdata, &value, true) < 0) {
 	opserr << "WARNING failed to set output\n";
 	delete theResponse;
 	return -1;
+      }
+    } else {
+      std::vector<double> values;
+      values.reserve(ndof);
+	for (int i = 0; i < ndof; i++) {
+	  values.push_back(theVec(i));
+	}
+      
+      if (OPS_SetDoubleOutput(&ndof, &values[0], false) < 0) {
+	opserr << "WARNING failed to set output\n";
+	delete theResponse;
+	return -1;
+      }      
     }
 
     delete theResponse;
@@ -2142,8 +2571,8 @@ int OPS_sectionForce()
 int OPS_sectionDeformation()
 {
     // make sure at least one other argument to contain type of system
-    if (OPS_GetNumRemainingInputArgs() < 3) {
-	opserr << "WARNING want - sectionDeformation eleTag? secNum? dof? \n";
+    if (OPS_GetNumRemainingInputArgs() < 2) {
+	opserr << "WARNING want - sectionDeformation eleTag? secNum? <dof?> \n";
 	return -1;
     }
 
@@ -2152,17 +2581,17 @@ int OPS_sectionDeformation()
     //  opserr << argv[i] << ' ' ;
     //opserr << endln;
 
-    int numdata = 3;
+    int numdata = 2;
     int data[3];
 
     if (OPS_GetIntInput(&numdata, data) < 0) {
-	opserr << "WARNING sectionDeformation eleTag? secNum? dof? - could not read int input? \n";
+	opserr << "WARNING sectionDeformation eleTag? secNum? <dof?> - could not read int input? \n";
 	return -1;
     }
 
     int tag = data[0];
     int secNum = data[1];
-    int dof = data[2];
+    int dof = -1;
 
     Domain* theDomain = OPS_GetDomain();
     if (theDomain == 0) return -1;
@@ -2192,21 +2621,40 @@ int OPS_sectionDeformation()
 
     theResponse->getResponse();
     Information &info = theResponse->getInformation();
-
     const Vector &theVec = *(info.theVector);
-    if (dof <= 0 || dof > theVec.Size()) {
-	opserr << "WARNING invalid dof "<<dof<<"\n";
+    
+    if (OPS_GetNumRemainingInputArgs() > 0) {
+      numdata = 1;
+      if (OPS_GetIntInput(&numdata, &dof) < 0) {
+	opserr << "WARNING sectionForce eleTag? secNum? dof? - could not read int input? \n";
 	delete theResponse;
 	return -1;
+      }      
     }
 
-    double value = theVec(dof-1);
-    numdata = 1;
-
-    if (OPS_SetDoubleOutput(&numdata, &value, true) < 0) {
+    int ndof = theVec.Size();
+    if (dof > 0 && dof <= ndof) {
+    
+      double value = theVec(dof-1);
+      numdata = 1;
+      
+      if (OPS_SetDoubleOutput(&numdata, &value, true) < 0) {
 	opserr << "WARNING failed to set output\n";
 	delete theResponse;
 	return -1;
+      }
+    } else {
+      std::vector<double> values;
+      values.reserve(ndof);
+	for (int i = 0; i < ndof; i++) {
+	  values.push_back(theVec(i));
+	}
+      
+      if (OPS_SetDoubleOutput(&ndof, &values[0], false) < 0) {
+	opserr << "WARNING failed to set output\n";
+	delete theResponse;
+	return -1;
+      }      
     }
 
     delete theResponse;
@@ -2231,7 +2679,7 @@ int OPS_sectionStiffness()
     int data[2];
 
     if (OPS_GetIntInput(&numdata, data) < 0) {
-	opserr << "WARNING sectionStiffness eleTag? secNum? dof? - could not read int input? \n";
+	opserr << "WARNING sectionStiffness eleTag? secNum? - could not read int input? \n";
 	return -1;
     }
 
@@ -2317,7 +2765,7 @@ int OPS_sectionFlexibility()
     int data[2];
 
     if (OPS_GetIntInput(&numdata, data) < 0) {
-	opserr << "WARNING sectionFlexibility eleTag? secNum? dof? - could not read int input? \n";
+	opserr << "WARNING sectionFlexibility eleTag? secNum? - could not read int input? \n";
 	return -1;
     }
 
@@ -2758,9 +3206,10 @@ int OPS_cbdiDisplacement()
     if (theResponse == 0) {
 	return 0;
     }
-
-    theResponse->getResponse();
     Information &info = theResponse->getInformation();
+    info.theDouble = xOverL;
+    
+    theResponse->getResponse();
 
     const Matrix &theMatrix = *(info.theMatrix);
     if (xOverL < 0.0 || xOverL > 1.0) {
@@ -2769,18 +3218,10 @@ int OPS_cbdiDisplacement()
 	return -1;
     }
 
-    double value[3]; // Need to interpolate
-    int N = theMatrix.noRows();
-    double dx = 1.0/(N-1);
-    for (int i = 0; i < N; i++) {
-      double xi = double(i)/(N-1);
-      double xf = double(i+1)/(N-1);
-      if (xOverL >= xi && xOverL < xf) {
-	value[0] = theMatrix(i,0) + (xOverL-xi)/(xf-xi)*(theMatrix(i+1,0)-theMatrix(i,0));
-	value[1] = theMatrix(i,1) + (xOverL-xi)/(xf-xi)*(theMatrix(i+1,1)-theMatrix(i,1));
-	value[2] = theMatrix(i,2) + (xOverL-xi)/(xf-xi)*(theMatrix(i+1,2)-theMatrix(i,2));	
-      }
-    }
+    double value[3];
+    value[0] = theMatrix(0,0);
+    value[1] = theMatrix(0,1);
+    value[2] = theMatrix(0,2);
     
     numdata = 3;
     if (OPS_SetDoubleOutput(&numdata, &value[0], false) < 0) {
@@ -2811,7 +3252,7 @@ int OPS_basicDeformation()
     int tag;
 
     if (OPS_GetIntInput(&numdata, &tag) < 0) {
-	opserr << "WARNING basicDeformation eleTag? dofNum? - could not read eleTag? \n";
+	opserr << "WARNING basicDeformation eleTag? - could not read eleTag? \n";
 	return -1;
     }
 
@@ -2832,6 +3273,14 @@ int OPS_basicDeformation()
     DummyStream dummy;
 
     Response *theResponse = theElement->setResponse(argvv, argcc, dummy);
+
+    // Try "basicDeformations"
+    if (theResponse == 0) {
+      char a[80] = "basicDeformations";
+      argvv[0] = a;
+      theResponse = theElement->setResponse(argvv, argcc, dummy);      
+    }
+    
     if (theResponse == 0) {
 	return 0;
     }
@@ -2839,18 +3288,31 @@ int OPS_basicDeformation()
     theResponse->getResponse();
     Information &info = theResponse->getInformation();
 
-    const Vector &theVec = *(info.theVector);
-    int nbf = theVec.Size();
+    // Vector
+    if (info.theVector != 0) {
+      const Vector &theVec = *(info.theVector);
+      int nbf = theVec.Size();
 
-    std::vector<double> data(nbf);
-    for (int i=0; i<nbf; i++) {
+      std::vector<double> data(nbf);
+      for (int i=0; i<nbf; i++) {
 	data[i] = theVec(i);
-    }
+      }
 
-    if (OPS_SetDoubleOutput(&nbf, &data[0], false) < 0) {
+      if (OPS_SetDoubleOutput(&nbf, &data[0], false) < 0) {
 	opserr << "WARNING failed to set output\n";
 	delete theResponse;
 	return -1;
+      }
+    }
+    // Scalar
+    else {
+      int nbf = 1;
+      double data = info.theDouble;
+      if (OPS_SetDoubleOutput(&nbf, &data, false) < 0) {
+	opserr << "WARNING failed to set output\n";
+	delete theResponse;
+	return -1;
+      }      
     }
 
     delete theResponse;
@@ -2875,7 +3337,7 @@ int OPS_basicForce()
     int tag;
 
     if (OPS_GetIntInput(&numdata, &tag) < 0) {
-	opserr << "WARNING basicForce eleTag? dofNum? - could not read eleTag? \n";
+	opserr << "WARNING basicForce eleTag? - could not read eleTag? \n";
 	return -1;
     }
 
@@ -2896,30 +3358,46 @@ int OPS_basicForce()
     DummyStream dummy;
 
     Response *theResponse = theElement->setResponse(argvv, argcc, dummy);
+
+    // Try "basicForces"
     if (theResponse == 0) {
-	double res = 0.0;
-	if (OPS_SetDoubleOutput(&numdata, &res, false) < 0) {
-	    opserr << "WARNING: failed to set output\n";
-	    return -1;
-	}
+      char a[80] = "basicForces";
+      argvv[0] = a;
+      theResponse = theElement->setResponse(argvv, argcc, dummy);      
+    }
+    
+    if (theResponse == 0) {
 	return 0;
     }
 
     theResponse->getResponse();
     Information &info = theResponse->getInformation();
 
-    const Vector &theVec = *(info.theVector);
-    int nbf = theVec.Size();
+    // Vector
+    if (info.theVector != 0) {
+      const Vector &theVec = *(info.theVector);
+      int nbf = theVec.Size();
 
-    std::vector<double> data(nbf);
-    for (int i=0; i<nbf; i++) {
+      std::vector<double> data(nbf);
+      for (int i=0; i<nbf; i++) {
 	data[i] = theVec(i);
-    }
+      }
 
-    if (OPS_SetDoubleOutput(&nbf, &data[0], false) < 0) {
+      if (OPS_SetDoubleOutput(&nbf, &data[0], false) < 0) {
 	opserr << "WARNING failed to set output\n";
 	delete theResponse;
 	return -1;
+      }
+    }
+    // Scalar
+    else {
+      int nbf = 1;
+      double data = info.theDouble;
+      if (OPS_SetDoubleOutput(&nbf, &data, false) < 0) {
+	opserr << "WARNING failed to set output\n";
+	delete theResponse;
+	return -1;
+      }      
     }
 
     delete theResponse;
@@ -2944,7 +3422,7 @@ int OPS_basicStiffness()
     int tag;
 
     if (OPS_GetIntInput(&numdata, &tag) < 0) {
-	opserr << "WARNING basicStiffness eleTag? dofNum? - could not read eleTag? \n";
+	opserr << "WARNING basicStiffness eleTag? - could not read eleTag? \n";
 	return -1;
     }
 
@@ -2972,32 +3450,44 @@ int OPS_basicStiffness()
     theResponse->getResponse();
     Information &info = theResponse->getInformation();
 
-    const Matrix &theMatrix = *(info.theMatrix);
-    int nbf = theMatrix.noCols();
+    // Matrix
+    if (info.theMatrix != 0) {
+      const Matrix &theMatrix = *(info.theMatrix);
+      int nbf = theMatrix.noCols();
 
-    std::vector<double> values;
-    int size = nbf*nbf;
-    if (size == 0) {
+      std::vector<double> values;
+      int size = nbf*nbf;
+      if (size == 0) {
         if (OPS_SetDoubleOutput(&size, 0, false) < 0) {
-            opserr << "WARNING failed to set output\n";
-            delete theResponse;
-            return -1;
+	  opserr << "WARNING failed to set output\n";
+	  delete theResponse;
+	  return -1;
         }
         return 0;
-    }
-    values.reserve(size);
-
-
-    for (int i = 0; i < nbf; i++) {
+      }
+      values.reserve(size);
+      
+      for (int i = 0; i < nbf; i++) {
 	for (int j = 0; j < nbf; j++) {
-	    values.push_back(theMatrix(i,j));
+	  values.push_back(theMatrix(i,j));
 	}
-    }
+      }
 
-    if (OPS_SetDoubleOutput(&size, &values[0], false) < 0) {
+      if (OPS_SetDoubleOutput(&size, &values[0], false) < 0) {
 	opserr << "WARNING failed to set output\n";
 	delete theResponse;
 	return -1;
+      }
+    }
+    // Scalar
+    else {
+      int nbf = 1;
+      double data = info.theDouble;
+      if (OPS_SetDoubleOutput(&nbf, &data, false) < 0) {
+	opserr << "WARNING failed to set output\n";
+	delete theResponse;
+	return -1;
+      }      
     }
 
     delete theResponse;

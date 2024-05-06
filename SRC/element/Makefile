@@ -42,6 +42,7 @@ all:         $(OBJS)
 	@$(CD) $(FE)/element/UWelements; $(MAKE);
 	@$(CD) $(FE)/element/XMUelements; $(MAKE);
 	@$(CD) $(FE)/element/HUelements; $(MAKE);
+	@$(CD) $(FE)/element/IGA; $(MAKE);
 	@$(CD) $(FE)/element/XMUelements; $(MAKE);
 	@$(CD) $(FE)/element/mvlem; $(MAKE);
 	@$(CD) $(FE)/element/PFEMElement; $(MAKE);
@@ -53,6 +54,7 @@ all:         $(OBJS)
 	@$(CD) $(FE)/element/RockingBC; $(MAKE);
 	@$(CD) $(FE)/element/masonry; $(MAKE);
 	@$(CD) $(FE)/element/CEqElement; $(MAKE);
+	@$(CD) $(FE)/element/mefi; $(MAKE);
 
 # Miscellaneous
 tidy:	
@@ -93,6 +95,7 @@ spotless: clean
 	@$(CD) $(FE)/element/UWelements; $(MAKE) wipe;
 	@$(CD) $(FE)/element/XMUelements; $(MAKE) wipe;
 	@$(CD) $(FE)/element/HUelements; $(MAKE) wipe;
+	@$(CD) $(FE)/element/IGA; $(MAKE) wipe;
 	@$(CD) $(FE)/element/XMUelements; $(MAKE) wipe;
 	@$(CD) $(FE)/element/mvlem; $(MAKE) wipe;
 	@$(CD) $(FE)/element/PFEMElement; $(MAKE) wipe;
@@ -104,6 +107,7 @@ spotless: clean
 	@$(CD) $(FE)/element/RockingBC; $(MAKE) wipe;
 	@$(CD) $(FE)/element/masonry; $(MAKE) wipe;
 	@$(CD) $(FE)/element/CEqElement; $(MAKE) wipe;
+	@$(CD) $(FE)/element/mefi; $(MAKE) wipe;
 
 wipe: spotless
 

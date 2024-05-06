@@ -256,6 +256,9 @@ void *OPS_LeadRubberX()
             opserr << ", for space problem need 6 - LeadRubberX \n"; 
         }
         theEle = new LeadRubberX(iData[0], iData[1], iData[2], dData[0], dData[1], dData[2], dData[3], dData[4], dData[5], dData[6], dData[7], dData[8], y, x, kl, phi, al, sDratio, m, cd1, tc1, qL1, cL1, kS1, aS1, tag1, tag2, tag3, tag4, tag5);
+    } else {
+        opserr << "LeadRubberX is only available for ndm=3 three-dimensional models" << endln;
+        return 0;
     }
     
     if (theEle == 0) {
@@ -318,7 +321,7 @@ LeadRubberX::LeadRubberX(int eleTag, int Nd1, int Nd2, double qd, double alpha1,
     }
     double Er = Ec/3.0;                                     // Rotation modulus of bearing
     double As = A*h/Tr;                                     // Adjusted shear area of bearing
-    double Is = I*h/Tr;                                     // Adjusted moment of intertia of bearing
+    double Is = I*h/Tr;                                     // Adjusted moment of inertia of bearing
     double Pe = PI*PI*Er*Is/(h*h);                          // Euler buckling load of bearing
     Fcr = -sqrt(Pe*G*As);                                   // Critical buckling load in compression
     Fcrn = Fcr;                                             // Current value of critical buckling load

@@ -29,12 +29,12 @@ target_sources(OPS_PFEM
         PFEMLinSOE.cpp
         PFEMQuasiLinSOE.cpp
         PFEMQuasiSolver.cpp
-
         PFEMSolver.cpp
         PFEMSolver_Laplace.cpp
         PFEMSolver_LumpM.cpp
         PFEMSolver_LumpM.cpp
         PFEMSolver_Umfpack.cpp
+        PFEMSolver_Mumps.cpp	
     PUBLIC
         PFEMCompressibleLinSOE.h
         PFEMCompressibleSolver.h
@@ -43,13 +43,15 @@ target_sources(OPS_PFEM
         PFEMLinSOE.h
         PFEMQuasiLinSOE.h
         PFEMQuasiSolver.h
-
         PFEMSolver.h
         PFEMSolver_Laplace.h
         PFEMSolver_LumpM.h
         PFEMSolver_LumpM.h
         PFEMSolver_Umfpack.h
+        PFEMSolver_Mumps.h	
 )
+
+if(MPI_FOUND)
 
 target_sources(OpenSeesMP
     PRIVATE 
@@ -66,6 +68,9 @@ target_sources(OpenSeesMP
         PFEMSolver_Mumps.h
         PFEMCompressibleSolver_Mumps.h
 )
+
+endif()
+
 
 target_include_directories(OPS_SysOfEqn PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 

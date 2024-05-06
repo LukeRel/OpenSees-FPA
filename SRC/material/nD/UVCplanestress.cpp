@@ -65,7 +65,7 @@ void* OPS_UVCplanestress(void) {
     return 0;
   }
 
-  // Read in the updated model paramters
+  // Read in the updated model parameters
   nInputsToRead = N_UPDATED_PROPERTIES;
   if (OPS_GetDoubleInput(&nInputsToRead, updProps) != 0) {
     opserr << inputInstructions.c_str() << endln;
@@ -194,8 +194,8 @@ UVCplanestress::UVCplanestress()
   aIso(0.),
   cK(0.),
   gammaK(0.),
-  shearModulus(0. / (2. * (1. + poissonRatio))),
-  bulkModulus(0. / (3. * (1. - 2. * poissonRatio))),
+  shearModulus(0.),
+  bulkModulus(0.),
   strainConverged(N_DIMS),
   strainTrial(N_DIMS),
   strainPlasticConverged(N_DIMS),

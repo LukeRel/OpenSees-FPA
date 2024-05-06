@@ -642,7 +642,10 @@ NineNodeQuad::addInertiaLoadToUnbalance(const Vector &accel)
   static double rhoi[nip];
   double sum = 0.0;
   for (i = 0; i < nip; i++) {
-    rhoi[i] = theMaterial[i]->getRho();
+    if (rho == 0)
+      rhoi[i] = theMaterial[i]->getRho();
+    else
+      rhoi[i] = rho;
     sum += rhoi[i];
   }
 
@@ -758,7 +761,10 @@ NineNodeQuad::getResistingForceIncInertia()
 	static double rhoi[nip];
 	double sum = 0.0;
 	for (i = 0; i < nip; i++) {
-	  rhoi[i] = theMaterial[i]->getRho();
+	  if (rho == 0)
+            rhoi[i] = theMaterial[i]->getRho();
+          else
+            rhoi[i] = rho;	 
 	  sum += rhoi[i];
 	}
 
@@ -1565,7 +1571,7 @@ NineNodeQuad::setPressureLoadAtNodes(void)
 	const Vector &node6 = theNodes[5]->getCrds();
 	const Vector &node7 = theNodes[6]->getCrds();
 	const Vector &node8 = theNodes[7]->getCrds();
-	// center node has no pressure commponents
+	// center node has no pressure components
 	// const Vector &node9 = theNodes[8]->getCrds();
 
 	double x1 = node1(0);

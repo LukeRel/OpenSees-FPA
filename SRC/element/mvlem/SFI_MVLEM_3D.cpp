@@ -96,6 +96,12 @@ void* OPS_SFI_MVLEM_3D(void)
 	int* matTags = new int[m];
 
 	NDMaterial** theMaterials = new NDMaterial * [m];
+	for (int i = 0; i < m; i++) {
+		theThickness[i] = 0.0;
+		theWidth[i] = 0.0;
+		matTags[i] = 0;
+		theMaterials[i] = 0;
+	}
 
 	numArgs = OPS_GetNumRemainingInputArgs();
 
@@ -332,7 +338,7 @@ SFI_MVLEM_3D::SFI_MVLEM_3D(int tag,
 			exit(-1);
 		}
 
-		theMaterial[i] = materials[i]->getCopy();
+		theMaterial[i] = materials[i]->getCopy("PlaneStress2D");
 
 		if (theMaterial[i] == 0) {
 			opserr << "SFI_MVLEM_3D::SFI_MVLEM_3D() - "
@@ -407,10 +413,10 @@ SFI_MVLEM_3D::SFI_MVLEM_3D()
 	theMaterial(0), theLoad(0),
 	SFI_MVLEM_3DStrainX(0), SFI_MVLEM_3DStrainY(0), SFI_MVLEM_3DStrainXY(0), SFI_MVLEM_3DStrain(0),
 	x(0), b(0), AcX(0), AcY(0), kx(0), ky(0), Kh(0), Fx(0), Fy(0), Fxy(0), Dx(0), Dy(0), Dxy(0),
-	SFI_MVLEM_3DK(24 + m, 24 + m), SFI_MVLEM_3DR(24 + m), SFI_MVLEM_3DD(24 + m, 24 + m), SFI_MVLEM_3DM(24 + m, 24 + m),
+	m(1), SFI_MVLEM_3DK(24 + m, 24 + m), SFI_MVLEM_3DR(24 + m), SFI_MVLEM_3DD(24 + m, 24 + m), SFI_MVLEM_3DM(24 + m, 24 + m),
 	SFI_MVLEM_3DKlocal(24 + m, 24 + m), SFI_MVLEM_3DDlocal(24 + m, 24 + m), SFI_MVLEM_3DRlocal(24 + m), SFI_MVLEM_3DMlocal(24 + m, 24 + m),
 	P_24DOF(24), P_24DOF_local(24),
-	m(m), c(c), NUelastic(NUelastic), Tfactor(Tfactor),
+	c(0.4), NUelastic(0.0), Tfactor(0.0),
 	T(24 + m, 24 + m), Tt(3, 3), T6(6, 6),
 	nd1Crds(3), nd2Crds(3), nd3Crds(3), nd4Crds(3), modifiedT(0), t(0)
 {
@@ -458,45 +464,45 @@ SFI_MVLEM_3D::~SFI_MVLEM_3D()
 	if (theLoad != 0)
 		delete theLoad;
 	if (x != 0)
-		delete x;
+		delete []x;
 	if (b != 0)
-		delete b;
+		delete []b;
 	if (AcX != 0)
-		delete AcX;
+		delete []AcX;
 	if (AcY != 0)
-		delete AcY;
+		delete []AcY;
 	if (kx != 0)
-		delete kx;
+		delete []kx;
 	if (ky != 0)
-		delete ky;
+		delete []ky;
 	if (Fx != 0)
-		delete Fx;
+		delete []Fx;
 	if (Fy != 0)
-		delete Fy;
+		delete []Fy;
 	if (Fxy != 0)
-		delete Fxy;
+		delete []Fxy;
 	if (Dx != 0)
-		delete Dx;
+		delete []Dx;
 	if (Dy != 0)
-		delete Dy;
+		delete []Dy;
 	if (Dxy != 0)
-		delete Dxy;
+		delete []Dxy;
 	if (SFI_MVLEM_3DStrainX != 0)
-		delete SFI_MVLEM_3DStrainX;
+		delete []SFI_MVLEM_3DStrainX;
 	if (SFI_MVLEM_3DStrainY != 0)
-		delete SFI_MVLEM_3DStrainY;
+		delete []SFI_MVLEM_3DStrainY;
 	if (SFI_MVLEM_3DStrainXY != 0)
-		delete SFI_MVLEM_3DStrainXY;
+		delete []SFI_MVLEM_3DStrainXY;
 	if (SFI_MVLEM_3DStrain != 0)
-		delete SFI_MVLEM_3DStrain;
+		delete []SFI_MVLEM_3DStrain;
 	if (theNodesX != 0)
-		delete theNodesX;
+		delete []theNodesX;
 	if (theNodesALL != 0)
-		delete theNodesALL;
+		delete []theNodesALL;
 	if (modifiedT != 0)
-		delete modifiedT;
+		delete []modifiedT;
 	if (t != 0)
-		delete t;
+		delete []t;
 
 }
 
@@ -628,9 +634,10 @@ void SFI_MVLEM_3D::setDomain(Domain *theDomain)
 	// Calculate distance of corner nodes from center axis
 	d = Lw / 2.0;
 
+	int eletag = this->getTag();
 	// Create a internal node tag
 	for (int i = 0; i < m; i++) { // Large NEGATIVE integer starting with tag of the element
-		externalNodes(i + 4) = -(Nd1 * 1000 + i + 1); // Max fibers is 999 to avoid overlap
+		externalNodes(i + 4) = -(eletag * 1000 + i + 1); // Max fibers is 999 to avoid overlap
 	}
 
 	// Build m internal nodes (NodesX) and add them to the domain
@@ -639,7 +646,7 @@ void SFI_MVLEM_3D::setDomain(Domain *theDomain)
 		int nodeId_temp = externalNodes(i + 4); // Store node tag temporarily 
 
 		// Create coordinates wrt top and bottom element node 
-		double xLoc_temp = nd1CrdL(0) + x[i];
+		double xLoc_temp = nd1CrdL(0) + x[i] + d;
 		double yLoc_temp = 0.5 * (nd1CrdL(1) + nd3CrdL(1)); // Mid-height
 		double zLoc_temp = nd1CrdL(2);
 
@@ -710,7 +717,7 @@ void SFI_MVLEM_3D::setDomain(Domain *theDomain)
 	// Call the DomainComponent class method 
 	this->DomainComponent::setDomain(theDomain);
 
-	// Ensure conected nodes have correct number of dof's
+	// Ensure connected nodes have correct number of dof's
 	int dofNd1 = theNodes[0]->getNumberDOF();
 	int dofNd2 = theNodes[1]->getNumberDOF();
 	int dofNd3 = theNodes[2]->getNumberDOF();
@@ -747,39 +754,46 @@ void SFI_MVLEM_3D::setDomain(Domain *theDomain)
 	NodeMass = density * A * h / 4.0;
 
 	// Get Concrete Young's Modulus
-	theResponses = new Response *[1];
-	if (theResponses == 0) {
-		opserr << " SFI_MVLEM_3D::SFI_MVLEM_3D - failed allocate responses array\n";
-		exit(-1);
-	}
+	//theResponses = new Response *[1];
+	//if (theResponses == 0) {
+	//	opserr << " SFI_MVLEM_3D::SFI_MVLEM_3D - failed allocate responses array\n";
+	//	exit(-1);
+	//}
 
-	OPS_Stream *theDummyStream = new DummyStream();
-	const char **argv = new const char *[1];
-
-	argv[0] = "getInputParameters"; // to get input parameters from concrete material
+	//OPS_Stream *theDummyStream = new DummyStream();
+	DummyStream theDummyStream;
+	//const char **argv = new const char *[1];
+	//argv[0] = "getInputParameters"; // to get input parameters from concrete material
+	char aa[80] = "getInputParameters";
+	const char *argv[1];
+	argv[0] = aa;
+	
 	for (int i = 0; i < m; i++)
 	{
-		theResponses[0] = theMaterial[i]->setResponse(argv, 1, *theDummyStream);
+	  //theResponses[0] = theMaterial[i]->setResponse(argv, 1, *theDummyStream);
+	  Response *theResponse = theMaterial[i]->setResponse(argv, 1, theDummyStream);
 
-		if (theResponses[0] == 0) {
+	  //if (theResponses[0] == 0) {
+		if (theResponse == 0) {		  
 			opserr << " SFI_MVLEM_3D::SFI_MVLEM_3D - failed to get input parameters for FSAM material with tag: " << this->getTag() << "\n";
 			exit(-1);
 		}
 
 		// Get FSAM material input variables
-		theResponses[0]->getResponse();
-		Information &theInfoInput = theResponses[0]->getInformation();
-		const Vector InputNDMat = theInfoInput.getData();
-
-		Vector InputNDMaterial(InputNDMat.Size());
-
-		for (int j = 0; j < InputNDMat.Size(); j++)
-			InputNDMaterial[j] = InputNDMat[j];
+		//theResponses[0]->getResponse();
+		//Information &theInfoInput = theResponses[0]->getInformation();		
+		theResponse->getResponse();		
+		Information &theInfoInput = theResponse->getInformation();
+		const Vector &InputNDMat = theInfoInput.getData();
 
 		// Calculate out-of-plane modulus of elasticity (average modulus)
-		Eave += AcY[i] * InputNDMaterial[9] / A;
+		Eave += AcY[i] * InputNDMat[9] / A;
+
+		delete theResponse;
 
 	}
+
+	//delete theDummyStream;
 	
 	// Internal beam parameters
 	Eib = Eave;
@@ -837,7 +851,7 @@ int SFI_MVLEM_3D::commitState()
 	return errCode;
 }
 
-// Revert to last commited state (if convergence is not achieved)
+// Revert to last committed state (if convergence is not achieved)
 int SFI_MVLEM_3D::revertToLastCommit()
 {
 	int errCode = 0;
@@ -923,7 +937,7 @@ double *SFI_MVLEM_3D::computeCurrentStrain(void)
 		dispG(i + 24) = Dx[i];
 	}
 
-	// tranform nodal displacements from global to local cs
+	// transform nodal displacements from global to local cs
 	dispL.addMatrixVector(0.0, T, dispG, 1.0);
 
 	dispL_inPlan2N(0) = dispL(0) / 2.0 + dispL(6) / 2.0;
@@ -960,7 +974,7 @@ double *SFI_MVLEM_3D::computeCurrentStrain(void)
 
 }
 
-// Get the element intial element tangent matrix
+// Get the element initial element tangent matrix
 const Matrix & SFI_MVLEM_3D::getInitialStiff(void)
 {
 
@@ -2330,7 +2344,7 @@ int SFI_MVLEM_3D::addInertiaLoadToUnbalance(const Vector &accel)
 		RaccelG(i + 18) = Raccel4(i);
 	}
 
-	// Tranform accelerations from global to local cs
+	// Transform accelerations from global to local cs
 	RaccelL.addMatrixVector(0.0, T, RaccelG, 1.0);
 
 	// Compute mass matrix
@@ -2459,7 +2473,7 @@ const Vector & SFI_MVLEM_3D::getResistingForce()
 	return SFI_MVLEM_3DR;
 }
 
-// Get resisting force incremenet from inertial forces
+// Get resisting force increment from inertial forces
 const Vector & SFI_MVLEM_3D::getResistingForceIncInertia()
 {
 	// if no mass terms .. just add damping terms
@@ -2493,7 +2507,7 @@ const Vector & SFI_MVLEM_3D::getResistingForceIncInertia()
 		accelG(i + 18) = accel4(i);
 	}
 
-	// Tranform accelerations from global to local cs
+	// Transform accelerations from global to local cs
 	accelL.addMatrixVector(0.0, T, accelG, 1.0);
 
 	// Compute the current resisting force
@@ -2798,7 +2812,7 @@ int SFI_MVLEM_3D::displaySelf(Renderer& theViewer, int displayMode, float fact, 
 		NodePLotCrds(panel, 9) = GlCoord(2);
 		LocCoord.Zero();
 		GlCoord.Zero();
-		// Local node 4 - top rigth
+		// Local node 4 - top right
 		LocCoord(0) = Lv2_(0) + x[panel] - b[panel] / 2.0; // x
 		LocCoord(1) = Lv2_(1) + (x[panel] - b[panel] / 2.0)*end2Disp(5)*fact; // y
 		LocCoord(2) = Lv2_(2) - (x[panel] - b[panel] / 2.0)*end2Disp(4)*fact; // z
@@ -2899,7 +2913,7 @@ Response *SFI_MVLEM_3D::setResponse(const char **argv, int argc, OPS_Stream &s)
 		s.tag("ResponseType", "My_l");
 		s.tag("ResponseType", "Mz_l");
 
-		return theResponse = new ElementResponse(this, 1, Vector(24));
+		theResponse = new ElementResponse(this, 1, Vector(24));
 
 	}
 	// Nodal forces in local cs
@@ -2931,7 +2945,7 @@ Response *SFI_MVLEM_3D::setResponse(const char **argv, int argc, OPS_Stream &s)
 		s.tag("ResponseType", "My_l");
 		s.tag("ResponseType", "Mz_l");
 
-		return theResponse = new ElementResponse(this, 2, Vector(24));
+		theResponse = new ElementResponse(this, 2, Vector(24));
 
 	}
 
@@ -2940,7 +2954,7 @@ Response *SFI_MVLEM_3D::setResponse(const char **argv, int argc, OPS_Stream &s)
 
 		s.tag("ResponseType", "Dsh");
 
-		return theResponse = new ElementResponse(this, 3, 0.0);
+		theResponse = new ElementResponse(this, 3, 0.0);
 
 	}
 
@@ -2949,12 +2963,13 @@ Response *SFI_MVLEM_3D::setResponse(const char **argv, int argc, OPS_Stream &s)
 
 		s.tag("ResponseType", "fi");
 
-		return theResponse = new ElementResponse(this, 4, 0.0);
+		theResponse = new ElementResponse(this, 4, 0.0);
 	}
 
 	// Material output
-	else if (strcmp(argv[0], "RCpanel") == 0 || strcmp(argv[0], "RCPanel")
-		|| strcmp(argv[0], "RC_panel") || strcmp(argv[0], "RC_Panel") == 0)
+	else if (strcmp(argv[0], "RCpanel") == 0 || strcmp(argv[0], "RCPanel") == 0
+		|| strcmp(argv[0], "RC_panel") == 0 || strcmp(argv[0], "RC_Panel") == 0
+		|| strcmp(argv[0], "material") == 0)
 	{
 
 		// Check if correct # of arguments passed
@@ -2964,17 +2979,21 @@ Response *SFI_MVLEM_3D::setResponse(const char **argv, int argc, OPS_Stream &s)
 		}
 
 		int matNum = atoi(argv[1]);
+		if (matNum > 0 && matNum <= m) {
 
-		s.tag("Material");
-		s.attr("number", matNum);
+			s.tag("GaussPointOutput");
+			s.attr("number", matNum);
+			s.attr("eta", x[matNum - 1] / Lw * 2.0);
+			s.attr("weight", b[matNum - 1] / Lw * 2.0);
 
-		return theResponse = theMaterial[matNum - 1]->setResponse(&argv[argc - 1], argc - 2, s);
+			theResponse = theMaterial[matNum - 1]->setResponse(&argv[argc - 1], argc - 2, s);
+		}
 
 	}
 
 	s.endTag();
 
-	return 0;
+	return theResponse;
 }
 
 // Get shear deformation

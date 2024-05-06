@@ -13,6 +13,7 @@ OBJS       = SectionForceDeformation.o \
 	ElasticPlateSection.o \
 	ElasticMembranePlateSection.o \
 	MembranePlateFiberSection.o \
+	DoubleMembranePlateFiberSection.o \
 	TclModelBuilderSectionCommand.o \
 	FiberSection2d.o \
 	NDFiberSection2d.o \
@@ -31,13 +32,15 @@ OBJS       = SectionForceDeformation.o \
 	LayeredShellFiberSection.o \
 	LayeredShellFiberSectionThermal.o \
 	FiberSection3dThermal.o \
-	MembranePlateFiberSectionThermal.o
+	MembranePlateFiberSectionThermal.o \
+	FiberSectionGJThermal.o
 
 all:         $(OBJS)
 	@$(CD) $(FE)/material/section/repres; $(MAKE);
 	@$(CD) $(FE)/material/section/fiber; $(MAKE);
 	@$(CD) $(FE)/material/section/yieldSurface; $(MAKE);
 	@$(CD) $(FE)/material/section/integration; $(MAKE);
+	@$(CD) $(FE)/material/section/LayeredMembraneSection; $(MAKE);
 
 test: main.o
 	@$(LINKER) $(LINKFLAGS) main.o $(INTERPRETER_LIBS_MPI) \
@@ -60,5 +63,6 @@ wipe: spotless
 	@$(CD) $(FE)/material/section/fiber; $(MAKE) wipe;
 	@$(CD) $(FE)/material/section/yieldSurface; $(MAKE) wipe;
 	@$(CD) $(FE)/material/section/integration; $(MAKE) wipe;
+	@$(CD) $(FE)/material/section/LayeredMembraneSection; $(MAKE) wipe;
 
 # DO NOT DELETE THIS LINE -- make depends on it.

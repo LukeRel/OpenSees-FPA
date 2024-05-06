@@ -16,6 +16,9 @@
     <ClCompile Include="..\..\..\SRC\interpreter\OpenSeesCrdTransfCommands.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\SRC\interpreter\OpenSeesDampingCommands.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\SRC\interpreter\OpenSeesElementCommands.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -53,6 +56,18 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\SRC\reliability\domain\distributions\PythonRV.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\SRC\reliability\domain\functionEvaluator\PythonEvaluator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\SRC\interpreter\OpenSeesIGACommands.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\SRC\interpreter\OpenSeesNDTestCommands.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\SRC\interpreter\PythonStream.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -45,6 +45,7 @@ UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 #include "DL_Interpreter.h"
 #include <UniaxialMaterial.h>
 #include <Domain.h>
+#include <ReliabilityDomain.h>
 #include <StaticAnalysis.h>
 #include <DirectIntegrationAnalysis.h>
 #include <LinearSOE.h>
@@ -73,6 +74,7 @@ public:
 
     DL_Interpreter* getInterpreter();
     Domain* getDomain();
+    ReliabilityDomain* getReliabilityDomain();
     AnalysisModel** getAnalysisModel();
 
     int getNDF() const {return ndf;}
@@ -83,41 +85,64 @@ public:
 
     void setSOE(LinearSOE* soe);
     LinearSOE* getSOE() {return theSOE;}
+    LinearSOE** getSOEPointer() {return &theSOE;}
 
     void setNumberer(DOF_Numberer* numberer);
     DOF_Numberer* getNumberer() {return theNumberer;}
+    DOF_Numberer** getNumbererPointer() { return &theNumberer; }
 
     void setHandler(ConstraintHandler* handler);
     ConstraintHandler* getHandler() {return theHandler;}
+    ConstraintHandler** getHandlerPointer() {return &theHandler;}
 
     void setStaticIntegrator(StaticIntegrator* integrator);
     StaticIntegrator* getStaticIntegrator() {return theStaticIntegrator;}
+    StaticIntegrator** getStaticIntegratorPointer() {
+        return &theStaticIntegrator;
+    }
 
     void setTransientIntegrator(TransientIntegrator* integrator);
     TransientIntegrator* getTransientIntegrator() {return theTransientIntegrator;}
+    TransientIntegrator** getTransientIntegratorPointer() {
+        return &theTransientIntegrator;
+    }
+
+    void setIntegrator(Integrator* inte, bool transient);
 
     void setAlgorithm(EquiSolnAlgo* algo);
     EquiSolnAlgo* getAlgorithm() {return theAlgorithm;}
+    EquiSolnAlgo** getAlgorithmPointer() {return &theAlgorithm;}
 
     void setCTest(ConvergenceTest* test);
     ConvergenceTest* getCTest() {return theTest;}
+    ConvergenceTest** getCTestPointer() { return &theTest; }
 
-    void setStaticAnalysis();
+    void setStaticAnalysis(bool suppress);
     StaticAnalysis* getStaticAnalysis() {return theStaticAnalysis;}
+    StaticAnalysis** getStaticAnalysisPointer() {return &theStaticAnalysis;}
 
-    int setPFEMAnalysis();
+    int setPFEMAnalysis(bool suppress);
     PFEMAnalysis* getPFEMAnalysis() {return thePFEMAnalysis;}
 
-    void setVariableAnalysis();
-    VariableTimeStepDirectIntegrationAnalysis*
-    getVariableAnalysis() {return theVariableTimeStepTransientAnalysis;}
+    void setVariableAnalysis(bool suppress);
+    VariableTimeStepDirectIntegrationAnalysis* getVariableAnalysis() {
+        return theVariableTimeStepTransientAnalysis;
+    }
+    VariableTimeStepDirectIntegrationAnalysis**
+    getVariableAnalysisPointer() {
+        return &theVariableTimeStepTransientAnalysis;
+    }
 
-    void setTransientAnalysis();
+    void setTransientAnalysis(bool suppress);
     DirectIntegrationAnalysis* getTransientAnalysis() {return theTransientAnalysis;}
+    DirectIntegrationAnalysis** getTransientAnalysisPointer() {
+        return &theTransientAnalysis;
+    }
 
     void setNumEigen(int num) {numEigen = num;}
     int getNumEigen() {return numEigen;}
     EigenSOE* getEigenSOE() {return theEigenSOE;}
+    EigenSOE** getEigenSOEPointer() {return &theEigenSOE;}
 
     void setFileDatabase(const char* filename);
     FE_Datastore* getDatabase() {return theDatabase;}
@@ -210,6 +235,12 @@ int OPS_doBlock3D();
 /* OpenSeesTimeSeriesCommands.cpp */
 int OPS_TimeSeries();
 
+/* OpenSeesIGACommands.cpp */
+int OPS_IGA();
+
+/* OpenSeesNDTestCommands.cpp */
+int OPS_NDTest();
+
 /* OpenSeesPatternCommands.cpp */
 int OPS_Pattern();
 int OPS_NodalLoad();
@@ -226,6 +257,7 @@ int OPS_Layer();
 
 /* OpenSeesCrdTransfCommands.cpp */
 int OPS_CrdTransf();
+int OPS_Damping();
 
 /* OpenSeesBeamIntegrationCommands.cpp */
 int OPS_BeamIntegration();
@@ -249,11 +281,19 @@ int OPS_nodeAccel();
 int OPS_nodeResponse();
 int OPS_nodeCoord();
 int OPS_setNodeCoord();
+int OPS_getPatterns();
+int OPS_getFixedNodes();
+int OPS_getFixedDOFs();
+int OPS_getConstrainedNodes();
+int OPS_getConstrainedDOFs();
+int OPS_getRetainedNodes();
+int OPS_getRetainedDOFs();
 int OPS_updateElementDomain();
 int OPS_eleNodes();
 int OPS_getNDMM();
 int OPS_getNDFF();
 int OPS_eleType();
+int OPS_classType();
 int OPS_nodeDOFs();
 int OPS_nodeMass();
 int OPS_nodePressure();
@@ -261,6 +301,7 @@ int OPS_setNodePressure();
 int OPS_nodeBounds();
 int OPS_setPrecision();
 int OPS_getEleTags();
+int OPS_getCrdTransfTags();
 int OPS_getNodeTags();
 int OPS_getParamTags();
 int OPS_getParamValue();
@@ -336,15 +377,34 @@ int OPS_partition();
 // OpenSeesReliabilityCommands.cpp
 int OPS_randomVariable();
 int OPS_getRVTags();
+int OPS_getRVParamTag();
+int OPS_getRVValue();
 int OPS_getRVMean();
 int OPS_getRVStdv();
 int OPS_getRVPDF();
 int OPS_getRVCDF();
 int OPS_getRVInverseCDF();
+int OPS_getLSFTags();
 int OPS_addCorrelate();
+int OPS_performanceFunction(); // limit state function
+int OPS_gradPerformanceFunction(); // limit state function
 int OPS_probabilityTransformation();
 int OPS_transformUtoX();
+int OPS_startPoint();
+int OPS_randomNumberGenerator();
+int OPS_reliabilityConvergenceCheck();
+int OPS_searchDirection();
+int OPS_meritFunctionCheck();
+int OPS_stepSizeRule();
+int OPS_rootFinding();
+int OPS_findDesignPoint();
+int OPS_functionEvaluator();
+int OPS_gradientEvaluator();
 int OPS_wipeReliability();
+int OPS_runFOSMAnalysis();
+int OPS_runFORMAnalysis();
+int OPS_runImportanceSamplingAnalysis();
+ReliabilityDomain* OPS_GetReliabilityDomain();
 
 /* OpenSeesCommands.cpp */
 int OPS_wipe();
@@ -363,6 +423,7 @@ int OPS_resetModel();
 int OPS_initializeAnalysis();
 int OPS_printA();
 int OPS_printB();
+int OPS_printX();
 int OPS_printModel();
 int OPS_Database();
 int OPS_save();
@@ -412,6 +473,8 @@ int OPS_HomogeneousBC_Y();
 int OPS_HomogeneousBC_Z();
 int OPS_ShallowFoundationGen();
 int OPS_Pressure_Constraint();
+int OPS_DomainModalProperties();
+int OPS_ResponseSpectrumAnalysis();
 
 void* OPS_TimeSeriesIntegrator();
 
@@ -455,6 +518,7 @@ void* OPS_LoadControlIntegrator();
 void* OPS_DisplacementControlIntegrator();
 void* OPS_Newmark();
 void* OPS_GimmeMCK();
+void* OPS_HarmonicSteadyState();
 void* OPS_ArcLength();
 void* OPS_ArcLength1();
 void* OPS_HSConstraint();

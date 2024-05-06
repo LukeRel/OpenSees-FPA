@@ -164,7 +164,7 @@ QuadMesh::mesh() {
         return -1;
     }
     if (lines.size() != 4) {
-        opserr << "WARNING: input number of lines != 4 3\n";
+        opserr << "WARNING: input number of lines != 4\n";
         return -1;
     }
     this->setNodeTags(ndtags);
@@ -272,7 +272,7 @@ QuadMesh::mesh() {
         // create node
         Node *node = newNode(nodecounter++, crds);
         if (node == 0) {
-            opserr << "WARING: failed to create node\n";
+            opserr << "WARNING: failed to create node\n";
             return -1;
         }
         if (domain->addNode(node) == false) {
@@ -373,7 +373,7 @@ QuadMesh::mesh() {
     }
     this->setEleNodes(elenodes);
 
-    // create elemnts
+    // create elements
     if (this->newElements(elenodes) < 0) {
         opserr << "WARNING: failed to create elements\n";
         return -1;

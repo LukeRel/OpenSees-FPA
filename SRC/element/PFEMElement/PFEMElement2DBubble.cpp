@@ -81,13 +81,13 @@ void* OPS_PFEMElement2DBubble(const ID &info)
     // regular element, or save data
     if (info.Size()==0 || info(0)==1) {
         if(OPS_GetNumRemainingInputArgs() < 4) {
-            opserr<<"insufficient arguments: rho, mu, b1, b2, (thinknes,kappa,minJ)\n";
+            opserr<<"insufficient arguments: rho, mu, b1, b2, (thinknes,kappa)\n";
             return 0;
         }
 
-        // rho, mu, b1, b2, (thinknes,kappa,minJ)
+        // rho, mu, b1, b2, thinknes,kappa
         numdata = OPS_GetNumRemainingInputArgs();
-        if(numdata > 7) numdata = 7;
+        if(numdata > 6) numdata = 6;
         if(OPS_GetDoubleInput(&numdata,data) < 0) {
             opserr << "WARNING: failed to get fluid properties\n";
             return 0;
@@ -293,7 +293,7 @@ PFEMElement2DBubble::update()
 
     // this is the trick to check negative jacobian
     if((kappa==-2 && J<0) || (kappa!=-2 && fabs(J)<minJ)) {
-        opserr<<"WARING: element "<<this->getTag()<<" area is "<<J<<"\n";
+        opserr<<"WARNING: element "<<this->getTag()<<" area is "<<J<<"\n";
         for (int i=0; i<3; i++) {
             opserr << "node "<<nodes[2*i]->getTag()<<": \n";
             opserr << "coordinates - "<<nodes[2*i]->getCrds();
@@ -840,7 +840,7 @@ PFEMElement2DBubble::setParameter(const char **argv, int argc,
         parameter.setValue(mu);
         return parameter.addObject(1, this);
     }
-    // Mass densitity of the
+    // Mass density of the
     if (strcmp(argv[0],"rho") == 0) {
         parameter.setValue(rho);
         return parameter.addObject(2, this);

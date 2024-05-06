@@ -4,16 +4,17 @@ import os
 class OpenSeesDependencies(ConanFile):
     name = "OpenSeesDependencies"
     version = "1.0.0"
-    description = "rovides Software Packages needed to build OpenSees"
+    description = "Provides Software Packages needed to build OpenSees"
     license = "BSD 3-Clause"
     author = "fmk fmckenna@berkeley.edu"
     settings = {"os": None, "build_type": None, "compiler": None, "arch": ["x86_64"]}
     options = {"shared": [True, False]}
     default_options = {"mkl-static:threaded": False, "ipp-static:simcenter_backend": True}    
-    generators = "cmake"
+    generators = "cmake", "cmake_find_package"
     build_policy = "missing"
-    requires = "libmysqlclient/8.0.25", \
-        "tcl/8.6.10"
+    requires = "hdf5/1.14.0", \
+        "tcl/8.6.11", \
+        "eigen/3.4.0"
     # Custom attributes for Bincrafters recipe conventions
     _source_subfolder = "source_subfolder"
     _build_subfolder = "build_subfolder"

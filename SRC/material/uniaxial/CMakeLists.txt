@@ -13,22 +13,19 @@ target_sources(OPS_Material
       BWBN.cpp
       Bilin.cpp
       Bilin02.cpp
-
       ConcreteCM.cpp
       ConcreteD.cpp
       ConcretewBeta.cpp
-
+      DowelType.cpp
       Elastic2Material.cpp
       ElasticBilin.cpp
       ElasticMaterial.cpp
       ElasticMultiLinear.cpp
       ElasticPPMaterial.cpp
       ElasticPowerFunc.cpp
-
       IMKBilin.cpp
       IMKPeakOriented.cpp
       IMKPinching.cpp
-
       MaterialState.cpp
       OriginCentered.cpp
       ParallelMaterial.cpp
@@ -38,7 +35,6 @@ target_sources(OPS_Material
       SteelDRC.cpp      
       UVCuniaxial.cpp
       UniaxialMaterial.cpp
-      #TclDegradingUniaxial.cpp
     PUBLIC
       AxialSp.h
       AxialSp.h
@@ -46,22 +42,19 @@ target_sources(OPS_Material
       BWBN.h
       Bilin.h
       Bilin02.h
-
       ConcreteCM.h
       ConcreteD.h
       ConcretewBeta.h
-
+      DowelType.h
       Elastic2Material.h
       ElasticBilin.h
       ElasticMaterial.h
       ElasticMultiLinear.h
       ElasticPPMaterial.h
       ElasticPowerFunc.h
-
       IMKBilin.h
       IMKPeakOriented.h
       IMKPinching.h
-
       MaterialState.h
       OriginCentered.h
       ParallelMaterial.h
@@ -83,6 +76,7 @@ target_sources(OPS_Material
       Bond_SP01.cpp
       BoucWenMaterial.cpp
       BoucWenOriginal.cpp
+      BoucWenInfill.cpp      
       CFSSSWP.cpp
       CFSWSWP.cpp
       CableMaterial.cpp
@@ -99,8 +93,12 @@ target_sources(OPS_Material
       ConcreteECThermal.cpp
       ConcreteSakaiKawashima.cpp
       ConcretewBeta.cpp
+      ConcreteZBH_fitted.cpp
+      ConcreteZBH_original.cpp
+      ConcreteZBH_smoothed.cpp 
       ConfinedConcrete01.cpp
       ContinuumUniaxial.cpp
+      CreepMaterial.cpp
       CubicSpline.cpp
       DamperMaterial.cpp
       DegradingPinchedBW.cpp
@@ -112,20 +110,28 @@ target_sources(OPS_Material
       EPPGapMaterial.cpp
       ElasticBDMaterial.cpp
       ElasticMaterialThermal.cpp
+      FRCC.cpp
       FRPConfinedConcrete.cpp
       FRPConfinedConcrete02.cpp
       FatigueMaterial.cpp
       #FedeasMaterial.cpp
+      FlagShapeMaterial.cpp
+      GMG_CyclicReinforcedConcrete.cpp
       GNGMaterial.cpp
       HardeningMaterial.cpp
       #HardeningMaterial2.cpp
+      Hertzdamp.cpp
       HookGap.cpp
       HyperbolicGapMaterial.cpp
+      HystereticAsym.cpp
       HystereticMaterial.cpp
+      HystereticSMMaterial.cpp
       HystereticPoly.cpp
+      HystereticSmooth.cpp
       ImpactMaterial.cpp
       InitStrainMaterial.cpp
       InitStressMaterial.cpp
+      JankowskiImpact.cpp
       KikuchiAikenHDR.cpp
       KikuchiAikenLRB.cpp
       Maxwell.cpp                      # Uses ops_Dt
@@ -135,12 +141,15 @@ target_sources(OPS_Material
       ModIMKPinching.cpp
       ModIMKPinching02.cpp
       MultiLinear.cpp
+      MultiplierMaterial.cpp
       Neoprene.cpp
       OOHystereticMaterial.cpp
       PathIndependentMaterial.cpp
+      PenaltyMaterial.cpp      
       Pinching4Material.cpp
       PrestressedSteelMaterial.cpp
       RambergOsgoodSteel.cpp
+      Ratchet.cpp
       ReinforcingSteel.cpp
       ResilienceMaterialHR.cpp
       SAWSMaterial.cpp
@@ -165,18 +174,22 @@ target_sources(OPS_Material
       SteelFractureDI.cpp
       SteelMP.cpp
       TDConcrete.cpp
+      TDConcreteNL.cpp
       TDConcreteEXP.cpp
       TDConcreteMC10.cpp
       TDConcreteMC10NL.cpp
       TensionOnlyMaterial.cpp
       UniaxialJ2Plasticity.cpp
+      ViscoelasticGap.cpp
       ViscousDamper.cpp
       ViscousMaterial.cpp
       WrapperUniaxialMaterial.cpp
       pyUCLA.cpp
       SMAMaterial.cpp
+      CoulombDamperMaterial.cpp
       
       TriMatrix.cpp
+      DuctileFracture.cpp
 
     PUBLIC
       ASD_SMA_3K.h
@@ -186,6 +199,7 @@ target_sources(OPS_Material
       Bond_SP01.h
       BoucWenMaterial.h
       BoucWenOriginal.h
+      BoucWenInfill.h      
       CFSSSWP.h
       CFSWSWP.h
       CableMaterial.h
@@ -202,8 +216,12 @@ target_sources(OPS_Material
       ConcreteECThermal.h
       ConcreteSakaiKawashima.h
       ConcretewBeta.h
+      ConcreteZBH_fitted.h
+      ConcreteZBH_original.h
+      ConcreteZBH_smoothed.h
       ConfinedConcrete01.h
       ContinuumUniaxial.h
+      CreepMaterial.h
       CubicSpline.h
       DamperMaterial.h
       DegradingPinchedBW.h
@@ -215,20 +233,28 @@ target_sources(OPS_Material
       EPPGapMaterial.h
       ElasticBDMaterial.h
       ElasticMaterialThermal.h
+      FRCC.h
       FRPConfinedConcrete.h
       FRPConfinedConcrete02.h
       FatigueMaterial.h
       #FedeasMaterial.h
+      FlagShapeMaterial.h
       GNGMaterial.h
-      #HardeningMaterial.h
-      HardeningMaterial2.h
+      GMG_CyclicReinforcedConcrete.h
+      HardeningMaterial.h
+      #HardeningMaterial2.h
+      Hertzdamp.h
       HookGap.h
       HyperbolicGapMaterial.h
+      HystereticAsym.h
       HystereticMaterial.h
+      HystereticSMMaterial.h
       HystereticPoly.h
+      HystereticSmooth.h
       ImpactMaterial.h
       InitStrainMaterial.h
       InitStressMaterial.h
+      JankowskiImpact.h
       KikuchiAikenHDR.h
       KikuchiAikenLRB.h
       Maxwell.h
@@ -238,12 +264,15 @@ target_sources(OPS_Material
       ModIMKPinching.h
       ModIMKPinching02.h
       MultiLinear.h
+      MultiplierMaterial.h
       Neoprene.h
       OOHystereticMaterial.h
       PathIndependentMaterial.h
+      PenaltyMaterial.h
       Pinching4Material.h
       PrestressedSteelMaterial.h
       RambergOsgoodSteel.h
+      Ratchet.h
       ReinforcingSteel.h
       ResilienceMaterialHR.h
       SAWSMaterial.h
@@ -267,17 +296,38 @@ target_sources(OPS_Material
       SteelECThermal.h
       SteelMP.h
       TDConcrete.h
+      TDConcreteNL.h
       TDConcreteEXP.h
       TDConcreteMC10.h
       TDConcreteMC10NL.h
       TensionOnlyMaterial.h
       UniaxialJ2Plasticity.h
+      ViscoelasticGap.h
       ViscousDamper.h
       ViscousMaterial.h
       WrapperUniaxialMaterial.h
       pyUCLA.h
+      CoulombDamperMaterial.h
 
       TriMatrix.h  # move to SRC/matrix ?
+      DuctileFracture.h
+)
+
+
+
+target_sources(OPS_Material
+  PRIVATE
+   Masonry.cpp
+   Masonryt.cpp
+   Trilinwp.cpp
+   Trilinwp2.cpp
+   Trilinwpd.cpp
+  PUBLIC
+   Masonry.h
+   Masonryt.h
+   Trilinwp.h
+   Trilinwp2.h
+   Trilinwpd.h
 )
 
 

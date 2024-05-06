@@ -57,11 +57,15 @@ void* OPS_FixedLocationBeamIntegration(int&,ID&);
 void* OPS_LowOrderBeamIntegration(int&,ID&);
 void* OPS_MidDistanceBeamIntegration(int&,ID&);
 void* OPS_ChebyshevBeamIntegration(int&,ID&);
+void* OPS_RegularizedHingeBeamIntegration(int&,ID&);
 void* OPS_UserHingeBeamIntegration(int&,ID&);
 void* OPS_HingeMidpointBeamIntegration(int&,ID&);
 void* OPS_HingeRadauBeamIntegration(int&,ID&);
 void* OPS_HingeRadauTwoBeamIntegration(int&,ID&);
 void* OPS_HingeEndpointBeamIntegration(int&,ID&);
+void* OPS_ConcentratedPlasticityBeamIntegration(int&, ID&);
+void* OPS_ConcentratedCurvatureBeamIntegration(int&, ID&);
+
 
 namespace {
     struct char_cmp { 
@@ -89,11 +93,14 @@ namespace {
 	functionMap.insert(std::make_pair("FixedLocation", &OPS_FixedLocationBeamIntegration));
 	functionMap.insert(std::make_pair("LowOrder", &OPS_LowOrderBeamIntegration));
 	functionMap.insert(std::make_pair("MidDistance", &OPS_MidDistanceBeamIntegration));
-	functionMap.insert(std::make_pair("UserHinge", &OPS_UserHingeBeamIntegration));
+	functionMap.insert(std::make_pair("RegularizedHinge", &OPS_RegularizedHingeBeamIntegration));
+	functionMap.insert(std::make_pair("UserHinge", &OPS_UserHingeBeamIntegration));	
 	functionMap.insert(std::make_pair("HingeMidpoint", &OPS_HingeMidpointBeamIntegration));
 	functionMap.insert(std::make_pair("HingeRadau", &OPS_HingeRadauBeamIntegration));
 	functionMap.insert(std::make_pair("HingeRadauTwo", &OPS_HingeRadauTwoBeamIntegration));
 	functionMap.insert(std::make_pair("HingeEndpoint", &OPS_HingeEndpointBeamIntegration));
+	functionMap.insert(std::make_pair("ConcentratedPlasticity", &OPS_ConcentratedPlasticityBeamIntegration));
+	functionMap.insert(std::make_pair("ConcentratedCurvature", &OPS_ConcentratedCurvatureBeamIntegration));
 	return 0;
     }
     

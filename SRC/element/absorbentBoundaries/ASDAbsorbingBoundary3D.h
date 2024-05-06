@@ -108,6 +108,10 @@ public:
     int setParameter(const char** argv, int argc, Parameter& param);
     int updateParameter(int parameterID, Information& info);
 
+    // response
+    Response* setResponse(const char** argv, int argc, OPS_Stream& output);
+    int getResponse(int responseID, Information& eleInfo);
+
 private:
 
     // methods to get displacement/velocity
@@ -141,9 +145,9 @@ private:
     void addRff(Vector& R);
     // obtain the N matrix
     const Matrix& computeNmatrix();
-    // fills the stiffness matrix of the free-field forces tranfered to the soil domain
+    // fills the stiffness matrix of the free-field forces transferred to the soil domain
     void addKffToSoil(Matrix& K);
-    // fills the forces transfered from the free-field to the soil domain
+    // fills the forces transferred from the free-field to the soil domain
     void addRffToSoil(Vector& R);
     // compute damping parameters
     void getDampParam(double& alpha, double& beta);

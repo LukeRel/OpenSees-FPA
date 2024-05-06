@@ -200,6 +200,7 @@
     <ClCompile Include="..\..\..\SRC\analysis\analysis\DirectIntegrationAnalysis.cpp" />
     <ClCompile Include="..\..\..\SRC\analysis\analysis\DomainDecompositionAnalysis.cpp" />
     <ClCompile Include="..\..\..\SRC\analysis\analysis\PFEMAnalysis.cpp" />
+    <ClCompile Include="..\..\..\SRC\analysis\analysis\SDFAnalysis.cpp" />
     <ClCompile Include="..\..\..\SRC\analysis\analysis\StaticAnalysis.cpp" />
     <ClCompile Include="..\..\..\SRC\analysis\analysis\TransientAnalysis.cpp" />
     <ClCompile Include="..\..\..\SRC\analysis\analysis\VariableTimeStepDirectIntegrationAnalysis.cpp" />
@@ -209,6 +210,7 @@
     <ClCompile Include="..\..\..\SRC\analysis\integrator\EQPath.cpp" />
     <ClCompile Include="..\..\..\SRC\analysis\integrator\ExplicitDifference.cpp" />
     <ClCompile Include="..\..\..\SRC\analysis\integrator\GimmeMCK.cpp" />
+    <ClCompile Include="..\..\..\SRC\analysis\integrator\HarmonicSteadyState.cpp" />
     <ClCompile Include="..\..\..\SRC\analysis\integrator\HHTExplicit_TP.cpp" />
     <ClCompile Include="..\..\..\SRC\analysis\integrator\HHTGeneralizedExplicit_TP.cpp" />
     <ClCompile Include="..\..\..\SRC\analysis\integrator\HHTGeneralized_TP.cpp" />

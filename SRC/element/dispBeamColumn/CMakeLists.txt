@@ -13,10 +13,13 @@ target_sources(OPS_Element
     DispBeamColumn2dThermal.cpp
     DispBeamColumn3dThermal.cpp
     DispBeamColumnNL2d.cpp
+    DispBeamColumnNL3d.cpp
+    DispBeamColumnWarping3d.cpp    
     DispBeamColumn2dWithSensitivity.cpp
     DispBeamColumn3dWithSensitivity.cpp
     AxEqDispBeamColumn2d.cpp
     TimoshenkoBeamColumn2d.cpp
+    TimoshenkoBeamColumn3d.cpp
     DispBeamColumn3dID.cpp
   PUBLIC
     DispBeamColumn2d.h
@@ -25,10 +28,13 @@ target_sources(OPS_Element
     DispBeamColumn2dThermal.h
     DispBeamColumn3dThermal.h
     DispBeamColumnNL2d.h
+    DispBeamColumnNL3d.h
+    DispBeamColumnWarping3d.h    
     DispBeamColumn2dWithSensitivity.h
     DispBeamColumn3dWithSensitivity.h
     AxEqDispBeamColumn2d.h
     TimoshenkoBeamColumn2d.h
+    TimoshenkoBeamColumn3d.h    
     DispBeamColumn3dID.h
 )
 

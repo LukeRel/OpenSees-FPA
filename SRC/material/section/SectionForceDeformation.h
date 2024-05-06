@@ -48,6 +48,8 @@ class SectionalLoad;
 
 #define MAX_SECTION_RESPONSE_ID 10000
 
+#define SECTION_RESPONSE_NONE   -1
+
 #define SECTION_RESPONSE_MZ		1
 #define SECTION_RESPONSE_P		2
 #define SECTION_RESPONSE_VY		3
@@ -59,6 +61,17 @@ class SectionalLoad;
 #define SECTION_RESPONSE_B              9 // Bi-moment (FiberSectionWarping3d)
 #define SECTION_RESPONSE_W             10 // (FiberSectionWarping3d)
 
+// section responses for shells
+#define SECTION_RESPONSE_FXX 11 // membrane xx
+#define SECTION_RESPONSE_FYY 12 // membrane yy
+#define SECTION_RESPONSE_FXY 13 // membrane xy
+#define SECTION_RESPONSE_MXX 14 // bending xx
+#define SECTION_RESPONSE_MYY 15 // bending yy
+#define SECTION_RESPONSE_MXY 16 // bending xy
+#define SECTION_RESPONSE_VXZ 17 // bending yy
+#define SECTION_RESPONSE_VYZ 18 // bending xy
+
+
 class SectionForceDeformation : public Material
 {
  public:
@@ -66,8 +79,7 @@ class SectionForceDeformation : public Material
   SectionForceDeformation ();
   virtual ~SectionForceDeformation ();
   
-  //virtual int setTrialSectionDeformation (const Vector&) = 0;
-  virtual int setTrialSectionDeformation (const Vector&) ; //the default valuoe 0 is removeed byJZ ,UoE 
+  virtual int setTrialSectionDeformation (const Vector&) = 0;
   virtual const Vector &getSectionDeformation (void) = 0;
   
   virtual const Vector &getStressResultant (void) = 0;

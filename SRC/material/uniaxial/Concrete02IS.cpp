@@ -33,7 +33,7 @@
 //       by MOHD YASSIN (1993)
 // adapted to FEDEAS material library
 // by D. Sze and Filip C. Filippou in 1994
-// Modified by Nasser A. Marafi (2018) so that the concrete intiial stiffness
+// Modified by Nasser A. Marafi (2018) so that the concrete initial stiffness
 // can be specified. 
 //-----------------------------------------------------------------------
 
@@ -101,6 +101,11 @@ Concrete02IS::Concrete02IS(int tag, double _E0, double _fc, double _epsc0, doubl
   ecminP = 0.0;
   deptP = 0.0;
 
+  if (fc > 0) fc = -fc;
+  if (epsc0 > 0) epsc0 = -epsc0;
+  if (fcu > 0) fcu = -fcu;
+  if (epscu > 0) epscu = -epscu;
+	  
   eP = E0;//2.0*fc / epsc0; // Marafi Change 2018/01/31
   epsP = 0.0;
   sigP = 0.0;
@@ -118,6 +123,11 @@ Concrete02IS::Concrete02IS(int tag, double _E0, double _fc, double _epsc0, doubl
   ecminP = 0.0;
   deptP = 0.0;
 
+  if (fc > 0) fc = -fc;
+  if (epsc0 > 0) epsc0 = -epsc0;
+  if (fcu > 0) fcu = -fcu;
+  if (epscu > 0) epscu = -epscu;
+	  
   eP = E0;//2.0*fc / epsc0; // Marafi Change 2018/01/31
   epsP = 0.0;
   sigP = 0.0;
@@ -164,7 +174,7 @@ Concrete02IS::setTrialStrain(double trialStrain, double strainRate)
 {
 	double  ec0 = E0; // fc * 2. / epsc0; // Marafi Change 2018/01/31
 
-  // retrieve concrete hitory variables
+  // retrieve concrete history variables
 
   ecmin = ecminP;
   dept = deptP;

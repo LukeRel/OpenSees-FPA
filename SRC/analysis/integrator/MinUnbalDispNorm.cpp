@@ -685,6 +685,8 @@ MinUnbalDispNorm::formdLambdaDh(int gradNumber)
   //return 0.0;
   if(dLAMBDAdh != 0)
     return (*dLAMBDAdh)(gradNumber);
+  else
+    return 0.0;
 }
 
 
@@ -933,13 +935,8 @@ MinUnbalDispNorm::computeSensitivities(void)
   
   // Zero out the old right-hand side of the SOE
   theSOE->zeroB();
-  if (this == 0) {
-    opserr << "ERROR SensitivityAlgorithm::computeSensitivities() -";
-    opserr << "the SensitivityIntegrator is NULL\n";
-    return -1;
-  }
-//opserr<<"A"<<endln;
-  // Form the part of the RHS which are indepent of parameter
+
+  // Form the part of the RHS which are independent of parameter
   this->formIndependentSensitivityRHS();
 
   AnalysisModel *theModel = this->getAnalysisModel();   

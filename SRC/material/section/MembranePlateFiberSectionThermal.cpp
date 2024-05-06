@@ -36,6 +36,41 @@
 #include <MaterialResponse.h>
 #include <Information.h>
 
+#include <elementAPI.h>
+
+void* OPS_MembranePlateFiberSectionThermal()
+{
+    int numdata = OPS_GetNumRemainingInputArgs();
+    if (numdata < 3) {
+	opserr << "WARNING insufficient arguments\n";
+	opserr << "Want: section PlateFiberThermal tag? matTag? h? " << endln;
+	return 0;
+    }
+    
+    int idata[2];
+    numdata = 2;
+    if (OPS_GetIntInput(&numdata, idata) < 0) {
+	opserr << "WARNING: invalid tags\n";
+	return 0;
+    }
+
+    double h;
+    numdata = 1;
+    if (OPS_GetDoubleInput(&numdata, &h) < 0) {
+	opserr << "WARNING: invalid h\n";
+	return 0;
+    }
+
+    NDMaterial *theMaterial = OPS_getNDMaterial(idata[1]);
+    if (theMaterial == 0) {
+	opserr << "WARNING nD material does not exist\n";
+	opserr << "nD material: " << idata[1]; 
+	opserr << "\nPlateFiberThermal section: " << idata[0] << endln;
+	return 0;
+    }
+
+    return new MembranePlateFiberSectionThermal(idata[0], h, *theMaterial);
+}
 
 //parameters
 //const double MembranePlateFiberSectionThermal::root56 = 1 ; //shear correction
@@ -79,7 +114,7 @@ const double  MembranePlateFiberSectionThermal::wg[] = { 0.1,
 //null constructor
 MembranePlateFiberSectionThermal::MembranePlateFiberSectionThermal( ) : 
 SectionForceDeformation( 0, SEC_TAG_MembranePlateFiberSectionThermal ), 
-strainResultant(8) 
+strainResultant(8), sT(2)
 { 
   for ( int i = 0; i < 5; i++ )
       theFibers[i] = 0 ;
@@ -94,7 +129,7 @@ MembranePlateFiberSectionThermal::MembranePlateFiberSectionThermal(
                                    double thickness, 
                                    NDMaterial &Afiber ) :
 SectionForceDeformation( tag, SEC_TAG_MembranePlateFiberSectionThermal ),
-strainResultant(8)
+strainResultant(8), sT(2)
 {
   this->h  = thickness ;
 
@@ -102,9 +137,6 @@ strainResultant(8)
   for ( i = 0; i < 5; i++ )
       theFibers[i] = Afiber.getCopy( "PlateFiberThermal" ) ;
  //J.Jiang add 
-   sT = new Vector(sTData,2);   
-   sTData[0] = 0.0;             
-   sTData[1] = 0.0;  
    ThermalElongation[0] = 0.0;
    ThermalElongation[1] = 0.0;
    ThermalElongation[2] = 0.0;
@@ -119,9 +151,8 @@ strainResultant(8)
 //destructor
 MembranePlateFiberSectionThermal::~MembranePlateFiberSectionThermal( ) 
 { 
-  int i ;
-  for ( i = 0; i < 5; i++ )
-     delete theFibers[i] ;
+  for (int i = 0; i < 5; i++ )
+    delete theFibers[i];
 } 
 
 
@@ -134,6 +165,12 @@ SectionForceDeformation  *MembranePlateFiberSectionThermal::getCopy( )
   clone = new MembranePlateFiberSectionThermal( this->getTag(), 
                                          this->h,
                                          *theFibers[0] ) ; //make the copy
+  clone->sT = sT;
+  clone->countnGauss = countnGauss;
+  clone->ThermalGradientShink = ThermalGradientShink;
+  for (int i = 0; i < 5; i++)
+    clone->ThermalElongation[i] = ThermalElongation[i];
+  
   return clone ;
 }
 
@@ -149,7 +186,19 @@ int MembranePlateFiberSectionThermal::getOrder( ) const
 //send back order of strainResultant in vector form
 const ID& MembranePlateFiberSectionThermal::getType( ) 
 {
-  return array ;
+    static bool initialized = false;
+    if (!initialized) {
+        array(0) = SECTION_RESPONSE_FXX;
+        array(1) = SECTION_RESPONSE_FYY;
+        array(2) = SECTION_RESPONSE_FXY;
+        array(3) = SECTION_RESPONSE_MXX;
+        array(4) = SECTION_RESPONSE_MYY;
+        array(5) = SECTION_RESPONSE_MXY;
+        array(6) = SECTION_RESPONSE_VXZ;
+        array(7) = SECTION_RESPONSE_VYZ;
+        initialized = true;
+    }
+    return array;
 }
 
 
@@ -302,9 +351,6 @@ const Vector&  MembranePlateFiberSectionThermal::getStressResultant( )
       weight = ( 0.5*h ) * wg[i] ;
 
       stress = theFibers[i]->getStress( ) ;
-#ifdef _SDEBUG
-	  opserr<<"MembranePlateFiberSection:resultantstress "<<endln<<stress;
-#endif
   
       //membrane
       stressResultant(0)  +=  stress(0)*weight ;
@@ -417,12 +463,12 @@ MembranePlateFiberSectionThermal::getTemperatureStress(const Vector& dataMixed)
   //update yBar = Ai*Ei*yi/(Ai*E*) 
   //calculate centroid of section yBar for composite section,i.e. yBar is related to tangent E
   
-      sTData[0] = fabs(ThermalTangent[0])*h*12e-6*fabs(dataTempe[0]+dataTempe[16])/2;
+  sT(0) = fabs(ThermalTangent[0])*h*12e-6*fabs(dataTempe[0]+dataTempe[16])/2;
       //sTData[0] = fabs(ThermalTangent[0])*h*12e-6*fabs(dataTempe[0]);
       //sTData[1] = fabs(dataTempe[0]-dataTempe[16])/h*ThermalTangent[0]*h*h*h/12*12e-6;
 	  //J.Jiang second try to get Mt
-      sTData[1] = fabs(dataTempe[0]-dataTempe[16])*12e-6*fabs(ThermalTangent[0])*h*h/12/0.7;
-      return *sT;
+  sT(1) = fabs(dataTempe[0]-dataTempe[16])*12e-6*fabs(ThermalTangent[0])*h*h/12/0.7;
+      return sT;
 }
 
 //send back the tangent 
@@ -692,7 +738,7 @@ MembranePlateFiberSectionThermal::recvSelf(int commitTag, Channel &theChannel, F
       theFibers[i]->setDbTag(matDbTag);
       res += theFibers[i]->recvSelf(commitTag, theChannel, theBroker);
       if (res < 0) {
-	opserr << "MembranePlateFiber::recvSelf() - material " << i << "failed to recv itself\n";
+	opserr << "MembranePlateFiberSectionThermal::recvSelf() - material " << i << "failed to recv itself\n";
 	  
 	return res;
       }
@@ -746,6 +792,8 @@ MembranePlateFiberSectionThermal::setResponse(const char **argv, int argc,
       
       output.tag("FiberOutput");
       output.attr("number",pointNum);
+      output.attr("zLoc", 0.5 * h * sg[pointNum - 1]);
+      output.attr("thickness", 0.5 * h * wg[pointNum - 1]);
       
       theResponse = theFibers[pointNum-1]->setResponse(&argv[2], argc-2, output);
       
@@ -763,4 +811,50 @@ int
 MembranePlateFiberSectionThermal::getResponse(int responseID, Information &secInfo)
 {
   return SectionForceDeformation::getResponse(responseID, secInfo);
+}
+
+int MembranePlateFiberSectionThermal::setParameter(const char** argv, int argc, Parameter& param)
+{
+    // if the user explicitly wants to update a material in this section...
+    if (argc > 1) {
+        // case 1: fiber value (all fibers)
+        // case 2: fiber id value (one specific fiber)
+        if (strcmp(argv[0], "fiber") == 0 || strcmp(argv[0], "Fiber") == 0) {
+            // test case 2 (one specific fiber) ...
+            if (argc > 2) {
+                int pointNum = atoi(argv[1]);
+                if (pointNum > 0 && pointNum <= 5) {
+                    return theFibers[pointNum - 1]->setParameter(&argv[2], argc - 2, param);
+                }
+            }
+            // ... otherwise case 1 (all fibers), if the argv[1] is not a valid id
+            int mixed_result = -1;
+            for (int i = 0; i < 5; ++i) {
+                if (theFibers[i]->setParameter(&argv[1], argc - 1, param) == 0)
+                    mixed_result = 0; // if at least one fiber handles the param, make it successful
+            }
+            return mixed_result;
+        }
+    }
+    // if we are here, the first keyword is not "fiber", so we can check for parameters
+    // specific to this section (if any) or forward the request to all fibers.
+    if (argc > 0) {
+        // we don't have parameters for this section, so we directly forward it to all fibers.
+        // placeholder for future implementations: if we will have parameters for this class, check them here
+        // before forwarding to all fibers
+        int mixed_result = -1;
+        for (int i = 0; i < 5; ++i) {
+            if (theFibers[i]->setParameter(argv, argc, param) == 0)
+                mixed_result = 0; // if at least one fiber handles the param, make it successful
+        }
+        return mixed_result;
+    }
+    // fallback to base class implementation
+    return SectionForceDeformation::setParameter(argv, argc, param);
+}
+
+int MembranePlateFiberSectionThermal::updateParameter(int parameterID, Information& info)
+{
+    // placeholder for future implementations: if we will have parameters for this class, update them here
+    return SectionForceDeformation::updateParameter(parameterID, info);
 }

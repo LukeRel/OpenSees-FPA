@@ -56,7 +56,11 @@
 
 
 // uniaxial material model header files
-#include "BoucWenMaterial.h"		//SAJalali
+#include "ElasticBilin.h"
+#include "BoucWenMaterial.h"
+#include "BWBN.h"
+#include "BoucWenOriginal.h"
+#include "BoucWenInfill.h"
 #include "SPSW02.h"			//SAJalali
 #include "ElasticMaterial.h"
 #include "ElasticMultiLinear.h"
@@ -64,39 +68,77 @@
 #include "Elastic2Material.h"
 #include "ElasticPPMaterial.h"
 #include "ParallelMaterial.h"
+#include "DamperMaterial.h"
+#include "PenaltyMaterial.h"
+#include "MultiplierMaterial.h"
+#include "TensionOnlyMaterial.h"
 #include "ASD_SMA_3K.h"
 #include "Concrete01.h"
+#include "Concrete01WithSITC.h"
 #include "Concrete02.h"
+#include "Concrete02IS.h"
 #include "Concrete04.h"
 #include "Concrete06.h" 
 #include "Concrete07.h"
 #include "ConcretewBeta.h"
+#include "TDConcrete.h"
+#include "TDConcreteNL.h"
+#include "TDConcreteEXP.h"
+#include "TDConcreteMC10.h"
+#include "TDConcreteMC10NL.h"
+#include "CreepMaterial.h"
 #include "OriginCentered.h"
 #include "Steel01.h"
 #include "Steel02.h"
+#include "SteelMPF.h"
 #include "Steel2.h"
 #include "Steel4.h"
+#include "RambergOsgoodSteel.h"
+#include "AxialSp.h"
+#include "AxialSpHD.h"
+#include "SelfCenteringMaterial.h"
+#include "SteelFractureDI.h"
 #include "FatigueMaterial.h"
 #include "ReinforcingSteel.h"
 #include "HardeningMaterial.h"
 #include "HystereticMaterial.h"
+#include "HystereticSMMaterial.h"
 #include "EPPGapMaterial.h"
 #include "ViscousMaterial.h"
 #include "ViscousDamper.h"
+#include "ContinuumUniaxial.h"
 #include "PathIndependentMaterial.h"
+#include "BackboneMaterial.h"
 #include "SeriesMaterial.h"
 #include "CableMaterial.h"
 #include "ENTMaterial.h"
+#include "GNGMaterial.h"
+#include "Ratchet.h"
 #include "MinMaxMaterial.h"
 #include "ModIMKPeakOriented.h"
+#include "IMKBilin.h"
+#include "IMKPeakOriented.h"
+#include "IMKPinching.h"
+#include "UVCuniaxial.h"
+#include "SLModel.h"
+#include "Cast.h"
 #include "snap/Clough.h"
 #include "limitState/LimitStateMaterial.h"
 #include "InitStressMaterial.h"
 #include "InitStrainMaterial.h"
 #include "Bond_SP01.h"
+#include "FRCC.h"
 #include "SimpleFractureMaterial.h"
 #include "ConfinedConcrete01.h"
+
 #include <HystereticPoly.h>					// Salvatore Sessa 14-Jan-2021
+#include <HystereticSmooth.h>					// Salvatore Sessa Apr-19-2022
+#include <HystereticAsym.h>					// Salvatore Sessa Apr-21-2022
+
+
+#include "DowelType.h"
+#include "DuctileFracture.h" // Kuanshi Zhong
+#include <GMG_CyclicReinforcedConcrete.h>      // Rasool Ghorbani
 
 //PY springs: RWBoulanger and BJeremic
 #include "PY/PySimple1.h"
@@ -127,38 +169,74 @@
 #include "drain/DrainPinch1Material.h"
 #include "HyperbolicGapMaterial.h"
 #include "ImpactMaterial.h"
+#include "Hertzdamp.h"
+#include "JankowskiImpact.h"
+#include "ViscoelasticGap.h"
+#include "Pinching4Material.h"
+#include "SAWSMaterial.h"
+#include "KikuchiAikenHDR.h"
+#include "KikuchiAikenLRB.h"
 
 // Sections
 #include "ElasticSection2d.h"
 #include "ElasticSection3d.h"
 #include "ElasticShearSection2d.h"
+#include "ElasticBDShearSection2d.h"
 #include "ElasticShearSection3d.h"
+#include "ElasticTubeSection3d.h"
+#include "ElasticWarpingShearSection2d.h"
 #include "GenericSection1d.h"
 //#include "GenericSectionNd.h"
 #include "SectionAggregator.h"
+#include "ParallelSection.h"
 //#include "FiberSection.h"
 #include "FiberSection2d.h"
 #include "FiberSection3d.h"
+#include "FiberSection2dThermal.h"
+#include "FiberSection3dThermal.h"
+#include "NDFiberSection2d.h"
+#include "NDFiberSectionWarping2d.h"
+#include "NDFiberSection3d.h"
 #include "FiberSectionAsym3d.h" //Xinlong Du
+#include "FiberSectionWarping3d.h"
 #include "ElasticPlateSection.h"
 #include "ElasticMembranePlateSection.h"
 #include "MembranePlateFiberSection.h"
+#include "DoubleMembranePlateFiberSection.h"
 #include "Bidirectional.h"
+#include "Elliptical2.h"
+#include "Isolator2spring.h"
 #include "LayeredShellFiberSection.h" // Yuli Huang & Xinzheng Lu 
+#include "LayeredMembraneSection/ReinforcedConcreteLayeredMembraneSection.h" // M. J. Nunez
+#include "LayeredMembraneSection/LayeredMembraneSection.h" // M. J. Nunez
+#include "LayeredMembraneSection/ElasticMembraneSection.h" // M. J. Nunez
 
 // NDMaterials
 #include "ElasticIsotropicPlaneStrain2D.h"
 #include "ElasticIsotropicPlaneStress2D.h"
 #include "ElasticIsotropicPlateFiber.h"
+#include "ElasticIsotropicBeamFiber.h"
+#include "ElasticIsotropicBeamFiber2d.h"
 #include "ElasticIsotropicAxiSymm.h"
 #include "ElasticIsotropicThreeDimensional.h"
+#include "ElasticOrthotropicThreeDimensional.h"
+#include "ElasticOrthotropicPlaneStress.h"
 #include "J2PlaneStrain.h"
 #include "J2PlaneStress.h"
 #include "J2PlateFiber.h"
+#include "J2BeamFiber2d.h"
+#include "J2BeamFiber3d.h"
 #include "J2AxiSymm.h"
 #include "J2ThreeDimensional.h"
+#include "SimplifiedJ2.h"
+#include "PlaneStrainMaterial.h"
 #include "PlaneStressMaterial.h"
 #include "PlateFiberMaterial.h"
+#include "OrthotropicMaterial.h"
+#include "Series3DMaterial.h"
+#include "Parallel3DMaterial.h"
+#include "PlaneStressRebarMaterial.h"
+#include "PlaneStressLayeredMaterial.h"
 //start Yuli Huang & Xinzheng L
 #include "PlateRebarMaterial.h"
 #include "PlateFromPlaneStressMaterial.h"
@@ -178,6 +256,7 @@
 #include "soil/FluidSolidPorousMaterial.h"
 #include "soil/PressureDependMultiYield.h"
 #include "soil/PressureDependMultiYield02.h"
+#include "soil/PressureDependMultiYield03.h"
 #include "soil/PressureIndependMultiYield.h"
 
 #include "UWmaterials/ContactMaterial2D.h"
@@ -201,6 +280,10 @@
 #include "UWmaterials/InitialStateAnalysisWrapper.h"
 #include "stressDensityModel/stressDensity.h"
 #include "InitStressNDMaterial.h"
+#include "InitStrainNDMaterial.h"
+#include "ASDConcrete3DMaterial.h"
+#include "OrthotropicRotatingAngleConcreteT2DMaterial01/OrthotropicRotatingAngleConcreteT2DMaterial01.h" // M. J. Nunez
+#include "SmearedSteelDoubleLayerT2DMaterial01/SmearedSteelDoubleLayerT2DMaterial01.h" // M. J. Nunez
 
 // Fibers
 #include "fiber/UniaxialFiber2d.h"
@@ -212,6 +295,8 @@
 #include "frictionBearing/frictionModel/VelPressureDep.h"
 #include "frictionBearing/frictionModel/VelDepMultiLinear.h"
 #include "frictionBearing/frictionModel/VelNormalFrcDep.h"
+
+#include "ArctangentBackbone.h"
 
 // element header files
 #include "Element.h"
@@ -238,11 +323,18 @@
 #include "fourNodeQuad/ConstantPressureVolumeQuad.h"
 #include "elasticBeamColumn/ElasticBeam2d.h"
 #include "elasticBeamColumn/ElasticBeam3d.h"
+#include "componentElement/ComponentElement2d.h"
+#include "componentElement/ComponentElement3d.h"
 #include "elasticBeamColumn/ModElasticBeam2d.h"			//SAJalali
+#include "elasticBeamColumn/ModElasticBeam3d.h"
 #include "elasticBeamColumn/ElasticTimoshenkoBeam2d.h"
 #include "elasticBeamColumn/ElasticTimoshenkoBeam3d.h"
 #include "forceBeamColumn/ForceBeamColumn2d.h"
 #include "forceBeamColumn/ForceBeamColumn3d.h"
+#include "dispBeamColumn/TimoshenkoBeamColumn2d.h"
+#include "dispBeamColumn/TimoshenkoBeamColumn3d.h"
+#include "gradientInelasticBeamColumn/GradientInelasticBeamColumn2d.h"
+#include "gradientInelasticBeamColumn/GradientInelasticBeamColumn3d.h"
 #include "triangle/Tri31.h"
 
 #include "UWelements/SSPquad.h"
@@ -256,9 +348,19 @@
 #include "UWelements/BeamEndContact3D.h"
 #include "UWelements/BeamEndContact3Dp.h"
 #include "UWelements/QuadBeamEmbedContact.h"
+#include "UWelements/Quad4FiberOverlay.h"
+#include "UWelements/Brick8FiberOverlay.h"
+#include "EmbeddedBeamInterfaceL.h"
+#include "SurfaceLoad.h"
+#include "TriSurfaceLoad.h"
 
 #include "PML/PML2D.h"
 #include "PML/PML3D.h"
+#include "PML/PML2D_3.h"
+#include "PML/PML2D_5.h"
+#include "PML/PML2D_12.h"
+#include "PML/PML2DVISCOUS.h"
+
 
 #include "UP-ucsd/Nine_Four_Node_QuadUP.h"
 #include "UP-ucsd/BrickUP.h"
@@ -269,25 +371,40 @@
 
 #include "dispBeamColumn/DispBeamColumn2d.h"
 #include "dispBeamColumn/DispBeamColumn3d.h"
+#include "mixedBeamColumn/MixedBeamColumn2d.h"
+#include "mixedBeamColumn/MixedBeamColumn3d.h"
+#include "dispBeamColumn/DispBeamColumnNL2d.h"
+#include "dispBeamColumn/DispBeamColumnNL3d.h"
 #include "dispBeamColumn/DispBeamColumnAsym3d.h"    //Xinlong Du
 #include "dispBeamColumnBond/DispBeamColumnBond2d.h" // Luca Parente
 #include "mixedBeamColumn/MixedBeamColumnAsym3d.h"  //Xinlong Du
+#include "dispBeamColumn/DispBeamColumn2dThermal.h"
+#include "dispBeamColumn/DispBeamColumn3dThermal.h"
 #include "shell/ShellMITC4.h"
 #include "shell/ShellMITC9.h"
 #include "shell/ShellDKGQ.h"   //Added by Lisha Wang, Xinzheng Lu, Linlin Xie, Song Cen & Quan Gu
 #include "shell/ShellNLDKGQ.h" //Added by Lisha Wang, Xinzheng Lu, Linlin Xie, Song Cen & Quan Gu
+#include "shell/ShellDKGT.h"
+#include "shell/ShellNLDKGT.h"
 #include "shell/ASDShellQ4.h" // Massimo Petracca
+#include "shell/ASDShellT3.h" // Massimo Petracca
 #include "brick/Brick.h"
 #include "brick/BbarBrick.h"
 #include "joint/Joint2D.h"		// Arash
+#include "joint/Inno3DPnPJoint.h" // Cristian Miculas
 #include "twoNodeLink/TwoNodeLink.h"
 #include "twoNodeLink/LinearElasticSpring.h"
 #include "twoNodeLink/Inerter.h"
+#include "tetrahedron/FourNodeTetrahedron.h"
 
 #include "mvlem/MVLEM.h"		// Kristijan Kolozvari
 #include "mvlem/SFI_MVLEM.h"	// Kristijan Kolozvari
 #include "mvlem/MVLEM_3D.h"		// Kristijan Kolozvari
-#include "mvlem/SFI_MVLEM_3D.h"		// Kristijan Kolozvari
+#include "mvlem/SFI_MVLEM_3D.h"	// Kristijan Kolozvari
+#include "mvlem/E_SFI_MVLEM_3D.h"	// Kristijan Kolozvari
+#include "mvlem/E_SFI.h"		// C. N. Lopez
+
+#include "mefi/MEFI.h"		// C. N. Lopez
 
 #include "elastomericBearing/ElastomericBearingBoucWen2d.h"
 #include "elastomericBearing/ElastomericBearingBoucWen3d.h"
@@ -306,6 +423,7 @@
 #include "frictionBearing/SingleFPSimple2d.h"
 #include "frictionBearing/SingleFPSimple3d.h"
 #include "frictionBearing/TripleFrictionPendulum.h"
+#include "frictionBearing/TripleFrictionPendulumX.h"
 
 #include "PFEMElement/PFEMElement2D.h"
 #include "RockingBC/RockingBC.h"
@@ -321,6 +439,11 @@
 #include "PDeltaCrdTransf3d.h"
 #include "CorotCrdTransf2d.h"
 #include "CorotCrdTransf3d.h"
+
+#include "UniformDamping.h"
+#include "SecStifDamping.h"
+#include "URDDamping.h"
+#include "URDDampingbeta.h"
 
 #include "HingeMidpointBeamIntegration.h"
 #include "HingeEndpointBeamIntegration.h"
@@ -341,6 +464,19 @@
 #include "LowOrderBeamIntegration.h"
 #include "MidDistanceBeamIntegration.h"
 #include "CompositeSimpsonBeamIntegration.h"
+#include "SimpsonBeamIntegration.h"
+#include "ChebyshevBeamIntegration.h"
+
+#include "ConcentratedPlasticityBeamIntegration.h"
+#include "ConcentratedCurvatureBeamIntegration.h"
+
+#include "RCCircularSectionIntegration.h"
+#include "RCSectionIntegration.h"
+#include "RCTBeamSectionIntegration.h"
+#include "RCTunnelSectionIntegration.h"
+#include "TubeSectionIntegration.h"
+#include "WideFlangeSectionIntegration.h"
+#include "HSSSectionIntegration.h"
 
 // node header files
 #include "Node.h"
@@ -360,7 +496,9 @@
 #include "EnvelopeNodeRecorder.h"
 #include "EnvelopeElementRecorder.h"
 #include "DriftRecorder.h"
+#ifdef _HDF5
 #include "MPCORecorder.h"
+#endif // _HDF5
 #include "VTK_Recorder.h"
 #include "GmshRecorder.h"
 
@@ -521,6 +659,7 @@
 #include "ConstantSeries.h"
 #include "TrigSeries.h"
 #include "TriangleSeries.h"
+#include "MPAccSeries.h"   //Tang.S
 
 // time series integrators
 #include "TrapezoidalTimeSeriesIntegrator.h"
@@ -718,14 +857,35 @@ FEM_ObjectBrokerAllClasses::getNewElement(int classTag)
 	case ELE_TAG_ModElasticBeam2d:
 		return new ModElasticBeam2d();
 
+	case ELE_TAG_ModElasticBeam3d:
+		return new ModElasticBeam3d();
+
 	case ELE_TAG_ElasticBeam3d:
       return new ElasticBeam3d();
+
+    case ELE_TAG_ComponentElement2d:
+      return new ComponentElement2d();
+
+    case ELE_TAG_ComponentElement3d:
+      return new ComponentElement3d();      
       
     case ELE_TAG_ElasticTimoshenkoBeam2d:
       return new ElasticTimoshenkoBeam2d();
       
     case ELE_TAG_ElasticTimoshenkoBeam3d:
       return new ElasticTimoshenkoBeam3d();
+
+    case ELE_TAG_TimoshenkoBeamColumn2d:
+      return new TimoshenkoBeamColumn2d();
+      
+    case ELE_TAG_TimoshenkoBeamColumn3d:
+      return new TimoshenkoBeamColumn3d();
+
+    case ELE_TAG_GradientInelasticBeamColumn2d:
+      return new GradientInelasticBeamColumn2d();
+      
+    case ELE_TAG_GradientInelasticBeamColumn3d:
+      return new GradientInelasticBeamColumn3d();
       
     case ELE_TAG_ForceBeamColumn2d:  
       return new ForceBeamColumn2d();					     
@@ -740,13 +900,31 @@ FEM_ObjectBrokerAllClasses::getNewElement(int classTag)
 		return new DispBeamColumnBond2d();
 
     case ELE_TAG_DispBeamColumn3d:  
-      return new DispBeamColumn3d(); 
+      return new DispBeamColumn3d();
+
+    case ELE_TAG_MixedBeamColumn2d:  
+      return new MixedBeamColumn2d();					     
+      
+    case ELE_TAG_MixedBeamColumn3d:  
+      return new MixedBeamColumn3d();      
+
+    case ELE_TAG_DispBeamColumnNL2d:  
+      return new DispBeamColumnNL2d();					     
+      
+    case ELE_TAG_DispBeamColumnNL3d:  
+      return new DispBeamColumnNL3d();       
 
 	case ELE_TAG_DispBeamColumnAsym3d:
 		return new DispBeamColumnAsym3d();    //Xinlong Du
 
 	case ELE_TAG_MixedBeamColumnAsym3d:
 		return new MixedBeamColumnAsym3d();   //Xinlong Du
+
+    case ELE_TAG_DispBeamColumn2dThermal:  
+      return new DispBeamColumn2dThermal();					     
+      
+    case ELE_TAG_DispBeamColumn3dThermal:  
+      return new DispBeamColumn3dThermal();
       
     case ELE_TAG_EnhancedQuad:
       return new EnhancedQuad();
@@ -778,12 +956,42 @@ FEM_ObjectBrokerAllClasses::getNewElement(int classTag)
     case ELE_TAG_SSPbrickUP:
       return new SSPbrickUP();
 
+    case ELE_TAG_SurfaceLoad:
+      return new SurfaceLoad();
+
+    case ELE_TAG_TriSurfaceLoad:
+      return new TriSurfaceLoad();      
+      
+    case ELE_TAG_Quad4FiberOverlay:
+      return new Quad4FiberOverlay(); //Amin Pakzad
+	
+	case ELE_TAG_Brick8FiberOverlay:
+      return new Brick8FiberOverlay(); //Amin Pakzad
+
+	case ELE_TAG_EmbeddedBeamInterfaceL:
+	  return new EmbeddedBeamInterfaceL(); //Amin Pakzad
+
+    case ELE_TAG_FourNodeTetrahedron:
+      return new FourNodeTetrahedron();
+      
 	case ELE_TAG_PML2D:
 	  return new PML2D();
 
 	case ELE_TAG_PML3D:
 	  return new PML3D();
 
+	case ELE_TAG_PML2D_3:
+	  return new PML2D_3(); // Amin Pakzad
+	
+	case ELE_TAG_PML2D_5:
+	  return new PML2D_5(); // Amin Pakzad
+
+	case ELE_TAG_PML2D_12:
+	  return new PML2D_12(); // Amin Pakzad
+
+	case ELE_TAG_PML2DVISCOUS:
+	  return new PML2DVISCOUS(); // Amin Pakzad
+	
     case ELE_TAG_BeamContact2D:
       return new BeamContact2D();
       
@@ -816,15 +1024,27 @@ FEM_ObjectBrokerAllClasses::getNewElement(int classTag)
       
     case ELE_TAG_ShellNLDKGQ:      //Added by Lisha Wang, Xinzheng Lu, Linlin Xie, Song Cen & Quan Gu
       return new ShellNLDKGQ();  //Added by Lisha Wang, Xinzheng Lu, Linlin Xie, Song Cen & Quan Gu
-    
+
+    case ELE_TAG_ShellDKGT:
+      return new ShellDKGT();
+      
+    case ELE_TAG_ShellNLDKGT:
+      return new ShellNLDKGT();
+	    
     case ELE_TAG_ASDShellQ4:   // Massimo Petracca
       return new ASDShellQ4(); // Massimo Petracca
+    
+    case ELE_TAG_ASDShellT3:   // Massimo Petracca
+      return new ASDShellT3(); // Massimo Petracca
     
     case ELE_TAG_BbarBrick:
       return new BbarBrick();
             
     case ELE_TAG_Joint2D:				// Arash
       return new Joint2D();			// Arash
+	  
+    case ELE_TAG_Inno3DPnPJoint:	// Cristian Miculas
+      return new Inno3DPnPJoint();	// Cristian Miculas
       
     case ELE_TAG_TwoNodeLink:				
       return new TwoNodeLink();			
@@ -846,6 +1066,15 @@ FEM_ObjectBrokerAllClasses::getNewElement(int classTag)
 
 	case ELE_TAG_SFI_MVLEM_3D:		// Kristijan Kolozvari
 		return new SFI_MVLEM_3D();	// Kristijan Kolozvari
+
+	case ELE_TAG_E_SFI_MVLEM_3D:		// Kristijan Kolozvari
+		return new E_SFI_MVLEM_3D();	// Kristijan Kolozvari
+		
+	case ELE_TAG_E_SFI:			// C. N. Lopez
+		return new E_SFI();		// C. N. Lopez	
+		
+	case ELE_TAG_MEFI:			// C. N. Lopez
+		return new MEFI();		// C. N. Lopez		
 
     case ELE_TAG_BBarFourNodeQuadUP:
       return new BBarFourNodeQuadUP();			
@@ -910,6 +1139,9 @@ FEM_ObjectBrokerAllClasses::getNewElement(int classTag)
     case ELE_TAG_TripleFrictionPendulum:
       return new TripleFrictionPendulum();
 
+    case ELE_TAG_TripleFrictionPendulumX:
+      return new TripleFrictionPendulumX();
+		    
     case ELE_TAG_PFEMElement2D:
       return new PFEMElement2D();
 
@@ -1093,6 +1325,27 @@ FEM_ObjectBrokerAllClasses::getNewCrdTransf(int classTag)
 
 }
 
+Damping*
+FEM_ObjectBrokerAllClasses::getNewDamping(int classTag)
+{
+	switch(classTag) {
+	case DMP_TAG_UniformDamping:
+		return new UniformDamping();
+	case DMP_TAG_SecStifDamping:
+		return new SecStifDamping();
+	case DMP_TAG_URDDamping:
+		return new URDDamping();
+	case DMP_TAG_URDDampingbeta:
+		return new URDDampingbeta();
+	default:
+	  opserr << "FEM_ObjectBrokerAllClasses::getNewDamping - ";
+	  opserr << " - no Damping type exists for class tag ";
+	  opserr << classTag << endln;
+	  return 0;
+	}
+
+}
+
 BeamIntegration *
 FEM_ObjectBrokerAllClasses::getNewBeamIntegration(int classTag)
 {
@@ -1127,6 +1380,18 @@ FEM_ObjectBrokerAllClasses::getNewBeamIntegration(int classTag)
   case BEAM_INTEGRATION_TAG_CompositeSimpson:        
     return new CompositeSimpsonBeamIntegration();
 
+  case BEAM_INTEGRATION_TAG_Simpson:        
+    return new SimpsonBeamIntegration();
+
+  case BEAM_INTEGRATION_TAG_Chebyshev:
+    return new ChebyshevBeamIntegration();
+
+  case BEAM_INTEGRATION_TAG_ConcentratedPlasticity:
+	  return new ConcentratedPlasticityBeamIntegration();
+
+  case BEAM_INTEGRATION_TAG_ConcentratedCurvature:
+	  return new ConcentratedCurvatureBeamIntegration();
+
   case BEAM_INTEGRATION_TAG_HingeMidpoint:
     return new HingeMidpointBeamIntegration();
     
@@ -1159,15 +1424,72 @@ FEM_ObjectBrokerAllClasses::getNewBeamIntegration(int classTag)
   }
 }
 
+SectionIntegration *
+FEM_ObjectBrokerAllClasses::getNewSectionIntegration(int classTag)
+{
+  switch(classTag) {
+  case SECTION_INTEGRATION_TAG_WideFlange:        
+    return new WideFlangeSectionIntegration();
+
+  case SECTION_INTEGRATION_TAG_RC:        
+    return new RCSectionIntegration();
+
+  case SECTION_INTEGRATION_TAG_RCT:        
+    return new RCTBeamSectionIntegration();        
+
+  case SECTION_INTEGRATION_TAG_RCCIRCULAR:        
+    return new RCCircularSectionIntegration();
+
+  case SECTION_INTEGRATION_TAG_RCTUNNEL:        
+    return new RCTunnelSectionIntegration();
+
+  case SECTION_INTEGRATION_TAG_Tube:        
+    return new TubeSectionIntegration();    
+
+  case SECTION_INTEGRATION_TAG_HSS:        
+    return new HSSSectionIntegration();
+	  
+  default:
+    opserr << "FEM_ObjectBrokerAllClasses::getSectionIntegration - ";
+    opserr << " - no SectionIntegration type exists for class tag ";
+    opserr << classTag << endln;
+    return 0;
+  }
+}
+
+
+HystereticBackbone *
+FEM_ObjectBrokerAllClasses::getNewHystereticBackbone(int classTag)
+{
+  switch (classTag) {
+  case BACKBONE_TAG_Arctangent:
+    return new ArctangentBackbone();
+    
+  default:
+    opserr << "FEM_ObjectBrokerAllClasses::getHystereticBackbone - ";
+    opserr << " - no HystereticBackbone type exists for class tag ";
+    opserr << classTag << endln;
+    return 0;
+  }
+}
 
 UniaxialMaterial *
 FEM_ObjectBrokerAllClasses::getNewUniaxialMaterial(int classTag)
 {
     switch(classTag) {
+    case MAT_TAG_ElasticBilin:
+      return new ElasticBilin();
+      
 	case MAT_TAG_SPSW02:
 		return new SPSW02(); // SAJalali
 	case MAT_TAG_BoucWen:
-		return new BoucWenMaterial(); // SAJalali
+		return new BoucWenMaterial();
+	case MAT_TAG_BoucWenOriginal:
+		return new BoucWenOriginal();
+	case MAT_TAG_BWBN:
+		return new BWBN();		
+	case MAT_TAG_BoucWenInfill:
+		return new BoucWenInfill();		
 	case MAT_TAG_ElasticMaterial:
 	     return new ElasticMaterial();
 
@@ -1186,14 +1508,32 @@ FEM_ObjectBrokerAllClasses::getNewUniaxialMaterial(int classTag)
     case MAT_TAG_ParallelMaterial:
 	     return new ParallelMaterial();
 
+    case MAT_TAG_DamperMaterial:
+      return new DamperMaterial();
+
+    case MAT_TAG_Penalty:
+      return new PenaltyMaterial();
+
+    case MAT_TAG_Multiplier:
+      return new MultiplierMaterial();
+
+    case MAT_TAG_TensionOnly:
+      return new TensionOnlyMaterial();      
+
 	case MAT_TAG_ASD_SMA_3K:  
 	     return new ASD_SMA_3K();
 
 	case MAT_TAG_Concrete01:  
 	     return new Concrete01();
 
+	case MAT_TAG_Concrete01WithSITC:  
+	     return new Concrete01WithSITC();	     
+
 	case MAT_TAG_Concrete02:  
 	     return new Concrete02();
+
+	case MAT_TAG_Concrete02IS:  
+	     return new Concrete02IS();	     
 
 	case MAT_TAG_Concrete04:  
 	     return new Concrete04();
@@ -1207,17 +1547,44 @@ FEM_ObjectBrokerAllClasses::getNewUniaxialMaterial(int classTag)
 	case MAT_TAG_ConcretewBeta:  
 	     return new ConcretewBeta();
 
+    case MAT_TAG_CreepMaterial:
+      return new CreepMaterial();
+
+    case MAT_TAG_TDConcrete:
+      return new TDConcrete();
+
+    case MAT_TAG_TDConcreteNL:
+      return new TDConcreteNL();
+
+    case MAT_TAG_TDConcreteEXP:
+      return new TDConcreteEXP();
+
+    case MAT_TAG_TDConcreteMC10:
+      return new TDConcreteMC10();
+
+    case MAT_TAG_TDConcreteMC10NL:
+      return new TDConcreteMC10NL();
+      
 	case MAT_TAG_Steel01:  
 	     return new Steel01();
 
 	case MAT_TAG_Steel02:  
 	     return new Steel02();
 
+	case MAT_TAG_SteelMPF:  
+	     return new SteelMPF();	     
+
 	case MAT_TAG_Steel2:  
 	     return new Steel2();
 
 	case MAT_TAG_Steel4:  
-	     return new Steel4();	     
+	     return new Steel4();
+
+	case MAT_TAG_RambergOsgoodSteel:  
+	     return new RambergOsgoodSteel();	     	     
+
+	case MAT_TAG_SteelFractureDI:
+		return new SteelFractureDI();
 
 	case MAT_TAG_OriginCentered:  
 	     return new OriginCentered();
@@ -1246,6 +1613,15 @@ FEM_ObjectBrokerAllClasses::getNewUniaxialMaterial(int classTag)
 	case MAT_TAG_Fatigue:
 		return new FatigueMaterial();
 
+	case MAT_TAG_AxialSp:
+	    return new AxialSp();
+
+	case MAT_TAG_AxialSpHD:
+	    return new AxialSpHD();
+
+	case MAT_TAG_SelfCentering:
+	    return new SelfCenteringMaterial();
+	    
     case MAT_TAG_TzLiq1:
 		return new TzLiq1();
 
@@ -1261,8 +1637,29 @@ FEM_ObjectBrokerAllClasses::getNewUniaxialMaterial(int classTag)
 	case MAT_TAG_Hysteretic:
 		return new HystereticMaterial();
 
+	case MAT_TAG_HystereticSM:			
+		return new HystereticSMMaterial();
+
 	case MAT_TAG_ModIMKPeakOriented:
 		return new ModIMKPeakOriented();
+
+	case MAT_TAG_IMKBilin:
+		return new IMKBilin();
+
+	case MAT_TAG_IMKPeakOriented:
+		return new IMKPeakOriented();
+
+    case MAT_TAG_IMKPinching:
+      return new IMKPinching();
+
+	case MAT_TAG_UVCuniaxial:
+	    return new UVCuniaxial();
+
+	case MAT_TAG_SLModel:
+	    return new SLModel();
+
+	case MAT_TAG_Cast:
+	    return new Cast();
 
 	case MAT_TAG_SnapClough:
 		return new Clough();
@@ -1279,8 +1676,14 @@ FEM_ObjectBrokerAllClasses::getNewUniaxialMaterial(int classTag)
 	case MAT_TAG_ViscousDamper:
 		return new ViscousDamper();
 
+	case MAT_TAG_ContinuumUniaxial:
+		return new ContinuumUniaxial();
+
 	case MAT_TAG_PathIndependent:
 		return new PathIndependentMaterial();
+
+	case MAT_TAG_Backbone:
+		return new BackboneMaterial();		
 
 	case MAT_TAG_SeriesMaterial:
 		return new SeriesMaterial();
@@ -1290,6 +1693,12 @@ FEM_ObjectBrokerAllClasses::getNewUniaxialMaterial(int classTag)
 	     
 	case MAT_TAG_ENTMaterial:
 		return new ENTMaterial();
+
+	case MAT_TAG_GNG:
+		return new GNGMaterial();
+		
+	case MAT_TAG_Ratchet:
+		return new Ratchet();				
 #if defined(OPSDEF_UNIAXIAL_FEDEAS)
 	case MAT_TAG_FedeasBond1:
 		return new FedeasBond1Material();
@@ -1330,6 +1739,15 @@ FEM_ObjectBrokerAllClasses::getNewUniaxialMaterial(int classTag)
 	case MAT_TAG_ImpactMaterial:
 		return new ImpactMaterial();
 
+	case MAT_TAG_Hertzdamp:
+		return new Hertzdamp();
+
+	case MAT_TAG_JankowskiImpact:
+		return new JankowskiImpact();
+
+	case MAT_TAG_ViscoelasticGap:
+		return new ViscoelasticGap();
+
 	case MAT_TAG_Bilin:
 		return new Bilin();
 
@@ -1354,6 +1772,9 @@ FEM_ObjectBrokerAllClasses::getNewUniaxialMaterial(int classTag)
         case MAT_TAG_Bond_SP01:
 	  return new Bond_SP01();
 
+        case MAT_TAG_FRCC:
+	  return new FRCC();	  
+
         case MAT_TAG_SimpleFractureMaterial:
 	  return new SimpleFractureMaterial();
 
@@ -1362,7 +1783,33 @@ FEM_ObjectBrokerAllClasses::getNewUniaxialMaterial(int classTag)
 		    
 	case MAT_TAG_HystereticPoly:			// Salvatore Sessa
 	    return new HystereticPoly();
+		    
+	case MAT_TAG_HystereticSmooth:			// Salvatore Sessa
+			return new HystereticSmooth();
 
+	case MAT_TAG_HystereticAsym:			// Salvatore Sessa
+		return new HystereticAsym();	    
+
+	case MAT_TAG_DowelType:
+		return new DowelType();
+
+	case MAT_TAG_DuctileFracture:
+		return new DuctileFracture();
+
+	case MAT_TAG_GMG_CyclicReinforcedConcrete:
+		return new GMG_CyclicReinforcedConcrete();
+
+	case MAT_TAG_Pinching4:
+		return new Pinching4Material();
+
+	case MAT_TAG_SAWSMaterial:
+		return new SAWSMaterial();
+
+    case MAT_TAG_KikuchiAikenHDR:
+      return new KikuchiAikenHDR();
+
+    case MAT_TAG_KikuchiAikenLRB:
+      return new KikuchiAikenLRB();      
 
 	default:
 
@@ -1396,11 +1843,19 @@ FEM_ObjectBrokerAllClasses::getNewSection(int classTag)
 	     
     case SEC_TAG_ElasticShear2d:
 	     return new ElasticShearSection2d();
+
+    case SEC_TAG_ElasticBDShear2d:
+	     return new ElasticBDShearSection2d();
 	     
 	case SEC_TAG_ElasticShear3d:
-	     return new ElasticShearSection3d();	     
-	     
+	     return new ElasticShearSection3d();
 
+	case SEC_TAG_ElasticTube3d:
+	     return new ElasticTubeSection3d();
+
+    case SEC_TAG_ElasticWarpingShear2d:
+      return new ElasticWarpingShearSection2d();
+	     
 	case SEC_TAG_Generic1d:
 	     return new GenericSection1d();
 	     
@@ -1409,6 +1864,9 @@ FEM_ObjectBrokerAllClasses::getNewSection(int classTag)
 
 	case SEC_TAG_Aggregator:
 	     return new SectionAggregator();
+
+	case SEC_TAG_Parallel:
+	     return new ParallelSection();	     
 
 	     //case SEC_TAG_Fiber:
 	     //return new FiberSection();
@@ -1419,9 +1877,27 @@ FEM_ObjectBrokerAllClasses::getNewSection(int classTag)
 	case SEC_TAG_FiberSection3d:
 		return new FiberSection3d();
 
+	case SEC_TAG_FiberSection2dThermal:
+		return new FiberSection2dThermal();
+      
+	case SEC_TAG_FiberSection3dThermal:
+		return new FiberSection3dThermal();		
+
+	case SEC_TAG_NDFiberSection2d:
+		return new NDFiberSection2d();
+
+	case SEC_TAG_NDFiberSectionWarping2d:
+		return new NDFiberSectionWarping2d();		
+      
+	case SEC_TAG_NDFiberSection3d:
+		return new NDFiberSection3d();		
+
 	case SEC_TAG_FiberSectionAsym3d:
 		return new FiberSectionAsym3d(); //Xinlong Du
 
+	case SEC_TAG_FiberSectionWarping3d:
+		return new FiberSectionWarping3d();
+		
 	case SEC_TAG_ElasticPlateSection:
 		return new ElasticPlateSection();
 
@@ -1431,6 +1907,9 @@ FEM_ObjectBrokerAllClasses::getNewSection(int classTag)
 	case SEC_TAG_MembranePlateFiberSection:
 		return new MembranePlateFiberSection();
 
+	case SEC_TAG_DoubleMembranePlateFiberSection:
+		return new DoubleMembranePlateFiberSection();
+
 	//start Yuli Huang & Xinzheng Lu LayeredShellFiberSection
         case SEC_TAG_LayeredShellFiberSection:
 	  return new LayeredShellFiberSection();
@@ -1438,6 +1917,20 @@ FEM_ObjectBrokerAllClasses::getNewSection(int classTag)
 
 	case SEC_TAG_Bidirectional:
 		return new Bidirectional();
+	case SEC_TAG_Elliptical2:
+		return new Elliptical2();
+    case SEC_TAG_Isolator2spring:
+      return new Isolator2spring();
+	
+
+	case SEC_TAG_ReinforcedConcreteLayeredMembraneSection:
+		return new ReinforcedConcreteLayeredMembraneSection();
+
+	case SEC_TAG_LayeredMembraneSection:
+		return new LayeredMembraneSection();
+
+	case SEC_TAG_ElasticMembraneSection:
+		return new ElasticMembraneSection();
 
 	default:
 	     opserr << "FEM_ObjectBrokerAllClasses::getNewSection - ";
@@ -1463,9 +1956,21 @@ FEM_ObjectBrokerAllClasses::getNewNDMaterial(int classTag)
     
   case ND_TAG_ElasticIsotropicPlateFiber:
     return new ElasticIsotropicPlateFiber();
+
+  case ND_TAG_ElasticIsotropicBeamFiber:
+    return new ElasticIsotropicBeamFiber();
+
+  case ND_TAG_ElasticIsotropicBeamFiber2d:
+    return new ElasticIsotropicBeamFiber2d();
     
   case ND_TAG_ElasticIsotropicThreeDimensional:
     return new ElasticIsotropicThreeDimensional();
+
+  case ND_TAG_ElasticOrthotropicThreeDimensional:
+    return new ElasticOrthotropicThreeDimensional();
+
+  case ND_TAG_ElasticOrthotropicPlaneStress:
+    return new ElasticOrthotropicPlaneStress();    
 		  
   case ND_TAG_J2PlaneStrain:
     return new J2PlaneStrain();
@@ -1478,12 +1983,39 @@ FEM_ObjectBrokerAllClasses::getNewNDMaterial(int classTag)
     
   case ND_TAG_J2PlateFiber:
     return new J2PlateFiber();
+
+  case ND_TAG_J2BeamFiber2d:
+    return new J2BeamFiber2d();
+
+  case ND_TAG_J2BeamFiber3d:
+    return new J2BeamFiber3d();
     
   case ND_TAG_J2ThreeDimensional:
     return new J2ThreeDimensional();
+
+  case ND_TAG_SimplifiedJ2:
+    return new SimplifiedJ2();    
     
   case ND_TAG_PlaneStressMaterial:
     return new PlaneStressMaterial();
+
+  case ND_TAG_PlaneStrainMaterial:
+    return new PlaneStrainMaterial();
+
+  case ND_TAG_OrthotropicMaterial:
+    return new OrthotropicMaterial();
+
+  case ND_TAG_Series3DMaterial:
+    return new Series3DMaterial();
+
+  case ND_TAG_Parallel3DMaterial:
+    return new Parallel3DMaterial();
+
+  case ND_TAG_PlaneStressRebarMaterial:
+    return new PlaneStressRebarMaterial();
+
+  case ND_TAG_PlaneStressLayeredMaterial:
+    return new PlaneStressLayeredMaterial();
 
   //start Yuli Huang & Xinzheng 
   case ND_TAG_PlateRebarMaterial:
@@ -1511,6 +2043,9 @@ FEM_ObjectBrokerAllClasses::getNewNDMaterial(int classTag)
   case ND_TAG_PressureDependMultiYield02:
     return new PressureDependMultiYield02();
 
+  case ND_TAG_PressureDependMultiYield03:
+    return new PressureDependMultiYield03();
+	
   case ND_TAG_PressureIndependMultiYield:
     return new PressureIndependMultiYield();
 
@@ -1598,6 +2133,18 @@ FEM_ObjectBrokerAllClasses::getNewNDMaterial(int classTag)
   case ND_TAG_CondConf:
 	  return new CondConf();
 
+  case ND_TAG_InitStrainNDMaterial:
+      return new InitStrainNDMaterial();
+
+  case ND_TAG_ASDConcrete3DMaterial:
+      return new ASDConcrete3DMaterial();
+
+  case ND_TAG_OrthotropicRotatingAngleConcreteT2DMaterial01:
+	  return new OrthotropicRotatingAngleConcreteT2DMaterial01();
+
+  case ND_TAG_SmearedSteelDoubleLayerT2DMaterial01:
+	  return new SmearedSteelDoubleLayerT2DMaterial01();
+    
   default:
     opserr << "FEM_ObjectBrokerAllClasses::getNewNDMaterial - ";
     opserr << " - no NDMaterial type exists for class tag ";
@@ -1763,6 +2310,9 @@ FEM_ObjectBrokerAllClasses::getNewTimeSeries(int classTag)
 
         case TSERIES_TAG_TrigSeries:
 	  return new TrigSeries;
+	  //Tang.S
+		case TSERIES_TAG_MPAccSeries:
+	  return new MPAccSeries;
 
 	default:
 	     opserr << "FEM_ObjectBrokerAllClasses::getPtrTimeSeries - ";
@@ -1915,10 +2465,10 @@ FEM_ObjectBrokerAllClasses::getPtrNewRecorder(int classTag)
 
         case RECORDER_TAGS_GmshRecorder:
            return new GmshRecorder();
-
+#ifdef _HDF5
 	case RECORDER_TAGS_MPCORecorder:
 	  return new MPCORecorder();
-	     
+#endif // _HDF5
 	default:
 	     opserr << "FEM_ObjectBrokerAllClasses::getNewRecordr - ";
 	     opserr << " - no Recorder type exists for class tag ";
@@ -2462,7 +3012,7 @@ FEM_ObjectBrokerAllClasses::getSubdomainPtr(int classTag)
     return 0;
 }
 
-
+/*
 int 
 FEM_ObjectBrokerAllClasses::addUniaxialMaterial(int classTag, 
 				      const char *lib, 
@@ -2515,7 +3065,7 @@ FEM_ObjectBrokerAllClasses::addUniaxialMaterial(int classTag,
   return 0;
 
 }
-
+*/
 
 Parameter *
 FEM_ObjectBrokerAllClasses::getParameter(int classTag)

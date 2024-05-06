@@ -33,14 +33,7 @@
 #include <Matrix.h>
 #include <ID.h>
 
-// number of nodes per element
-#define SL_NUM_NODE 4
-// d.o.f. per node
-#define SL_NUM_NDF  2
-// degrees of freedom per element
-#define SL_NUM_DOF  8
-// displacement degrees of freedom per element
-#define SL_NUM_DDOF  8
+
 
 class Domain;
 class Node;
@@ -92,7 +85,17 @@ class Quad4FiberOverlay : public Element
 	protected:
 
 	private:
-		// private member functions - only available to objects of the class              
+		// private member functions - only available to objects of the class  
+				enum {
+			// number of nodes per element
+			SL_NUM_NODE = 4,
+			// d.o.f. per node
+			SL_NUM_NDF  =  2,
+			// degrees of freedom per element
+			SL_NUM_DOF  =  8,
+			// displacement degrees of freedom per element
+			SL_NUM_DDOF =  8,
+		};              
 		
 		double computeCurrentStrain(void) ;
 		int Dual();
@@ -128,10 +131,10 @@ class Quad4FiberOverlay : public Element
 		Vector nFi;
 		Vector nFj;
 
-		int iStartNode;						// Fiber starting interploation node
-		int iEndNode;						// Fiber starting interploation node
-		int jStartNode;						// Fiber ending interploation node
-		int jEndNode;						// Fiber ending interploation node
+		int iStartNode;						// Fiber starting interpolation node
+		int iEndNode;						// Fiber starting interpolation node
+		int jStartNode;						// Fiber ending interpolation node
+		int jEndNode;						// Fiber ending interpolation node
 
 		Matrix dNidxAlphai;					// J^-1 ^ dN/dxi	
 		Vector A;							// Normalized fiber direction vector
